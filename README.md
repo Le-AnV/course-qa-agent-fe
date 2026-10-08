@@ -1,93 +1,147 @@
 # course-qa-agent-fe
 
+Frontend for the course Q&A RAG chatbot — Next.js App Router.
+Split from the `course-qa-agent` monorepo (UI foundation AI-121).
 
+- Backend repo: `course-qa-agent-be`
+- Jira: AI project on `ai03.atlassian.net` — this repo maps to [AI-121](https://ai03.atlassian.net/browse/AI-121)
 
-## Getting started
+## Stack
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- [Next.js](https://nextjs.org) 16 (App Router) + React 19, TypeScript
+- Tailwind CSS v4 + shadcn/ui primitives in `components/ui/`
+- Lint: `next lint` (ESLint flat config `eslint.config.mjs`)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## Structure
 
 ```
-cd existing_repo
-git remote add origin https://git.fsoft-academy.edu.vn/hcm26_cpl_ai_03/group-01/course-qa-agent-fe.git
-git branch -M main
-git push -uf origin main
+.
+├── app/
+│   ├── globals.css          # ALL design tokens (colors, radius, fonts) live here
+│   ├── layout.tsx           # fonts + page metadata
+│   ├── login/               # outside the shell (public)
+│   └── (shell)/             # every route here renders inside AppShell
+│       ├── layout.tsx       # navbar + sidebar + auth guard
+│       └── styleguide/      # component gallery — the team's visual reference
+├── components/ui/           # ONLY place shared components live (Button, Card, Table…)
+│   ├── nav-config.ts        # sidebar menu + roles + auth storage keys
+│   ├── app-shell.tsx        # layout frame (navbar + sidebar + main + Toaster)
+│   ├── auth-guard.tsx       # client redirect to /login (UX only — backend enforces)
+│   └── empty-state.tsx      # zero-data states
+├── features/<module>/       # feature-specific components (chat, admin, …)
+├── lib/                     # API client & helpers (no UI)
+└── public/                  # static assets
 ```
 
-## Integrate with your tools
+## Local run
 
-- [ ] [Set up project integrations](https://git.fsoft-academy.edu.vn/hcm26_cpl_ai_03/group-01/course-qa-agent-fe/-/settings/integrations)
+```bash
+npm ci
+npm run dev
+```
 
-## Collaborate with your team
+Open http://localhost:3000. Health of the backend: `http://localhost:8000/health`
+(see the `course-qa-agent-be` repo).
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+```bash
+npm run lint   # eslint
+npm run build  # production build
+```
 
-## Test and Deploy
+## Configuration
 
-Use the built-in continuous integration in GitLab.
+Copy `.env.example` to `.env.local` and adjust if needed. Never commit real keys.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+| Variable | Default | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend base URL. `NEXT_PUBLIC_*` values are baked into the bundle at **build** time — restart `next dev` / rebuild the image after changing it. |
 
-***
+## Docker (whole stack)
 
-# Editing this README
+One command — no manual `npm run dev`:
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+```bash
+docker compose up -d --build
+```
 
-## Suggestions for a good README
+| Service | Host port | Container port | Notes |
+|---|---|---|---|
+| frontend (Next.js standalone) | 3000 | 3000 | container `course-qa-frontend`, non-root `node` user |
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+The image build takes `NEXT_PUBLIC_API_URL` as a build arg (default
+`http://localhost:8000`). Override for a build:
 
-## Name
-Choose a self-explaining name for your project.
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000 docker compose build
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+**Port rule — local first, Docker second:** both modes use the **same** port,
+so run **either** the local dev server **or** the container, never both at once.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+| Mode | Command | Frontend port |
+|---|---|---|
+| Local (develop) | `npm run dev` | 3000 |
+| Docker (container) | `docker compose up -d --build` | 3000 |
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Stop with `docker compose down`.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+## UI foundation (AI-121)
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+Every page is assembled from the shared library — never re-implement Button, Input
+or Table, and never hardcode colors. Live examples: `/styleguide` (inside the app,
+login required). Spec: [`docs/design/ai-121-ui-foundation.md`](docs/design/ai-121-ui-foundation.md)
+— lands with the Design branch (`features/Design_UIFoundation`, MR !1).
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Adding a new page
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+1. Create `app/(shell)/<route>/page.tsx` — inside `(shell)` if it needs navbar/sidebar,
+   outside (next to `login/`) if it must be public.
+2. Import primitives from `@/components/ui` and assemble:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+   ```tsx
+   import { Button, Card, CardContent, CardHeader, CardTitle, Input } from "@/components/ui";
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+   export default function MyPage() {
+     return (
+       <Card className="max-w-lg">
+         <CardHeader><CardTitle>New ticket</CardTitle></CardHeader>
+         <CardContent>
+           <form className="flex flex-col gap-4">
+             <label className="flex flex-col gap-1.5 text-sm font-medium">
+               Subject
+               <Input required placeholder="What is the question?" />
+             </label>
+             <Button type="submit">Submit</Button>
+           </form>
+         </CardContent>
+       </Card>
+     );
+   }
+   ```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+3. Need a sidebar menu item for it? Add one entry in `components/ui/nav-config.ts`
+   (`NAV_ITEMS`, with the roles that may see it) — no JSX edits.
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### Adding a shared component
 
-## License
-For open source projects, say how it is licensed.
+- Standard shadcn primitives: `npx shadcn@latest add <name>` (drops into `components/ui/`).
+- Custom component: put it in `components/ui/`, use semantic tokens only
+  (`bg-primary`, `text-muted-foreground`…), then add a section with a live example to
+  `app/(shell)/styleguide/page.tsx`.
+- Feature-specific widgets do **not** go in `components/ui/` — they live in
+  `features/<module>/`.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### Auth storage contract (client UX only)
+
+The login flow (AI-25) writes after a successful login:
+
+| Key | Value |
+|---|---|
+| `qa.auth.token` | JWT access token |
+| `qa.auth.role` | `student` \| `trainer` \| `admin` |
+
+`AppShell` redirects to `/login` when either key is missing, and bounces a role off
+routes it may not see (e.g. student opening `/dashboard`) back to its role home —
+same rules as the sidebar menu. Both are UX only: the backend re-checks every
+request (AI-27). To preview the shell before the login API exists, sign in via the
+demo buttons on `/login` or set these keys in DevTools.
