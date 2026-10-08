@@ -3,7 +3,12 @@ import React, { useState } from "react";
 import { X, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { AUTH_ROLE_KEY, AUTH_TOKEN_KEY, homeRouteFor, type Role } from "@/components/ui/nav-config";
 
-export function LoginModal({ isLoginModalOpen, closeLoginModal }: any) {
+interface LoginModalProps {
+  isLoginModalOpen: boolean;
+  closeLoginModal: () => void;
+}
+
+export function LoginModal({ isLoginModalOpen, closeLoginModal }: LoginModalProps) {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
