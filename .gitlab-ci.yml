@@ -14,6 +14,8 @@ stages:
 lint:
   stage: lint
   image: node:20-slim
+  tags:
+    - course-qa-fe
   cache:
     key:
       files:
@@ -31,6 +33,8 @@ lint:
 build:
   stage: build
   image: node:20-slim
+  tags:
+    - course-qa-fe
   cache:
     key:
       files:
