@@ -56,6 +56,35 @@ Copy `.env.example` to `.env.local` and adjust if needed. Never commit real keys
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend base URL. `NEXT_PUBLIC_*` values are baked into the bundle at **build** time — restart `next dev` / rebuild the image after changing it. |
 
+## Docker (whole stack)
+
+One command — no manual `npm run dev`:
+
+```bash
+docker compose up -d --build
+```
+
+| Service | Host port | Container port | Notes |
+|---|---|---|---|
+| frontend (Next.js standalone) | 3000 | 3000 | container `course-qa-frontend`, non-root `node` user |
+
+The image build takes `NEXT_PUBLIC_API_URL` as a build arg (default
+`http://localhost:8000`). Override for a build:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000 docker compose build
+```
+
+**Port rule — local first, Docker second:** both modes use the **same** port,
+so run **either** the local dev server **or** the container, never both at once.
+
+| Mode | Command | Frontend port |
+|---|---|---|
+| Local (develop) | `npm run dev` | 3000 |
+| Docker (container) | `docker compose up -d --build` | 3000 |
+
+Stop with `docker compose down`.
+
 ## UI foundation (AI-121)
 
 Every page is assembled from the shared library — never re-implement Button, Input
