@@ -1,7 +1,15 @@
 "use client";
 import React from "react";
 
-export function LandingHeader({ isHeaderActive, isNavActive, toggleNav, openLoginModal }: any) {
+interface LandingHeaderProps {
+  isHeaderActive: boolean;
+  isNavActive: boolean;
+  toggleNav: () => void;
+  closeNav: () => void;
+  openLoginModal: (e?: React.MouseEvent) => void;
+}
+
+export function LandingHeader({ isHeaderActive, isNavActive, toggleNav, closeNav, openLoginModal }: LandingHeaderProps) {
   return (
     <>
       {/* HEADER */}
@@ -113,27 +121,27 @@ export function LandingHeader({ isHeaderActive, isNavActive, toggleNav, openLogi
 
             <ul className="navbar-list">
               <li className="navbar-item">
-                <a href="#home" className="navbar-link" onClick={() => setIsNavActive(false)}>
+                <a href="#home" className="navbar-link" onClick={closeNav}>
                   Home
                 </a>
               </li>
               <li className="navbar-item">
-                <a href="#about" className="navbar-link" onClick={() => setIsNavActive(false)}>
+                <a href="#about" className="navbar-link" onClick={closeNav}>
                   About
                 </a>
               </li>
               <li className="navbar-item">
-                <a href="#courses" className="navbar-link" onClick={() => setIsNavActive(false)}>
+                <a href="#courses" className="navbar-link" onClick={closeNav}>
                   Courses
                 </a>
               </li>
               <li className="navbar-item">
-                <a href="#blog" className="navbar-link" onClick={() => setIsNavActive(false)}>
+                <a href="#blog" className="navbar-link" onClick={closeNav}>
                   Blog
                 </a>
               </li>
               <li className="navbar-item">
-                <a href="#contact" className="navbar-link" onClick={() => setIsNavActive(false)}>
+                <a href="#contact" className="navbar-link" onClick={closeNav}>
                   Contact
                 </a>
               </li>

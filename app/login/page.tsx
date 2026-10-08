@@ -1,5 +1,4 @@
 "use client";
-import './education-template.css';
 import React, { useState, useEffect } from "react";
 import { LandingHeader } from "@/features/login/landing-header";
 import { LandingFooter } from "@/features/login/landing-footer";
@@ -39,6 +38,7 @@ export default function Home() {
         isHeaderActive={isHeaderActive} 
         isNavActive={isNavActive} 
         toggleNav={toggleNav} 
+        closeNav={() => setIsNavActive(false)}
         openLoginModal={openLoginModal} 
       />
       
