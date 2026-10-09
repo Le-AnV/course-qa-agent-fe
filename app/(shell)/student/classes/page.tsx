@@ -3,43 +3,19 @@
 import * as React from "react";
 import { Search, Users, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { CLASSES } from "@/lib/classes";
 
 export default function StudentClassesPage() {
   const router = useRouter();
   const [search, setSearch] = React.useState("");
 
-  const classes = [
-    {
-      id: "cs-401",
-      title: "Introduction to Artificial Intelligence",
-      code: "CS 401",
-      term: "Fall 2026",
-      dept: "Computer Science",
-      stats: "12 units · 28 resources",
-      members: 34,
-      accentColor: "#2563EB",
-    },
-    {
-      id: "se-301",
-      title: "Software Engineering",
-      code: "SE 301",
-      term: "Fall 2026",
-      dept: "Software Engineering",
-      stats: "10 units · 22 resources",
-      members: 42,
-      accentColor: "#0EA5E9",
-    },
-    {
-      id: "cs-310",
-      title: "Machine Learning Foundations",
-      code: "CS 310",
-      term: "Spring 2026",
-      dept: "Computer Science",
-      stats: "8 units · 15 resources",
-      members: 28,
-      accentColor: "#6366F1",
-    }
-  ];
+  // Ô search lọc thật theo title / mã lớp / khoa (trước đây gõ không lọc gì).
+  const q = search.trim().toLowerCase();
+  const classes = q
+    ? CLASSES.filter((c) =>
+        [c.title, c.code, c.dept].some((f) => f.toLowerCase().includes(q)),
+      )
+    : CLASSES;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderClassCard = (cls: any) => (
@@ -78,7 +54,7 @@ export default function StudentClassesPage() {
   );
 
   return (
-    <div className="max-w-[920px] mx-auto pb-12 space-y-8">
+    <div className="w-full max-w-[920px] mx-auto px-6 pt-8 pb-12 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-[28px] font-bold text-[#172033] font-[family-name:var(--font-lora)] tracking-tight">My Classes</h1>

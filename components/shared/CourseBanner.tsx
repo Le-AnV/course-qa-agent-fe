@@ -10,45 +10,61 @@ interface CourseBannerProps {
   backLabel?: string;
   accentColor?: string;
   teacherName?: string;
+  /** Chip mã lớp + kỳ, vd "CS 401 · Fall 2026" */
+  meta?: string;
 }
 
+/**
+ * Banner workspace: MỘT chiều cao duy nhất cho mọi tab (đổi tab không nảy).
+ * Grid 3 cột cân ([112px_1fr_112px]): trái = back, giữa = tên lớp căn giữa,
+ * phải = giáo viên góc phải. 2 biên rộng bằng nhau nên title luôn chính giữa,
+ * tên lớp dài chỉ truncate trong cột giữa, không đẩy lệch layout.
+ */
 export function CourseBanner({
   title,
   backHref,
   backLabel = "My Classes",
   accentColor = "#EFF6FF",
   teacherName,
+  meta,
 }: CourseBannerProps) {
   return (
     <div
       className="relative w-full border-b border-[#E2E8F0] overflow-hidden select-none shrink-0"
       style={{ backgroundColor: accentColor }}
     >
-      {/* Subtle Dot Grid Background on the right */}
-      <div 
-        className="absolute inset-y-0 right-0 w-1/3 opacity-30" 
-        style={{
-          backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)',
-          backgroundSize: '16px 16px'
-        }}
-      />
-      
-      <div className="relative z-10 px-6 py-5 md:px-10 lg:px-10 md:py-6">
+      <div className="relative z-10 grid grid-cols-[112px_minmax(0,1fr)_112px] items-center gap-2 px-4 py-2.5 md:px-6">
+        {/* Trái: back — rộng cố định để title luôn giữa */}
         <Link
           href={backHref}
-          className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#2563EB] hover:underline mb-2"
+          className="inline-flex items-center gap-1 text-[12.5px] font-medium text-[#2563EB] hover:underline min-w-0"
+          title={backLabel}
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          {backLabel}
+          <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+          <span className="hidden sm:inline truncate">{backLabel}</span>
         </Link>
-        <h1 className="text-[22px] md:text-[26px] font-bold tracking-tight text-[#172033]">
-          {title}
-        </h1>
-        {teacherName && (
-          <p className="text-[14px] text-[#64748B] mt-1 font-medium">
-            Teacher: <span className="text-[#334155]">{teacherName}</span>
+
+        {/* Giữa: tên lớp to, căn giữa; mã lớp nhỏ bên dưới */}
+        <div className="min-w-0 text-center">
+          <h1 className="text-[18px] md:text-[20px] font-bold tracking-tight text-[#172033] truncate leading-snug">
+            {title}
+          </h1>
+          {meta && (
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#64748B] truncate mt-0.5">
+              {meta}
+            </p>
+          )}
+        </div>
+
+        {/* Phải: giáo viên góc phải, rộng cố định; mobile giữ chỗ để không lệch giữa */}
+        <div className="min-w-0 text-right">
+          <p className="hidden sm:block text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] leading-none mb-1">
+            Teacher
           </p>
-        )}
+          <p className="hidden sm:block truncate text-[12.5px] font-semibold text-[#334155] leading-none">
+            {teacherName ?? "—"}
+          </p>
+        </div>
       </div>
     </div>
   );

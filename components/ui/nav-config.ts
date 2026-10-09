@@ -1,6 +1,5 @@
 import {
   LayoutDashboard,
-  MessageSquare,
   Palette,
   type LucideIcon,
   Home,
@@ -30,12 +29,6 @@ export type NavItem = {
  */
 export const NAV_ITEMS: NavItem[] = [
 // Shared Routes
-  {
-    href: "/chat",
-    label: "Chat",
-    roles: ["student", "trainer", "admin"],
-    icon: MessageSquare,
-  },
   {
     href: "/styleguide",
     label: "Styleguide",

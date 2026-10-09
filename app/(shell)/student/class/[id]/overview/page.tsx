@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import { BookOpen, Users, FileText, Bell, ChevronRight, BotMessageSquare } from "lucide-react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { getClassById } from "@/lib/classes";
 
 export default function StudentClassOverviewPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const cls = getClassById(id);
 
   return (
     <div className="space-y-8 max-w-[920px]">
@@ -26,7 +27,7 @@ export default function StudentClassOverviewPage() {
             </div>
             <span className="text-[13px] font-semibold text-[#64748B]">Units</span>
           </div>
-          <p className="text-2xl font-bold text-[#172033]">12</p>
+          <p className="text-2xl font-bold text-[#172033]">{cls?.units ?? 12}</p>
         </div>
         
         <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm">
@@ -36,7 +37,7 @@ export default function StudentClassOverviewPage() {
             </div>
             <span className="text-[13px] font-semibold text-[#64748B]">Resources</span>
           </div>
-          <p className="text-2xl font-bold text-[#172033]">28</p>
+          <p className="text-2xl font-bold text-[#172033]">{cls?.resources ?? 28}</p>
         </div>
         
         <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm">
@@ -46,7 +47,7 @@ export default function StudentClassOverviewPage() {
             </div>
             <span className="text-[13px] font-semibold text-[#64748B]">Members</span>
           </div>
-          <p className="text-2xl font-bold text-[#172033]">34</p>
+          <p className="text-2xl font-bold text-[#172033]">{cls?.members ?? 34}</p>
         </div>
         
         <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm">

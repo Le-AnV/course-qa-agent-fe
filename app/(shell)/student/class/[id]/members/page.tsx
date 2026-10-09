@@ -13,6 +13,14 @@ export default function StudentMembersPage() {
     { name: "Lê Hoàng Tuấn", role: "Student", email: "tuan.le@student.edu" },
   ];
 
+  // Ô search lọc thật theo tên / email (trước đây gõ không lọc gì).
+  const q = search.trim().toLowerCase();
+  const filteredMembers = q
+    ? members.filter((m) =>
+        [m.name, m.email, m.role].some((f) => f.toLowerCase().includes(q)),
+      )
+    : members;
+
   return (
     <div className="max-w-[920px] space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
@@ -45,7 +53,7 @@ export default function StudentMembersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E2E8F0]">
-            {members.map((member, i) => (
+            {filteredMembers.map((member, i) => (
               <tr key={i} className="hover:bg-[#F8FAFC] transition-colors">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">

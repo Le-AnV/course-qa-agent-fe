@@ -1,15 +1,14 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { Ticket, FileText, CheckCircle2, MessageSquare, ChevronRight } from "lucide-react";
+import { FileText, MessageSquare, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function StudentHomePage() {
   const router = useRouter();
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-8 pb-16 pt-8 px-6 bg-[#F8FAFC]">
+    <div className="w-full max-w-[920px] mx-auto px-6 pt-8 pb-12 space-y-8 bg-[#F8FAFC]">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
@@ -29,7 +28,7 @@ export default function StudentHomePage() {
             <span className="px-2.5 py-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/60 rounded uppercase tracking-wider">Unread</span>
           </div>
           <div className="p-6 space-y-5">
-            <div className="flex items-center gap-4 group cursor-pointer">
+            <div className="flex items-center gap-4 group cursor-pointer" onClick={() => router.push("/student/class/cs-401/proposals")}>
               <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                 <FileText className="w-5 h-5" />
               </div>
@@ -40,7 +39,7 @@ export default function StudentHomePage() {
               <span className="text-[12.5px] font-semibold text-[#2563eb] flex items-center gap-0.5">View <ChevronRight className="w-3 h-3" /></span>
             </div>
             
-            <div className="flex items-center gap-4 group cursor-pointer">
+            <div className="flex items-center gap-4 group cursor-pointer" onClick={() => router.push("/student/class/cs-401/agent")}>
               <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                 <MessageSquare className="w-5 h-5" />
               </div>
