@@ -3,6 +3,8 @@ import {
   MessageSquare,
   Palette,
   type LucideIcon,
+  Home,
+  BookOpen
 } from "lucide-react";
 
 /** Roles mirror the backend RBAC (AI-27). Client-side filtering is UX only. */
@@ -27,6 +29,7 @@ export type NavItem = {
  * Routes that do not exist yet (other tickets) will 404 until those land.
  */
 export const NAV_ITEMS: NavItem[] = [
+// Shared Routes
   {
     href: "/chat",
     label: "Chat",
@@ -34,16 +37,31 @@ export const NAV_ITEMS: NavItem[] = [
     icon: MessageSquare,
   },
   {
-    href: "/dashboard",
-    label: "Dashboard",
-    roles: ["trainer", "admin"],
-    icon: LayoutDashboard,
-  },
-  {
     href: "/styleguide",
     label: "Styleguide",
     roles: ["student", "trainer", "admin"],
     icon: Palette,
+  },
+  // Teacher Routes
+  {
+    href: "/teacher",
+    label: "Teacher Portal",
+    roles: ["trainer", "admin"],
+    icon: BookOpen,
+  },
+  // Admin Routes
+  {
+    href: "/admin",
+    label: "Admin Dashboard",
+    roles: ["admin"],
+    icon: LayoutDashboard,
+  },
+  // Student Routes
+  {
+    href: "/student",
+    label: "Student Portal",
+    roles: ["student"],
+    icon: Home,
   },
 ];
 
@@ -57,6 +75,9 @@ export function navItemsForRole(role: Role): NavItem[] {
  * is the real enforcement either way.
  */
 export function canAccessRoute(role: Role, pathname: string): boolean {
+  // Allow root path so it can redirect properly
+  if (pathname === "/") return true;
+
   const item = NAV_ITEMS.find(
     (entry) =>
       pathname === entry.href || pathname.startsWith(`${entry.href}/`),
@@ -66,5 +87,8 @@ export function canAccessRoute(role: Role, pathname: string): boolean {
 
 /** Landing route per role — used by guards that bounce users on role mismatch. */
 export function homeRouteFor(role: Role): string {
-  return role === "student" ? "/chat" : "/dashboard";
+  if (role === "student") return "/student/home";
+  if (role === "trainer") return "/teacher/home";
+  if (role === "admin") return "/admin/home";
+  return "/login";
 }

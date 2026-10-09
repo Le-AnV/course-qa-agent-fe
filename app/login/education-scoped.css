@@ -1,9 +1,11 @@
 
+.education-login-page {
+  
 /*-----------------------------------*\
   #CUSTOM PROPERTY
 \*-----------------------------------*/
 
-:root {
+& {
 
     /* COLORS */
   
@@ -34,13 +36,13 @@
     --ff-league_spartan: 'League Spartan', sans-serif;
     --ff-poppins: 'Poppins', sans-serif; 
   
-    --fs-1: 4.2rem;
-    --fs-2: 3.2rem;
-    --fs-3: 2.3rem;
-    --fs-4: 1.8rem;
-    --fs-5: 1.5rem;
-    --fs-6: 1.4rem;
-    --fs-7: 1.3rem;
+    --fs-1: 42px;
+    --fs-2: 32px;
+    --fs-3: 23px;
+    --fs-4: 18px;
+    --fs-5: 15px;
+    --fs-6: 14px;
+    --fs-7: 13px;
   
     --fw-500: 500;
     --fw-600: 600;
@@ -116,16 +118,16 @@
   
   address { font-style: normal; }
   
-  html {
+  & {
     font-family: var(--ff-poppins);
     font-size: 10px;
     scroll-behavior: smooth;
   }
   
-  body {
+  & {
     background-color: var(--white);
     color: var(--gray-web);
-    font-size: 1.6rem;
+    font-size: 16px;
     line-height: 1.75;
   }
   
@@ -487,17 +489,7 @@
     animation: bounce 2.5s infinite;
   }
   
-  @keyframes bounce {
-    0%,
-    20%,
-    50%,
-    80%,
-    100% { transform: translateY(0); }
   
-    40% { transform: translateY(-30px); }
-  
-    60% { transform: translateY(-15px); }
-  }
   
   .about :is(.section-subtitle, .section-title, .section-text) {
     text-align: left;
@@ -668,10 +660,7 @@
     animation: pulse 3s ease infinite;
   }
   
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 var(--white_50); }
-    100% { box-shadow: 0 0 0 20px transparent; }
-  }
+  
   
   .video-banner::after {
     inset: 0;
@@ -965,12 +954,12 @@
 
     /* CUSTOM PROPERTY */
   
-    :root {
+    & {
 
         /* TYPO-GRPAHY */
   
-      --fs-1: 4.6rem;
-      --fs-2: 3.8rem;
+      --fs-1: 46px;
+      --fs-2: 38px;
   
     }
 
@@ -1055,12 +1044,12 @@
 
     /* CUSTOM PROPERTY */
   
-    :root {
+    & {
   
       /* TYPO-GRAPHY */
   
-      --fs-1: 5.5rem;
-      --fs-2: 4.5rem;
+      --fs-1: 55px;
+      --fs-2: 45px;
   
     }
 
@@ -1113,11 +1102,11 @@
   
     /* CUSTOM PROPERTY */
   
-    :root {
+    & {
   
       /* TYPO-GRAPHY */
   
-      --fs-1: 6.5rem;
+      --fs-1: 65px;
   
       /* SPACING */
   
@@ -1146,10 +1135,7 @@
       animation: slideIn 0.5s ease forwards;
     }
   
-    @keyframes slideIn {
-      0% { transform: translateY(-100%); }
-      100% { transform: translateY(0); }
-    }
+    
   
     .navbar,
     .navbar.active { all: unset; }
@@ -1244,3 +1230,28 @@
   display: flex !important;
 }
 
+
+}
+
+/* Keyframes must be at the top level */
+@keyframes bounce {
+    0%,
+    20%,
+    50%,
+    80%,
+    100% { transform: translateY(0); }
+  
+    40% { transform: translateY(-30px); }
+  
+    60% { transform: translateY(-15px); }
+  }
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 var(--white_50); }
+    100% { box-shadow: 0 0 0 20px transparent; }
+  }
+
+@keyframes slideIn {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(0); }
+    }

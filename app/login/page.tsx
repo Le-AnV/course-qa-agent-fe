@@ -4,6 +4,8 @@ import { LandingHeader } from "@/features/login/landing-header";
 import { LandingFooter } from "@/features/login/landing-footer";
 import { LoginModal } from "@/features/login/login-modal";
 
+import "./education-scoped.css";
+
 export default function Home() {
   const [isNavActive, setIsNavActive] = useState(false);
   const [isHeaderActive, setIsHeaderActive] = useState(false);
@@ -33,15 +35,15 @@ export default function Home() {
   const closeLoginModal = () => setIsLoginModalOpen(false);
 
   return (
-    <>
-      <LandingHeader 
-        isHeaderActive={isHeaderActive} 
-        isNavActive={isNavActive} 
-        toggleNav={toggleNav} 
+    <div className="education-login-page">
+      <LandingHeader
+        isHeaderActive={isHeaderActive}
+        isNavActive={isNavActive}
+        toggleNav={toggleNav}
         closeNav={() => setIsNavActive(false)}
-        openLoginModal={openLoginModal} 
+        openLoginModal={openLoginModal}
       />
-      
+
       {/* MAIN CONTENT */}
       <main>
         <article>
@@ -708,9 +710,9 @@ export default function Home() {
           </section>
         </article>
       </main>
-      
+
       <LandingFooter />
-      
+
       {/* GO TO TOP */}
       <a
         href="#top"
@@ -720,11 +722,12 @@ export default function Home() {
       >
         <ion-icon name="chevron-up" aria-hidden="true"></ion-icon>
       </a>
-      
-      <LoginModal 
-        isLoginModalOpen={isLoginModalOpen} 
-        closeLoginModal={closeLoginModal} 
+
+      <LoginModal
+        isLoginModalOpen={isLoginModalOpen}
+        closeLoginModal={closeLoginModal}
       />
-    </>
+    </div>
   );
 }
+
