@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
+import "./login/education-template.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +25,19 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <Script
+          type="module"
+          src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"
+          strategy="afterInteractive"
+        />
+        <Script
+          noModule
+          src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"
+          strategy="afterInteractive"
+        />
+      </body>
     </html>
   );
 }
