@@ -1,17 +1,20 @@
 import { useState, useCallback } from 'react';
+import { AUTH_TOKEN_KEY } from '@/components/ui/nav-config';
 
 interface UseChatStreamProps {
+  /** Class scope — BE dùng để lọc syllabus/tài liệu của đúng lớp, tránh lẫn dữ liệu giữa các lớp. */
+  classId: string;
   onChunk: (chunk: string) => void;
   onFinish?: () => void;
   onError?: (error: Error) => void;
 }
 
-export function useChatStream({ onChunk, onFinish, onError }: UseChatStreamProps) {
+export function useChatStream({ classId, onChunk, onFinish, onError }: UseChatStreamProps) {
   const [isStreaming, setIsStreaming] = useState(false);
 
   const sendMessage = useCallback(async (message: string) => {
     setIsStreaming(true);
-    
+
     try {
       // 1. Khởi tạo hàm fetch gọi đến endpoint API (giả định là /api/chat)
       const response = await fetch('/api/chat', {
@@ -19,9 +22,9 @@ export function useChatStream({ onChunk, onFinish, onError }: UseChatStreamProps
         headers: {
           'Content-Type': 'application/json',
           // Đính kèm token ảo của Developer từ localStorage
-          'Authorization': `Bearer ${localStorage.getItem('qa.auth.token') || ''}`
+          'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY) || ''}`
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, class_id: classId }),
       });
 
       if (!response.ok) {
@@ -64,7 +67,7 @@ export function useChatStream({ onChunk, onFinish, onError }: UseChatStreamProps
     } finally {
       setIsStreaming(false);
     }
-  }, [onChunk, onFinish, onError]);
+  }, [classId, onChunk, onFinish, onError]);
 
   return {
     sendMessage,

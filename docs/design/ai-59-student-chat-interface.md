@@ -15,7 +15,7 @@ The Chat Interface is designed as a standalone "App Window" occupying the remain
 
 ## 2. Component Architecture
 
-All UI components are located in the `components/chat/` directory.
+All UI components are located in `features/chat/` (flat, no nested `components/` — same convention as `features/login/`).
 
 ### 2.1. `chat-window.tsx` (Parent Container)
 - Acts as the main wrapper for the Chat Interface.
