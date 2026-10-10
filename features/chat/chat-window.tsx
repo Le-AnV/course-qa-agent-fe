@@ -6,61 +6,61 @@ import { ChatInput } from './chat-input';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { getClassById } from '@/lib/classes';
 
-// Định nghĩa kiểu dữ liệu cho 1 tin nhắn
+// Define message type
 type Message = {
   id: string;
   role: 'user' | 'ai';
   content: string;
 };
 
-// Khởi tạo trạng thái ban đầu của khung chat
-// TODO (Task AI-95): Xóa dòng này và thay bằng API gọi lịch sử hội thoại (GET /api/history)
-// Lịch sử cũng phải lọc theo classId — mỗi lớp 1 cuộc hội thoại riêng.
+// Initialize chat state
+// TODO (Task AI-95): Remove this and replace with chat history API call (GET /api/history)
+// History must be filtered by classId - each class has its own chat scope.
 const INITIAL_MESSAGES: Message[] = [
   { 
     id: 'welcome-msg', 
     role: 'ai', 
-    content: 'Xin chào! Mình là trợ lý AI môn học. Bạn cần mình giải đáp gì về bài giảng hay bài tập hôm nay?' 
+    content: "Hello! I am your course AI assistant. What can I help you with regarding today's lectures or assignments?" 
   }
 ];
 
-// Gợi ý câu hỏi khởi đầu — user mới đỡ nhìn khung chat trống.
+// Suggested starter questions - prevents empty chat window for new users.
 const SUGGESTED_QUESTIONS = [
-  'Môn học này có những unit nào?',
-  'Giải thích thuật toán A* search?',
-  'Tài liệu nào cần đọc cho unit 1?',
+  'What units are covered in this course?',
+  'Explain the A* search algorithm?',
+  'What reading materials are required for unit 1?',
 ];
 
 export function ChatWindow({ classId }: { classId: string }) {
   const cls = getClassById(classId);
   const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
-  const [isTyping, setIsTyping] = React.useState(false); // Trạng thái chờ cụm từ đầu tiên (để hiện 3 dấu chấm)
+  const [isTyping, setIsTyping] = React.useState(false); // Waiting state for the first chunk (to show typing indicator)
   
-  // Counter cho id tin nhắn (id ổn định, không gọi impure fn trong render).
+  // Message ID counter (stable IDs, avoid calling impure fn during render).
   const msgIdRef = React.useRef(0);
   const nextMsgId = React.useCallback(() => {
     msgIdRef.current += 1;
     return `msg-${msgIdRef.current}`;
   }, []);
 
-  // Mỏ neo dùng để tham chiếu tới vị trí cuối cùng của danh sách
+  // Anchor to reference the bottom of the message list
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
-  // Bước 3.2: Tự động cuộn xuống cuối (Auto-scroll) mỗi khi có tin nhắn mới
+  // Step 3.2: Auto-scroll to bottom on new message
   React.useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isTyping]);
 
-  // Bước 4.2: Khởi tạo Hook đọc Stream
+  // Step 4.2: Initialize Stream Hook
   const { sendMessage, isStreaming } = useChatStream({
     classId,
     onChunk: (chunkText) => {
-      // Khi nhận được mảnh chữ đầu tiên, lập tức tắt 3 dấu chấm loading đi
+      // Turn off typing indicator when first chunk arrives
       setIsTyping(false);
       
-      // Móc chữ mới nối vào đuôi của tin nhắn AI cuối cùng
+      // Append new text to the last AI message
       setMessages(prev => {
         const lastMsg = prev[prev.length - 1];
         if (!lastMsg || lastMsg.role !== 'ai') return prev;
@@ -74,23 +74,23 @@ export function ChatWindow({ classId }: { classId: string }) {
     }
   });
 
-  // Hàm xử lý khi user bấm Enter gửi chữ
+  // Handler for user sending a message
   const handleSend = (text: string) => {
-    // 1. Nhét câu hỏi của User VÀ một tin nhắn AI rỗng vào danh sách
+    // 1. Append User message AND an empty AI message to the list
     const newUserMsg: Message = { id: nextMsgId(), role: 'user', content: text };
     const emptyAiMsg: Message = { id: nextMsgId(), role: 'ai', content: '' };
     setMessages(prev => [...prev, newUserMsg, emptyAiMsg]);
     
-    // 2. Bật hiệu ứng AI đang suy nghĩ chờ phản hồi (3 dấu chấm)
+    // 2. Enable AI typing indicator
     setIsTyping(true);
 
-    // 3. Kích hoạt Hook gọi API luồng
+    // 3. Trigger the streaming API hook
     sendMessage(text);
   };
 
   return (
     <div className="flex flex-col h-full relative">
-      {/* Badge scope lớp: user luôn biết AI đang trả lời theo tài liệu lớp nào */}
+      {/* Class scope badge: lets user know AI is answering based on this class's context */}
       <div className="shrink-0 px-4 md:px-6 pt-3">
         <div className="max-w-4xl mx-auto flex items-center gap-2">
           <span
@@ -101,12 +101,12 @@ export function ChatWindow({ classId }: { classId: string }) {
             {cls ? `${cls.code} · ${cls.title}` : `Class ${classId}`}
           </span>
           <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
-            · AI chỉ dùng tài liệu lớp này
+            · AI uses only this class's materials
           </span>
         </div>
       </div>
 
-      {/* Vùng trên: Khung danh sách tin nhắn (Tự động xuất hiện thanh cuộn nếu dài) */}
+      {/* Top area: Message list container (auto-scrolls if long) */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-8">
         <div className="max-w-4xl mx-auto">
           {messages.map((msg) => (
@@ -117,7 +117,7 @@ export function ChatWindow({ classId }: { classId: string }) {
             />
           ))}
 
-          {/* Gợi ý câu hỏi — chỉ hiện khi chưa hỏi gì (ngoài tin chào) */}
+          {/* Suggested questions - only visible before user asks anything */}
           {messages.length <= 1 && !isTyping && (
             <div className="flex flex-wrap gap-2 mt-2">
               {SUGGESTED_QUESTIONS.map((q) => (
@@ -132,7 +132,7 @@ export function ChatWindow({ classId }: { classId: string }) {
             </div>
           )}
           
-          {/* Nếu đang gọi API thì hiện thêm một bong bóng AI trống với hiệu ứng loading */}
+          {/* Show empty AI bubble with loading effect while waiting for API */}
           {isTyping && (
             <MessageBubble 
               role="ai" 
@@ -141,12 +141,12 @@ export function ChatWindow({ classId }: { classId: string }) {
             />
           )}
 
-          {/* Thẻ div rỗng dùng làm mỏ neo (anchor) để hàm scrollIntoView có chỗ trỏ tới */}
+          {/* Empty div serving as an anchor for scrollIntoView */}
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Vùng dưới: Khung nhập tin nhắn (Luôn dính dưới đáy) */}
+      {/* Bottom area: Message input container (sticky to bottom) */}
       <div className="w-full shrink-0">
         <ChatInput onSend={handleSend} disabled={isTyping || isStreaming} />
       </div>

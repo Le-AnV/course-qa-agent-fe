@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Send } from 'lucide-react';
-import { Button } from '@/components/ui/button'; // Giả sử dự án có xài shadcn ui button
+import { Button } from '@/components/ui/button'; // Assuming the project uses shadcn ui button
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -11,7 +11,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [content, setContent] = React.useState('');
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
-  // Tự động thay đổi chiều cao của textarea khi gõ nhiều dòng
+  // Automatically adjust textarea height for multiline input
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
     if (textareaRef.current) {
@@ -27,21 +27,21 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     onSend(trimmed);
     setContent('');
     
-    // Reset chiều cao về mặc định sau khi gửi
+    // Reset height to default after sending
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
   };
 
-  // Bước 3.1: Xử lý sự kiện Enter và Shift+Enter
+  // Step 3.1: Handle Enter and Shift+Enter events
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Trường hợp 1: Nhấn Enter (Không đè Shift) -> Gửi tin nhắn
+    // Case 1: Press Enter (without Shift) -> Send message
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault(); // Chặn trình duyệt tự động chèn dòng mới
-      handleSend();       // Thực thi việc đẩy dữ liệu lên
+      e.preventDefault(); // Prevent browser from inserting a new line
+      handleSend();       // Execute message submission
     }
-    // Trường hợp 2: Nhấn Enter + Shift (e.key === 'Enter' && e.shiftKey)
-    // -> Không gọi preventDefault() để giữ nguyên hành vi mặc định (tự động chèn ký tự \n)
+    // Case 2: Press Enter + Shift (e.key === 'Enter' && e.shiftKey)
+    // -> Do not call preventDefault() to keep default behavior (insert \n)
   };
 
   return (
@@ -53,7 +53,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           onChange={handleInput}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          placeholder="Hỏi trợ lý AI bất cứ điều gì về môn học... (Shift + Enter để xuống dòng)"
+          placeholder="Ask the AI assistant anything about the course... (Shift + Enter for new line)"
           className="flex-1 max-h-[200px] min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm focus:outline-none dark:text-slate-100 placeholder:text-slate-500"
           rows={1}
         />
