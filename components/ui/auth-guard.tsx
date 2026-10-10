@@ -90,6 +90,10 @@ export function useAuth():
   const signOut = React.useCallback(() => {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(AUTH_ROLE_KEY);
+    // Clear cookies for Next.js Middleware
+    document.cookie = `${AUTH_ROLE_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    document.cookie = `${AUTH_TOKEN_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    
     window.dispatchEvent(new Event(AUTH_EVENT));
     router.replace("/login");
   }, [router]);

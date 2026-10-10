@@ -29,28 +29,54 @@ export function LoginModal({ isLoginModalOpen, closeLoginModal }: LoginModalProp
     setIsLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const normalized = identifier.trim().toLowerCase();
-
       let role: Role | null = null;
-      if ((normalized === "student@academic.edu.vn" || normalized === "student") && password === "Student@123") {
-        role = "student";
-      } else if ((normalized === "admin@academic.edu.vn" || normalized === "admin" || normalized === "teacher") && password === "Admin@123") {
-        role = (normalized === "teacher") ? "trainer" : "admin";
+      let token: string | null = null;
+
+      // Lưu ý: Vẫn giữ lại Mock Logic theo yêu cầu để bật/tắt dự phòng
+      const useMock = process.env.NEXT_PUBLIC_USE_MOCK_LOGIN === "true";
+
+      if (useMock) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const normalized = identifier.trim().toLowerCase();
+        if ((normalized === "student@academic.edu.vn" || normalized === "student") && password === "Student@123") {
+          role = "student";
+        } else if ((normalized === "admin@academic.edu.vn" || normalized === "admin") && password === "Admin@123") {
+          role = "admin";
+        } else if ((normalized === "teacher@academic.edu.vn" || normalized === "teacher") && password === "Teacher@123") {
+          role = "trainer";
+        }
+        if (role) token = "demo-token";
+      } else {
+        // Gọi API thật tới Backend
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const res = await fetch(`${apiUrl}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier, password }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          role = data.role as Role;
+          token = data.token;
+        }
       }
 
-      if (role) {
+      if (role && token) {
         setRedirectNotice("Login successful! Redirecting...");
         setTimeout(() => {
-          localStorage.setItem(AUTH_TOKEN_KEY, "demo-token");
+          localStorage.setItem(AUTH_TOKEN_KEY, token as string);
           localStorage.setItem(AUTH_ROLE_KEY, role as string);
+          // Set cookie for Next.js Middleware
+          document.cookie = `${AUTH_ROLE_KEY}=${role}; path=/`;
+          document.cookie = `${AUTH_TOKEN_KEY}=${token}; path=/`;
           window.location.assign(homeRouteFor(role as Role));
         }, 700);
       } else {
         setError("Invalid email or password.");
       }
     } catch {
-      setError("Invalid email or password.");
+      setError("Unable to connect to the server. Please try again.");
     } finally {
       setIsLoading(false);
     }
