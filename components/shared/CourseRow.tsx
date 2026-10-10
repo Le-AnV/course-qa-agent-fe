@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { MoreVertical } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export interface CourseRowProps {
   id: string;

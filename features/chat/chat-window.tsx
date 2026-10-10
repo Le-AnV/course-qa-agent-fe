@@ -101,7 +101,7 @@ export function ChatWindow({ classId }: { classId: string }) {
             {cls ? `${cls.code} · ${cls.title}` : `Class ${classId}`}
           </span>
           <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
-            · AI uses only this class's materials
+            · AI uses only this class&apos;s materials
           </span>
         </div>
       </div>
