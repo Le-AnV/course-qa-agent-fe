@@ -200,6 +200,19 @@ export function acceptedExtensions(): string[] {
   return ACCEPTED_TYPES.map((t) => t.extension);
 }
 
+/**
+ * AI-41 (AC-01): keep the upload target class valid when the async class
+ * list arrives after mount. Keeps `current` if it still exists, otherwise
+ * falls back to the first class ("" when the list is empty, blocking upload).
+ */
+export function resolveDefaultClassId(
+  classes: ClassOption[],
+  current: string,
+): string {
+  if (current && classes.some((c) => c.id === current)) return current;
+  return classes[0]?.id ?? "";
+}
+
 /** Upload AC-01/AC-07 client validation (pure, unit-tested). */
 export function validationError(file: Pick<File, "name" | "size">): string | null {
   const dot = file.name.lastIndexOf(".");
