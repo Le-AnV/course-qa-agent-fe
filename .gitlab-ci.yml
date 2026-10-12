@@ -1,0 +1,52 @@
+# CI for course-qa-agent-fe (AI-123).
+# Runs on FPT instance runners. No CD, no image push, no secrets.
+# NEXT_PUBLIC_API_URL is a dummy build-time value — enough to prove the build compiles.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+
+stages:
+  - lint
+  - build
+
+lint:
+  stage: lint
+  image: node:20-slim
+  tags:
+    - course-qa-fe
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run lint
+  # Advisory only: main still carries ESLint errors from MR !3 (AI-25 scope).
+  # Remove allow_failure once those are fixed — see docs/design/ai-123-ci-pipeline.md.
+  allow_failure: true
+
+build:
+  stage: build
+  image: node:20-slim
+  tags:
+    - course-qa-fe
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+  variables:
+    NEXT_PUBLIC_API_URL: "http://localhost:8000"
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run build
+  needs:
+    - job: lint
+      optional: true
