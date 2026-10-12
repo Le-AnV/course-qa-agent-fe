@@ -6,9 +6,12 @@ import {
 } from "lucide-react";
 
 /** Roles mirror the backend RBAC (AI-27). Client-side filtering is UX only. */
-export type Role = "student" | "trainer" | "admin";
+export type Role = "student" | "trainer" | "teaching_assistant" | "admin";
 
-export const ROLES: Role[] = ["student", "trainer", "admin"];
+export const ROLES: Role[] = ["student", "trainer", "teaching_assistant", "admin"];
+
+/** Importable roles for the admin create/import forms (AC-03, AC-05). */
+export const IMPORTABLE_ROLES: Role[] = ["student", "trainer", "teaching_assistant"];
 
 /** localStorage keys written by the login flow (AI-25) after a successful login. */
 export const AUTH_TOKEN_KEY = "qa.auth.token";
@@ -30,19 +33,19 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: "/chat",
     label: "Chat",
-    roles: ["student", "trainer", "admin"],
+    roles: ["student", "trainer", "teaching_assistant", "admin"],
     icon: MessageSquare,
   },
   {
     href: "/dashboard",
     label: "Dashboard",
-    roles: ["trainer", "admin"],
+    roles: ["trainer", "teaching_assistant", "admin"],
     icon: LayoutDashboard,
   },
   {
     href: "/styleguide",
     label: "Styleguide",
-    roles: ["student", "trainer", "admin"],
+    roles: ["student", "trainer", "teaching_assistant", "admin"],
     icon: Palette,
   },
 ];
