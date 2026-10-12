@@ -26,7 +26,10 @@ const AUTH_EVENT = "qa-auth-changed";
 const SERVER_SNAPSHOT: SessionSnapshot = { status: "loading", role: null };
 
 function readRole(raw: string | null): Role | null {
-  return raw === "student" || raw === "trainer" || raw === "admin"
+  return raw === "student" ||
+    raw === "trainer" ||
+    raw === "teaching_assistant" ||
+    raw === "admin"
     ? raw
     : null;
 }

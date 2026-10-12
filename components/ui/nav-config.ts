@@ -7,9 +7,12 @@ import {
 } from "lucide-react";
 
 /** Roles mirror the backend RBAC (AI-27). Client-side filtering is UX only. */
-export type Role = "student" | "trainer" | "admin";
+export type Role = "student" | "trainer" | "teaching_assistant" | "admin";
 
-export const ROLES: Role[] = ["student", "trainer", "admin"];
+export const ROLES: Role[] = ["student", "trainer", "teaching_assistant", "admin"];
+
+/** Importable roles for the admin create/import forms (AC-03, AC-05). */
+export const IMPORTABLE_ROLES: Role[] = ["student", "trainer", "teaching_assistant"];
 
 /** localStorage keys written by the login flow (AI-25) after a successful login. */
 export const AUTH_TOKEN_KEY = "qa.auth.token";
@@ -28,18 +31,25 @@ export type NavItem = {
  * Routes that do not exist yet (other tickets) will 404 until those land.
  */
 export const NAV_ITEMS: NavItem[] = [
+  // Admin onboarding dashboard (AI-31): reachable via direct URL + mobile nav.
+  {
+    href: "/dashboard",
+    label: "Dashboard",
+    roles: ["trainer", "teaching_assistant", "admin"],
+    icon: LayoutDashboard,
+  },
 // Shared Routes
   {
     href: "/styleguide",
     label: "Styleguide",
-    roles: ["student", "trainer", "admin"],
+    roles: ["student", "trainer", "teaching_assistant", "admin"],
     icon: Palette,
   },
   // Teacher Routes
   {
     href: "/teacher",
     label: "Teacher Portal",
-    roles: ["trainer", "admin"],
+    roles: ["trainer", "teaching_assistant", "admin"],
     icon: BookOpen,
   },
   // Admin Routes
@@ -82,6 +92,7 @@ export function canAccessRoute(role: Role, pathname: string): boolean {
 export function homeRouteFor(role: Role): string {
   if (role === "student") return "/student/home";
   if (role === "trainer") return "/teacher/home";
+  if (role === "teaching_assistant") return "/teacher/home";
   if (role === "admin") return "/admin/home";
   return "/login";
 }
