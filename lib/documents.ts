@@ -68,6 +68,34 @@ export const MOCK_CLASSES: ClassOption[] = [
   { id: "class-b", courseId: "course-cs101", name: "CS101 - Class B", code: "CS101-B" },
 ];
 
+export const MOCK_DOCUMENTS: DocumentItem[] = [
+  {
+    id: "doc-1",
+    fileName: "syllabus.pdf",
+    fileType: ".pdf",
+    mimeType: "application/pdf",
+    sizeBytes: 245760,
+    uploaderId: "trainer-1",
+    classId: "class-a",
+    className: "CS101 - Class A",
+    status: "indexed",
+    createdAt: "2026-10-01T09:00:00Z",
+  },
+  {
+    id: "doc-2",
+    fileName: "week1-slides.pptx",
+    fileType: ".pptx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    sizeBytes: 5242880,
+    uploaderId: "trainer-1",
+    classId: "class-a",
+    className: "CS101 - Class A",
+    status: "pending",
+    createdAt: "2026-10-08T14:30:00Z",
+  },
+];
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 type AuthHeaders = {
@@ -94,11 +122,79 @@ export async function fetchMyClasses(auth: AuthHeaders): Promise<ClassOption[]> 
   return rows.map((r) => ({ id: r.id, courseId: r.course_id, name: r.name, code: r.code }));
 }
 
+type DocumentRow = {
+  id: string;
+  file_name: string;
+  file_type: string;
+  mime_type: string;
+  size_bytes: number;
+  uploader_id: string;
+  class_id: string;
+  class_name: string;
+  status: DocumentStatus;
+  created_at: string;
+};
+
+function toItem(i: DocumentRow): DocumentItem {
+  return {
+    id: i.id,
+    fileName: i.file_name,
+    fileType: i.file_type,
+    mimeType: i.mime_type,
+    sizeBytes: i.size_bytes,
+    uploaderId: i.uploader_id,
+    classId: i.class_id,
+    className: i.class_name,
+    status: i.status,
+    createdAt: i.created_at,
+  };
+}
+export type ListParams = {
+  search?: string;
+  classId?: string;
+  fileType?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export async function fetchDocuments(
+  auth: AuthHeaders,
+  params: ListParams,
+): Promise<{ items: DocumentItem[]; total: number }> {
+  const query = new URLSearchParams();
+  if (params.search) query.set("search", params.search);
+  if (params.classId) query.set("class_id", params.classId);
+  if (params.fileType) query.set("file_type", params.fileType);
+  if (params.status) query.set("status", params.status);
+  query.set("page", String(params.page ?? 1));
+  query.set("page_size", String(params.pageSize ?? 20));
+  const res = await fetch(`${API_URL}/api/documents/?${query.toString()}`, {
+    headers: headers(auth),
+  });
+  if (!res.ok) throw new Error(`Backend responded with ${res.status}`);
+  const body = (await res.json()) as {
+    items: DocumentRow[];
+    total: number;
+  };
+  return {
+    items: body.items.map(toItem),
+    total: body.total,
+  };
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+export type DocumentFilters = {
+  search: string;
+  classId: string;
+  fileType: string;
+  status: string;
+};
 
 export function acceptedExtensions(): string[] {
   return ACCEPTED_TYPES.map((t) => t.extension);
@@ -115,4 +211,24 @@ export function validationError(file: Pick<File, "name" | "size">): string | nul
     return `${file.name}: exceeds 100MB per file.`;
   }
   return null;
+}
+
+/** Mock fallback for the materials list when the backend is unreachable (pure, unit-tested). */
+export function applyMockFallback(
+  all: DocumentItem[],
+  filters: DocumentFilters,
+  page: number,
+  pageSize: number,
+): { items: DocumentItem[]; total: number } {
+  const needle = filters.search.trim().toLowerCase();
+  const filtered = all.filter((d) => {
+    if (needle && !d.fileName.toLowerCase().includes(needle)) return false;
+    if (filters.classId !== "all" && d.classId !== filters.classId) return false;
+    if (filters.fileType !== "all" && d.fileType !== filters.fileType) return false;
+    if (filters.status !== "all" && d.status !== filters.status) return false;
+    return true;
+  });
+  const total = filtered.length;
+  const start = (page - 1) * pageSize;
+  return { items: filtered.slice(start, start + pageSize), total };
 }
