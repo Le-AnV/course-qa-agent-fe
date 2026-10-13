@@ -29,72 +29,38 @@ export function LoginModal({ isLoginModalOpen, closeLoginModal }: LoginModalProp
     setIsLoading(true);
 
     try {
-      let role: Role | null = null;
-      let token: string | null = null;
-
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-      // DB login first (AI-25 / AI-31): POST /api/auth/login {email, password}.
-      // Falls back to the legacy mock contract below for demo accounts.
-      try {
-        const dbRes = await fetch(`${apiUrl}/api/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: identifier.trim(), password }),
-        });
-        if (dbRes.ok) {
-          const data = await dbRes.json();
-          role = data.role as Role;
-          token = data.access_token as string;
-        }
-      } catch {
-        // Network error — fall through to the mock contract.
+      // DB login only (AI-25): POST /api/auth/login {email, password}.
+      // No mock fallback — a failed login must surface here instead of
+      // issuing a mock token that later bounces on the first real API call.
+      const dbRes = await fetch(`${apiUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: identifier.trim(), password }),
+      });
+      if (!dbRes.ok) {
+        setError("Invalid email or password.");
+        return;
       }
+      const data = await dbRes.json();
+      const role = data.role as Role;
+      const token = data.access_token as string;
 
       if (!role || !token) {
-        // Lưu ý: Vẫn giữ lại Mock Logic theo yêu cầu để bật/tắt dự phòng
-        const useMock = process.env.NEXT_PUBLIC_USE_MOCK_LOGIN === "true";
-
-        if (useMock) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          const normalized = identifier.trim().toLowerCase();
-          if ((normalized === "student@academic.edu.vn" || normalized === "student") && password === "Student@123") {
-            role = "student";
-          } else if ((normalized === "admin@academic.edu.vn" || normalized === "admin") && password === "Admin@123") {
-            role = "admin";
-          } else if ((normalized === "teacher@academic.edu.vn" || normalized === "teacher") && password === "Teacher@123") {
-            role = "trainer";
-          }
-          if (role) token = "demo-token";
-        } else {
-          // Gọi API thật tới Backend
-          const res = await fetch(`${apiUrl}/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ identifier, password }),
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            role = data.role as Role;
-            token = data.token;
-          }
-        }
-      }
-
-      if (role && token) {
-        setRedirectNotice("Login successful! Redirecting...");
-        setTimeout(() => {
-          localStorage.setItem(AUTH_TOKEN_KEY, token as string);
-          localStorage.setItem(AUTH_ROLE_KEY, role as string);
-          // Set cookie for Next.js Middleware
-          document.cookie = `${AUTH_ROLE_KEY}=${role}; path=/`;
-          document.cookie = `${AUTH_TOKEN_KEY}=${token}; path=/`;
-          window.location.assign(homeRouteFor(role as Role));
-        }, 700);
-      } else {
         setError("Invalid email or password.");
+        return;
       }
+
+      setRedirectNotice("Login successful! Redirecting...");
+      setTimeout(() => {
+        localStorage.setItem(AUTH_TOKEN_KEY, token as string);
+        localStorage.setItem(AUTH_ROLE_KEY, role as string);
+        // Set cookie for Next.js Middleware
+        document.cookie = `${AUTH_ROLE_KEY}=${role}; path=/`;
+        document.cookie = `${AUTH_TOKEN_KEY}=${token}; path=/`;
+        window.location.assign(homeRouteFor(role as Role));
+      }, 700);
     } catch {
       setError("Unable to connect to the server. Please try again.");
     } finally {
