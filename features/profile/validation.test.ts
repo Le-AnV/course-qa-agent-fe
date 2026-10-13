@@ -5,6 +5,7 @@ import {
   NEW_PASSWORD_MIN,
   initialsFor,
   isAuthFailureMessage,
+  isDisplayNameDirty,
   roleBadgeLabel,
   validateDisplayName,
   validateNewPassword,
@@ -30,6 +31,21 @@ describe("validateDisplayName", () => {
 
   it("trims before measuring", () => {
     expect(validateDisplayName("  An  ")).toBeNull();
+  });
+});
+
+describe("isDisplayNameDirty", () => {
+  it("is false when the draft matches the saved name exactly", () => {
+    expect(isDisplayNameDirty("Academic Trainer", "Academic Trainer")).toBe(false);
+  });
+
+  it("ignores surrounding whitespace so a re-save is a no-op", () => {
+    expect(isDisplayNameDirty("  Academic Trainer  ", "Academic Trainer")).toBe(false);
+  });
+
+  it("is true once the trimmed draft differs from the saved name", () => {
+    expect(isDisplayNameDirty("Academic Trainer 2", "Academic Trainer")).toBe(true);
+    expect(isDisplayNameDirty("  Academic  ", "Academic Trainer")).toBe(true);
   });
 });
 

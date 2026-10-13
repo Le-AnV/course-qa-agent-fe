@@ -19,9 +19,15 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { errorMessage, isSessionError, profileApi, type MeProfile } from "./api";
+import { errorMessage, isSessionError, profileApi } from "./api";
+import { useProfile } from "./profile-context";
 import { PasswordDialog } from "./password-dialog";
-import { initialsFor, roleBadgeLabel, validateDisplayName } from "./validation";
+import {
+  initialsFor,
+  isDisplayNameDirty,
+  roleBadgeLabel,
+  validateDisplayName,
+} from "./validation";
 
 /** Suspense fallback for `app/(shell)/account/page.tsx` (spec §5). */
 export function ProfileLoadingSkeleton() {
@@ -64,41 +70,34 @@ function ReadOnlyRow({
  * Shared profile surface for every authenticated role (AI-29, spec §1–§3).
  * Identity header (monogram avatar + name + email + role badge), an editable
  * display-name card, and a security card that opens the password dialog.
+ * Profile data comes from <ProfileProvider>, so the same /me response feeds
+ * the sidebar identity block.
  */
 export function ProfilePanel({ signOut }: { signOut: () => void }) {
-  const [profile, setProfile] = React.useState<MeProfile | null>(null);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
-  const [draft, setDraft] = React.useState("");
+  const { profile, error, sessionExpired, setProfile, refresh } = useProfile();
+  const [draft, setDraft] = React.useState(profile?.username ?? "");
   const [nameError, setNameError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [passwordOpen, setPasswordOpen] = React.useState(false);
+
+  // Derived state: re-seed the draft when the shared profile changes (load,
+  // rename, refresh). React's documented adjust-during-render pattern — keeps
+  // the input in sync without a cascading render from an effect.
+  const [syncedProfile, setSyncedProfile] = React.useState(profile);
+  if (profile !== syncedProfile) {
+    setSyncedProfile(profile);
+    setDraft(profile?.username ?? "");
+  }
 
   const expireSession = React.useCallback(() => {
     toast.error("Session expired. Log in again to continue.");
     signOut();
   }, [signOut]);
 
-  // NOTE: mount-time fetch only; load() sets state after await, never synchronously.
-  const load = React.useCallback(async () => {
-    setLoadError(null);
-    try {
-      const me = await profileApi.me();
-      setProfile(me);
-      setDraft(me.username);
-      setNameError(null);
-    } catch (err) {
-      if (isSessionError(err)) {
-        expireSession();
-        return;
-      }
-      setLoadError("Couldn't load your profile. Check the connection and retry.");
-    }
-  }, [expireSession]);
-
+  // /me answered 401/403 — renew the session exactly like a failed save did.
   React.useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time fetch; load() only sets state after await, never synchronously.
-    void load();
-  }, [load]);
+    if (sessionExpired) expireSession();
+  }, [sessionExpired, expireSession, profile]);
 
   /** AC-03 — rename; the updated /me re-renders the header, no reload. */
   async function saveName(event: React.FormEvent) {
@@ -124,23 +123,25 @@ export function ProfilePanel({ signOut }: { signOut: () => void }) {
     }
   }
 
-  if (!profile && !loadError) return <ProfileLoadingSkeleton />;
+  if (!profile && !error) return <ProfileLoadingSkeleton />;
 
   if (!profile) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pt-6">
         <Alert variant="destructive">
           <AlertTitle>Profile unavailable</AlertTitle>
-          <AlertDescription>{loadError}</AlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
         <div>
-          <Button variant="outline" onClick={() => void load()}>
+          <Button variant="outline" onClick={() => void refresh()}>
             Retry
           </Button>
         </div>
       </div>
     );
   }
+
+  const dirty = isDisplayNameDirty(draft, profile.username);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-12 pt-6">
@@ -184,19 +185,19 @@ export function ProfilePanel({ signOut }: { signOut: () => void }) {
                 {nameError && <FieldError>{nameError}</FieldError>}
               </Field>
             </FieldGroup>
-            <div className="flex flex-col gap-3">
-              <Separator />
-              <ReadOnlyRow label="Email">{profile.email}</ReadOnlyRow>
-              <ReadOnlyRow label="Role">
-                <Badge variant="secondary">{roleBadgeLabel(profile.role)}</Badge>
+            {/* Read-only facts — shaded so they cannot be mistaken for inputs. */}
+            <div className="flex flex-col gap-2 rounded-md bg-muted/60 p-3">
+              <ReadOnlyRow label="Email" separator={false}>
+                {profile.email}
               </ReadOnlyRow>
-              <ReadOnlyRow label="Class" separator={false}>
-                {profile.class_id ?? "Unassigned"}
+              <ReadOnlyRow label="Role" separator={false}>
+                <Badge variant="secondary">{roleBadgeLabel(profile.role)}</Badge>
               </ReadOnlyRow>
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={saving}>
+            {/* Enabled only when saving would actually change the name. */}
+            <Button type="submit" disabled={saving || !dirty}>
               {saving && <Spinner data-icon="inline-start" />}
               Save changes
             </Button>

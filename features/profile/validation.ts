@@ -28,6 +28,11 @@ export function validateDisplayName(raw: string): string | null {
   return null;
 }
 
+/** True when saving would actually change the stored display name. */
+export function isDisplayNameDirty(raw: string, saved: string): boolean {
+  return (raw ?? "").trim() !== (saved ?? "").trim();
+}
+
 export function validateNewPassword(oldPassword: string, next: string): string | null {
   if (!next) return "New password is required.";
   if (next.length < NEW_PASSWORD_MIN)

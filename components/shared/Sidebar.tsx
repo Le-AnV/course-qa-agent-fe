@@ -18,6 +18,8 @@ import {
 import { Role } from "@/components/ui/nav-config";
 import { useAuth } from "@/components/ui/auth-guard";
 import { classesForRole } from "@/lib/classes";
+import { useProfile } from "@/features/profile/profile-context";
+import { initialsFor, roleBadgeLabel } from "@/features/profile/validation";
 
 export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHome?: boolean }) {
   const pathname = usePathname();
@@ -36,6 +38,11 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
 
   // Một nguồn data duy nhất với trang My Classes + banner (lib/classes.ts).
   const myClasses = classesForRole(role);
+
+  // Identity block — real profile (AI-29), not a hardcoded demo name.
+  const { profile, loading: profileLoading } = useProfile();
+  const displayName = profile?.username ?? (profileLoading ? "Loading…" : "Account");
+  const roleLabel = roleBadgeLabel(profile?.role ?? role);
 
   const basePath = role === "admin" ? "/admin" : role === "student" ? "/student" : "/teacher";
 
@@ -264,20 +271,16 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
           </>
         )}
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <img
-            src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=80"
-            alt="Avatar"
-            className="h-8 w-8 rounded-full border border-[#E2E8F0] object-cover"
-          />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#E2E8F0] bg-[#2563EB] text-[11px] font-bold text-white">
+            {initialsFor(displayName)}
+          </div>
           {!collapsed && (
             <>
               <div className="flex flex-1 flex-col overflow-hidden">
                 <span className="truncate text-[12.5px] font-bold text-[#1e293b]">
-                  {role === "admin" ? "System Admin" : role === "student" ? "Trần Gia Linh" : "Minh"}
+                  {displayName}
                 </span>
-                <span className="text-[11px] text-[#64748B]">
-                  {role === "admin" ? "Admin" : role === "student" ? "Student" : "Teacher"}
-                </span>
+                <span className="text-[11px] text-[#64748B]">{roleLabel}</span>
               </div>
               <button
                 onClick={() => setShowMenu(!showMenu)}
