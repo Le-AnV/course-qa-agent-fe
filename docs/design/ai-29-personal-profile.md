@@ -65,15 +65,24 @@ All other surfaces use existing semantic tokens (`bg-card`, `text-muted-foregrou
 |      role badge                               |
 +--------------------------------------------------+
 |  (B) Card "Profile"                           |
-|      Display name [input]  Email (read-only)   |
-|      Role (badge)  Class (read-only)           |
-|      [Save changes]                           |
+|      Display name [input]                     |
+|      +-------------------------------------+  |
+|      | Email (read-only)  Role (badge)     |  |
+|      | shaded block — not editable         |  |
+|      +-------------------------------------+  |
+|      [Save changes] (disabled until dirty)     |
 +--------------------------------------------------+
 |  (C) Card "Security"                          |
 |      [Change password] -> Dialog               |
 |      Old / New / Confirm + [Update password]   |
 +--------------------------------------------------+
 ```
+
+> Update (`features/Implementation_PersonalProfileUI`): the `Class` row was
+> removed from the profile card — class is admin-managed and outside AC-01;
+> showing it exposed a raw `class_id` UUID. Read-only facts now sit in a
+> shaded block so they cannot be mistaken for inputs, and **Save changes**
+> is disabled until the display name draft differs from the saved value.
 
 - Max width `max-w-2xl mx-auto`, vertical rhythm `flex flex-col gap-6`
   (never `space-y-*` per shadcn rule). Content left-aligned; nothing centered
