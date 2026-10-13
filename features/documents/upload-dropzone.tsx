@@ -15,6 +15,7 @@ import {
   ACCEPTED_TYPES,
   acceptedExtensions,
   formatFileSize,
+  resolveDefaultClassId,
   validationError,
   type ClassOption,
 } from "@/lib/documents";
@@ -36,7 +37,11 @@ export function UploadDropzone({
   classes: ClassOption[];
   onUploaded?: () => void;
 }) {
-  const [classId, setClassId] = useState(classes[0]?.id ?? "");
+  // AI-41 (AC-01): derive the target class during render so it stays
+  // valid when the async class list arrives after mount — uploads are
+  // never tagged with a stale class, with no sync effect needed.
+  const [chosenClassId, setChosenClassId] = useState(classes[0]?.id ?? "");
+  const classId = resolveDefaultClassId(classes, chosenClassId);
   const [files, setFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [state, setState] = useState<UploadState>({ status: "idle" });
@@ -114,7 +119,7 @@ export function UploadDropzone({
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">Class</span>
-          <Select value={classId} onValueChange={setClassId}>
+          <Select value={classId} onValueChange={setChosenClassId}>
             <SelectTrigger aria-label="Choose a class">
               <SelectValue placeholder="Choose a class" />
             </SelectTrigger>

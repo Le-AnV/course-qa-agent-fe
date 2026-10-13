@@ -5,7 +5,9 @@ import {
   acceptedExtensions,
   applyMockFallback,
   formatFileSize,
+  resolveDefaultClassId,
   validationError,
+  type ClassOption,
   type DocumentFilters,
   type DocumentItem,
 } from "./documents";
@@ -98,6 +100,29 @@ describe("formatFileSize", () => {
     expect(formatFileSize(512)).toBe("512 B");
     expect(formatFileSize(2048)).toBe("2.0 KB");
     expect(formatFileSize(5 * 1024 * 1024)).toBe("5.0 MB");
+  });
+});
+
+describe("resolveDefaultClassId (AI-41, AC-01)", () => {
+  const classes: ClassOption[] = [
+    { id: "class-a", courseId: "course-cs101", name: "CS101 - Class A", code: "CS101-A" },
+    { id: "class-b", courseId: "course-cs101", name: "CS101 - Class B", code: "CS101-B" },
+  ];
+
+  it("keeps the current class when it still exists", () => {
+    expect(resolveDefaultClassId(classes, "class-b")).toBe("class-b");
+  });
+
+  it("falls back to the first class when current is stale", () => {
+    expect(resolveDefaultClassId(classes, "class-mock")).toBe("class-a");
+  });
+
+  it("falls back to the first class when current is empty", () => {
+    expect(resolveDefaultClassId(classes, "")).toBe("class-a");
+  });
+
+  it("returns empty string when there are no classes (blocks upload)", () => {
+    expect(resolveDefaultClassId([], "class-a")).toBe("");
   });
 });
 
