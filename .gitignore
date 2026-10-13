@@ -43,3 +43,6 @@ next-env.d.ts
 
 # windows
 Thumbs.db
+
+# impeccable skill artifacts (design detector/critique working dir)
+.impeccable/

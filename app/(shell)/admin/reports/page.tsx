@@ -16,7 +16,7 @@ export default function AdminReportsPage() {
     <div className="max-w-[960px] mx-auto pb-12 space-y-6 bg-[#F8FAFC]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-[28px] font-bold text-[#172033] font-[family-name:var(--font-lora)] tracking-tight">Reports</h1>
+          <h1 className="text-[28px] font-bold text-[#172033] font-heading tracking-tight">Reports</h1>
           <p className="text-[14px] text-[#64748B] mt-1">System moderation and review.</p>
         </div>
       </div>
