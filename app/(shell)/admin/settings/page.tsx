@@ -6,7 +6,7 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-[800px] mx-auto pb-12 space-y-8 bg-[#F8FAFC]">
       <div>
-        <h1 className="text-[28px] font-bold text-[#172033] font-[family-name:var(--font-lora)] tracking-tight">Settings</h1>
+        <h1 className="text-[28px] font-bold text-[#172033] font-heading tracking-tight">Settings</h1>
         <p className="text-[14px] text-[#64748B] mt-1">Configure platform rules and defaults.</p>
       </div>
 
