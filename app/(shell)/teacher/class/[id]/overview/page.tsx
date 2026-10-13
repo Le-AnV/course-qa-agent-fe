@@ -13,7 +13,7 @@ export default function TeacherClassOverviewPage() {
   return (
     <div className="space-y-8 max-w-[920px]">
       <div>
-        <h2 className="text-[22px] font-bold font-[family-name:var(--font-lora)] text-[#172033]">Class Overview</h2>
+        <h2 className="text-[22px] font-bold font-heading text-[#172033]">Class Overview</h2>
         <p className="text-[14px] text-[#64748B] mt-0.5">At a glance information and quick actions for your class.</p>
       </div>
 
@@ -62,7 +62,7 @@ export default function TeacherClassOverviewPage() {
 
       {/* Shortcuts */}
       <div className="space-y-4">
-        <h3 className="text-[17px] font-bold font-[family-name:var(--font-lora)] text-[#172033]">Quick Actions</h3>
+        <h3 className="text-[17px] font-bold font-heading text-[#172033]">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div 
             onClick={() => router.push(`/teacher/class/${id}/syllabus`)}
@@ -133,7 +133,7 @@ export default function TeacherClassOverviewPage() {
       {/* Announcements */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-[17px] font-bold font-[family-name:var(--font-lora)] text-[#172033]">Class Announcements</h3>
+          <h3 className="text-[17px] font-bold font-heading text-[#172033]">Class Announcements</h3>
           <button className="text-[13px] font-semibold text-[#2563EB] hover:underline">New Announcement</button>
         </div>
         

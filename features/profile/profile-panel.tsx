@@ -2,23 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
+import { Check, KeyRound, Loader2, Mail } from "lucide-react";
 import { errorMessage, isSessionError, profileApi } from "./api";
 import { useProfile } from "./profile-context";
 import { PasswordDialog } from "./password-dialog";
@@ -29,49 +13,36 @@ import {
   validateDisplayName,
 } from "./validation";
 
-/** Suspense fallback for `app/(shell)/account/page.tsx` (spec §5). */
+/** Suspense fallback for `app/(shell)/account/page.tsx` — masthead + two cards. */
 export function ProfileLoadingSkeleton() {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pt-6" aria-busy="true">
-      <div className="flex items-center gap-4">
-        <Skeleton className="size-10 rounded-full" />
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-4 w-56" />
+    <div className="mx-auto w-full max-w-3xl" aria-busy="true">
+      <div className="h-7 w-32 animate-pulse rounded bg-[#F1F5F9]" />
+      <div className="mt-2 h-4 w-64 animate-pulse rounded bg-[#F1F5F9]" />
+      <div className="mt-10 flex flex-col gap-6">
+        <div className="h-[92px] animate-pulse rounded-lg border border-[#E2E8F0] bg-white shadow-sm" />
+        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+          <div className="h-[232px] animate-pulse rounded-lg border border-[#E2E8F0] bg-white shadow-sm" />
+          <div className="h-[232px] animate-pulse rounded-lg border border-[#E2E8F0] bg-white shadow-sm" />
         </div>
       </div>
-      <Skeleton className="h-64 w-full" />
-      <Skeleton className="h-36 w-full" />
     </div>
   );
 }
 
-function ReadOnlyRow({
-  label,
-  children,
-  separator = true,
-}: {
-  label: string;
-  children: React.ReactNode;
-  separator?: boolean;
-}) {
-  return (
-    <>
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        <span className="truncate text-sm">{children}</span>
-      </div>
-      {separator && <Separator />}
-    </>
-  );
-}
+const FIELD_CLASSES =
+  "mt-1.5 w-full rounded-lg border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-[14px] text-[#1e293b] placeholder:text-[#94A3B8] transition-colors focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 disabled:bg-[#F8FAFC]";
+
+const LABEL_CLASSES = "block text-[12.5px] font-semibold text-[#334155]";
+const CARD_CLASSES = "rounded-lg border border-[#E2E8F0] bg-white shadow-sm";
+const ICON_ACTION_CLASSES =
+  "inline-flex items-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#334155] shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40";
 
 /**
- * Shared profile surface for every authenticated role (AI-29, spec §1–§3).
- * Identity header (monogram avatar + name + email + role badge), an editable
- * display-name card, and a security card that opens the password dialog.
- * Profile data comes from <ProfileProvider>, so the same /me response feeds
- * the sidebar identity block.
+ * Shared profile surface for every authenticated role (AI-29).
+ * Identity column on the left, the rename task as the page's hero on the
+ * right, security a deliberate step below — the product's own blue-and-slate
+ * grammar, not a stock settings form.
  */
 export function ProfilePanel({ signOut }: { signOut: () => void }) {
   const { profile, error, sessionExpired, setProfile, refresh } = useProfile();
@@ -79,15 +50,10 @@ export function ProfilePanel({ signOut }: { signOut: () => void }) {
   const [nameError, setNameError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [passwordOpen, setPasswordOpen] = React.useState(false);
-
-  // Derived state: re-seed the draft when the shared profile changes (load,
-  // rename, refresh). React's documented adjust-during-render pattern — keeps
-  // the input in sync without a cascading render from an effect.
-  const [syncedProfile, setSyncedProfile] = React.useState(profile);
-  if (profile !== syncedProfile) {
-    setSyncedProfile(profile);
-    setDraft(profile?.username ?? "");
-  }
+  // Timestamp of the last successful rename. `justSaved` is DERIVED from it so
+  // the render-phase profile sync below can never clear it by accident.
+  const [lastSavedAt, setLastSavedAt] = React.useState(0);
+  const nameRef = React.useRef<HTMLInputElement>(null);
 
   const expireSession = React.useCallback(() => {
     toast.error("Session expired. Log in again to continue.");
@@ -99,18 +65,43 @@ export function ProfilePanel({ signOut }: { signOut: () => void }) {
     if (sessionExpired) expireSession();
   }, [sessionExpired, expireSession, profile]);
 
+  // Derived state: re-seed the draft when the shared profile changes (load,
+  // rename, refresh). React's documented adjust-during-render pattern.
+  const [syncedProfile, setSyncedProfile] = React.useState(profile);
+  if (profile !== syncedProfile) {
+    setSyncedProfile(profile);
+    setDraft(profile?.username ?? "");
+  }
+
+  // The one authored moment: the confirmation after a rename, then it rests.
+  React.useEffect(() => {
+    if (lastSavedAt === 0) return;
+    const timer = window.setTimeout(() => setLastSavedAt(0), 2500);
+    return () => window.clearTimeout(timer);
+  }, [lastSavedAt]);
+
+  const dirty = isDisplayNameDirty(draft, profile?.username ?? "");
+  const justSaved = lastSavedAt !== 0 && !dirty;
+
   /** AC-03 — rename; the updated /me re-renders the header, no reload. */
   async function saveName(event: React.FormEvent) {
     event.preventDefault();
+    // Guard instead of disabling: a disabled control loses keyboard focus
+    // mid-request (focus falls to <body>) and the user is thrown out of the form.
+    if (saving) return;
     const invalid = validateDisplayName(draft);
     setNameError(invalid);
-    if (invalid) return;
+    if (invalid) {
+      nameRef.current?.focus();
+      return;
+    }
     setSaving(true);
     try {
       const updated = await profileApi.updateProfile(draft);
       setProfile(updated);
       setDraft(updated.username);
       setNameError(null);
+      setLastSavedAt(Date.now());
       toast.success("Profile updated.");
     } catch (err) {
       if (isSessionError(err)) {
@@ -118,105 +109,165 @@ export function ProfilePanel({ signOut }: { signOut: () => void }) {
         return;
       }
       setNameError(errorMessage(err));
+      nameRef.current?.focus();
     } finally {
       setSaving(false);
     }
   }
 
-  if (!profile && !error) return <ProfileLoadingSkeleton />;
-
   if (!profile) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pt-6">
-        <Alert variant="destructive">
-          <AlertTitle>Profile unavailable</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <div>
-          <Button variant="outline" onClick={() => void refresh()}>
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-6 shadow-sm">
+          <h2 className="text-[15px] font-semibold text-[#B91C1C]">Profile unavailable</h2>
+          <p className="mt-1 text-[13px] text-[#7F1D1D]">{error}</p>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-4 py-2 text-[13px] font-semibold text-[#334155] shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+          >
             Retry
-          </Button>
+          </button>
         </div>
       </div>
     );
   }
 
-  const dirty = isDisplayNameDirty(draft, profile.username);
-
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-12 pt-6">
-      {/* (A) Identity header — the single memorable element (spec §1). */}
-      <div className="flex items-center gap-4">
-        <Avatar size="lg">
-          <AvatarFallback className="bg-primary/10 text-base font-semibold text-primary">
+    <div className="mx-auto w-full max-w-3xl">
+      <h1 className="font-heading text-[28px] font-bold tracking-tight text-[#1e293b]">
+        Account
+      </h1>
+      <p className="mt-2 text-[14px] text-[#64748B]">
+        Your profile and the details you use to sign in.
+      </p>
+
+      <div className="mt-10 flex flex-col gap-6">
+        {/* Identity masthead — real facts only, no filler prose. */}
+        <section
+          className={`${CARD_CLASSES} flex flex-wrap items-center gap-x-8 gap-y-4 p-6`}
+          aria-label="Your identity"
+        >
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#2563EB] text-[18px] font-semibold text-white">
             {initialsFor(profile.username)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-heading truncate text-xl font-semibold tracking-tight">
-              {profile.username}
-            </h1>
-            <Badge variant="secondary">{roleBadgeLabel(profile.role)}</Badge>
           </div>
-          <p className="truncate text-sm text-muted-foreground">{profile.email}</p>
-        </div>
-      </div>
-
-      {/* (B) Profile card — only the display name is editable (spec §2). */}
-      <Card>
-        <form onSubmit={(event) => void saveName(event)}>
-          <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>Your display name as it appears across the app.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <FieldGroup>
-              <Field data-invalid={nameError ? true : undefined}>
-                <FieldLabel htmlFor="profile-display-name">Display name</FieldLabel>
-                <Input
-                  id="profile-display-name"
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  aria-invalid={nameError ? true : undefined}
-                  disabled={saving}
-                  autoComplete="name"
-                />
-                {nameError && <FieldError>{nameError}</FieldError>}
-              </Field>
-            </FieldGroup>
-            {/* Read-only facts — shaded so they cannot be mistaken for inputs. */}
-            <div className="flex flex-col gap-2 rounded-md bg-muted/60 p-3">
-              <ReadOnlyRow label="Email" separator={false}>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <h2
+              className="truncate text-[18px] font-semibold text-[#1e293b]"
+              title={profile.username}
+            >
+              {profile.username}
+            </h2>
+            <span className="inline-flex w-fit items-center rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-0.5 text-[11px] font-semibold text-[#2563EB]">
+              {roleBadgeLabel(profile.role)}
+            </span>
+          </div>
+          <dl className="ml-auto flex flex-wrap items-center gap-x-8 gap-y-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <dt className="sr-only">Email</dt>
+              <Mail className="h-4 w-4 shrink-0 text-[#94A3B8]" aria-hidden="true" />
+              <dd className="truncate text-[13px] font-medium text-[#334155]" title={profile.email}>
                 {profile.email}
-              </ReadOnlyRow>
-              <ReadOnlyRow label="Role" separator={false}>
-                <Badge variant="secondary">{roleBadgeLabel(profile.role)}</Badge>
-              </ReadOnlyRow>
+              </dd>
             </div>
-          </CardContent>
-          <CardFooter>
-            {/* Enabled only when saving would actually change the name. */}
-            <Button type="submit" disabled={saving || !dirty}>
-              {saving && <Spinner data-icon="inline-start" />}
-              Save changes
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+            <div className="flex items-center gap-2">
+              <dt className="sr-only">Status</dt>
+              <dd className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#15803D]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#15803D]" aria-hidden="true" />
+                {profile.is_active ? "Active" : "Inactive"}
+              </dd>
+            </div>
+          </dl>
+        </section>
 
-      {/* (C) Security card — password change lives in a dialog (spec §1). */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Security</CardTitle>
-          <CardDescription>Change the password you use to sign in.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" type="button" onClick={() => setPasswordOpen(true)}>
-            Change password
-          </Button>
-        </CardContent>
-      </Card>
+        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+          {/* (2) Rename — the reason people open this page. */}
+          <section className={`${CARD_CLASSES} flex flex-col`}>
+          <div className="px-6 pt-6">
+            <h3 className="text-[15px] font-semibold text-[#1e293b]">Display name</h3>
+            <p className="mt-1 text-[13px] text-[#64748B]">
+              Change how your name appears to everyone else.
+            </p>
+          </div>
+          <form onSubmit={(event) => void saveName(event)} className="flex flex-1 flex-col" aria-busy={saving}>
+            <div className="px-6 py-5">
+              <label className={LABEL_CLASSES} htmlFor="profile-display-name">
+                Name
+              </label>
+              <input
+                id="profile-display-name"
+                ref={nameRef}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                aria-invalid={nameError ? true : undefined}
+                aria-describedby="profile-display-name-hint"
+                autoComplete="name"
+                className={`${FIELD_CLASSES} ${
+                  nameError ? "border-[#FCA5A5] focus:border-[#DC2626] focus:ring-[#DC2626]/20" : ""
+                }`}
+              />
+              {nameError ? (
+                <p className="mt-2 text-[12.5px] text-[#DC2626]">{nameError}</p>
+              ) : (
+                <p id="profile-display-name-hint" className="mt-2 text-[12.5px] text-[#64748B]">
+                  Up to 100 characters.
+                </p>
+              )}
+            </div>
+            <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#E2E8F0] px-6 py-4">
+              <p className="text-[12.5px] text-[#64748B]" role="status" aria-live="polite">
+                {dirty
+                  ? "You have unsaved changes."
+                  : justSaved
+                    ? "All changes saved."
+                    : "Nothing to save yet."}
+              </p>
+              <div className="flex items-center gap-3">
+                {justSaved && (
+                  <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#15803D]">
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                    Saved
+                  </span>
+                )}
+                <button
+                  type="submit"
+                  disabled={!dirty}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-[13px] font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40 ${
+                    dirty
+                      ? "bg-[#2563EB] text-white hover:bg-[#1D4ED8]"
+                      : "cursor-not-allowed bg-[#F1F5F9] text-[#64748B]"
+                  }`}
+                >
+                  {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                  {saving ? "Saving…" : "Save changes"}
+                </button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        {/* (3) Security — a deliberate step beside, never competing. */}
+        <section className={`${CARD_CLASSES} flex flex-col p-6`}>
+          <h3 className="text-[15px] font-semibold text-[#1e293b]">Password</h3>
+          <p className="mt-1 text-[13px] text-[#64748B]">
+            Change the password you use to sign in.
+          </p>
+          <p className="mt-3 text-[12.5px] leading-relaxed text-[#64748B]">
+            Your email and role are managed by your administrator.
+          </p>
+          <div className="mt-auto pt-5">
+            <button
+              type="button"
+              onClick={() => setPasswordOpen(true)}
+              className={ICON_ACTION_CLASSES}
+            >
+              <KeyRound className="h-4 w-4 text-[#94A3B8]" aria-hidden="true" />
+              Change password
+            </button>
+          </div>
+        </section>
+      </div>
+      </div>
 
       <PasswordDialog
         key={passwordOpen ? "open" : "closed"}

@@ -73,7 +73,7 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
         </div>
         {!collapsed && (
           <div className="flex flex-1 flex-col justify-center overflow-hidden">
-            <span className="font-[family-name:var(--font-lora)] text-[15px] font-bold leading-none text-[#1e293b] mb-1">
+            <span className="font-heading text-[15px] font-bold leading-none text-[#1e293b] mb-1">
               Course Q&amp;A
             </span>
             <span className="text-[11px] font-medium leading-none text-[#64748B]">
