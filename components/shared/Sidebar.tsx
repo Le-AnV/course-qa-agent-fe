@@ -212,16 +212,15 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
             </div>
           )}
           <nav className="space-y-0.5">
-            {role !== "admin" && (
-              <Link
-                href={`${basePath}/account`}
-                title="Account"
-                className={linkCls(pathname === `${basePath}/account`)}
-              >
-                <User className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>Account</span>}
-              </Link>
-            )}
+            {/* AI-29: shared profile surface — one route for every role. */}
+            <Link
+              href="/account"
+              title="Account"
+              className={linkCls(pathname === "/account")}
+            >
+              <User className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>Account</span>}
+            </Link>
             <Link
               href={`${basePath}/settings`}
               title="Settings"
@@ -241,7 +240,7 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
             <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
             <div className="absolute bottom-full left-4 mb-2 w-[calc(100%-2rem)] rounded-md border border-[#E2E8F0] bg-white py-1 shadow-sm z-50">
               <Link
-                href={`${basePath}/account`}
+                href="/account"
                 className="block px-4 py-2 text-[12.5px] text-[#334155] hover:bg-slate-50"
                 onClick={() => setShowMenu(false)}
               >
