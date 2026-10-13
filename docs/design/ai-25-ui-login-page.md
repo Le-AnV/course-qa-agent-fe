@@ -2,7 +2,7 @@
 
 > **Ticket:** AI-25
 > **Epic:** E2 - Authentication & Authorization
-> **Status:** Implemented (UI & Client Mock Logic)
+> **Status:** Implemented (DB-backed login via `POST /api/auth/login`)
 
 This document serves as the Design Specs and a hand-over reference detailing the architecture and components built for the Login Page. The purpose is to provide context and guidance for future tasks (especially backend API integration).
 
@@ -29,19 +29,20 @@ The main UI components are located in the `features/login/` directory.
 
 ## 3. Data & Authentication Flow
 
-Currently, the authentication logic is mock-implemented directly on the client-side for demonstration and UI testing purposes.
+The login modal authenticates against the backend only — the client-side mock logic
+(`NEXT_PUBLIC_USE_MOCK_LOGIN`, hardcoded demo passwords, `demo-token`) was removed in
+`hotfix/Bug_MockLoginFallback` (AI-25). A failed login now surfaces "Invalid email or
+password." instead of silently falling through to a fake session that later bounces to
+`/login` on the first authenticated API call.
 
 ### Mechanism:
 1. **Trigger:** User fills in the form and clicks "Login" -> Triggers `handleLoginSubmit()`.
 2. **Validation:** Checks if identifier and password are not empty.
-3. **API Simulation:** The system sets `isLoading` to true and pauses for 1 second (`setTimeout`) to simulate a network request.
-4. **Role Mapping (Mock Logic):**
-   - **Student Role**: Username `student@academic.edu.vn` (or `student`) and Password `Student@123`.
-   - **Admin Role**: Username `admin@academic.edu.vn` (or `admin`) and Password `Admin@123`.
-   - **Trainer Role**: Username `teacher` and Password `Admin@123`.
-5. **State Storage & Redirection:**
-   - **Success**: The system saves a mock `demo-token` to `localStorage` under `AUTH_TOKEN_KEY` and the user's role under `AUTH_ROLE_KEY`. It then utilizes `homeRouteFor` from `components/ui/nav-config.ts` to redirect the user to their role-specific dashboard.
-   - **Failure**: Sets an error message which triggers the Error Banner.
+3. **API Call:** `POST /api/auth/login` with `{ email, password }` while `isLoading` is true.
+4. **Success:** Stores the backend `access_token` + `role` in `localStorage` (`AUTH_TOKEN_KEY` /
+   `AUTH_ROLE_KEY`), mirrors them into cookies for the middleware, then redirects via
+   `homeRouteFor` from `components/ui/nav-config.ts`.
+5. **Failure:** Non-200 or network error shows the Error Banner; no session is written.
 
 ## 4. API Design Contract (Backend Handoff)
 
