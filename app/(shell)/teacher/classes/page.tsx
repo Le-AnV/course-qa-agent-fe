@@ -53,7 +53,7 @@ export default function TeacherClassesPage() {
           <span className="text-[#334155] bg-slate-100 px-2 py-0.5 rounded">{cls.code}</span>
           <span>{cls.term}</span>
         </div>
-        <h3 className="text-[16px] font-[family-name:var(--font-lora)] font-bold text-[#1e293b] leading-snug mb-1.5 group-hover:text-[#2563EB] transition-colors">{cls.title}</h3>
+        <h3 className="text-[16px] font-heading font-bold text-[#1e293b] leading-snug mb-1.5 group-hover:text-[#2563EB] transition-colors">{cls.title}</h3>
         <p className="text-[13px] text-[#64748b] mb-6">{cls.dept}</p>
         
         <div className="flex items-center gap-4 text-[12.5px] text-[#64748b] font-medium mt-auto mb-5">
@@ -88,7 +88,7 @@ export default function TeacherClassesPage() {
     <div className="max-w-[920px] mx-auto pb-12 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-[28px] font-bold text-[#172033] font-[family-name:var(--font-lora)] tracking-tight">My Classes</h1>
+          <h1 className="text-[28px] font-bold text-[#172033] font-heading tracking-tight">My Classes</h1>
           <p className="text-[14px] text-[#64748B] mt-1">Manage your active and past courses.</p>
         </div>
         <button className="flex items-center gap-1.5 px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-[8px] text-[13px] font-semibold transition-colors shadow-sm w-fit">

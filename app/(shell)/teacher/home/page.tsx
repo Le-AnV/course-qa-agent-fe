@@ -46,7 +46,7 @@ export default function TeacherHomePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-[28px] font-[family-name:var(--font-lora)] font-bold text-[#1e293b] tracking-tight">Good afternoon, Minh</h1>
+          <h1 className="text-[28px] font-heading font-bold text-[#1e293b] tracking-tight">Good afternoon, Minh</h1>
           <p className="text-[14px] text-[#64748B] mt-1">
             Here is what needs your attention today.
           </p>
@@ -68,7 +68,7 @@ export default function TeacherHomePage() {
         {/* Needs Attention */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
-            <h2 className="text-[15px] font-[family-name:var(--font-lora)] font-bold text-[#1e293b]">Needs Attention</h2>
+            <h2 className="text-[15px] font-heading font-bold text-[#1e293b]">Needs Attention</h2>
             <span className="px-2.5 py-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/60 rounded uppercase tracking-wider">Action Required</span>
           </div>
           <div className="p-6 space-y-5">
@@ -99,7 +99,7 @@ export default function TeacherHomePage() {
         {/* Activity & Draft Status */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
-            <h2 className="text-[15px] font-[family-name:var(--font-lora)] font-bold text-[#1e293b]">Activity & Draft Status</h2>
+            <h2 className="text-[15px] font-heading font-bold text-[#1e293b]">Activity & Draft Status</h2>
             <span className="px-2.5 py-1 text-[10px] font-bold text-[#2563eb] bg-[#eff6ff] border border-blue-200/60 rounded uppercase tracking-wider">Synced</span>
           </div>
           <div className="p-6 space-y-5">
@@ -131,7 +131,7 @@ export default function TeacherHomePage() {
       {/* Classes you manage */}
       <div className="pt-2">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-[17px] font-[family-name:var(--font-lora)] font-bold text-[#1e293b]">Classes you manage</h2>
+          <h2 className="text-[17px] font-heading font-bold text-[#1e293b]">Classes you manage</h2>
           <Link href="/teacher/classes" className="text-[13px] font-semibold text-[#2563eb] hover:underline flex items-center gap-1">
             View all classes (4) <ChevronRight className="w-3 h-3" />
           </Link>
@@ -146,7 +146,7 @@ export default function TeacherHomePage() {
                   <span>{cls.code}</span>
                   <span>{cls.term}</span>
                 </div>
-                <h3 className="text-[15px] font-[family-name:var(--font-lora)] font-bold text-[#1e293b] leading-snug mb-1.5">{cls.name}</h3>
+                <h3 className="text-[15px] font-heading font-bold text-[#1e293b] leading-snug mb-1.5">{cls.name}</h3>
                 <p className="text-[13px] text-[#64748b] mb-6">{cls.dept}</p>
                 
                 <div className="flex items-center gap-4 text-[12px] text-[#64748b] font-medium mt-auto mb-5">
@@ -172,7 +172,7 @@ export default function TeacherHomePage() {
       {/* Recent Course Activity */}
       <div className="pt-2">
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-          <h2 className="text-[17px] font-[family-name:var(--font-lora)] font-bold text-[#1e293b] mb-5">Recent course activity</h2>
+          <h2 className="text-[17px] font-heading font-bold text-[#1e293b] mb-5">Recent course activity</h2>
           <div className="space-y-5">
             <div className="flex items-center justify-between text-[13px]">
               <div className="flex items-center gap-3">

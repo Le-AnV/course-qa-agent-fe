@@ -12,7 +12,7 @@ export default function StudentHomePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-[28px] font-[family-name:var(--font-lora)] font-bold text-[#1e293b] tracking-tight">Welcome back, Trần Gia Linh</h1>
+          <h1 className="text-[28px] font-heading font-bold text-[#1e293b] tracking-tight">Welcome back, Trần Gia Linh</h1>
           <p className="text-[14px] text-[#64748B] mt-1">
             Here is your latest activity and upcoming deadlines.
           </p>
@@ -24,7 +24,7 @@ export default function StudentHomePage() {
         {/* Important Updates */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
-            <h2 className="text-[15px] font-[family-name:var(--font-lora)] font-bold text-[#1e293b]">Important Updates</h2>
+            <h2 className="text-[15px] font-heading font-bold text-[#1e293b]">Important Updates</h2>
             <span className="px-2.5 py-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/60 rounded uppercase tracking-wider">Unread</span>
           </div>
           <div className="p-6 space-y-5">

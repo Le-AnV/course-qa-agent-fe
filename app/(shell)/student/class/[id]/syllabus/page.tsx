@@ -43,7 +43,7 @@ export default function StudentClassSyllabusPage() {
   const toolbar = (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-1">
       <div>
-        <h2 className="text-xl font-bold font-[family-name:var(--font-lora)] text-[#172033]">Syllabus</h2>
+        <h2 className="text-xl font-bold font-heading text-[#172033]">Syllabus</h2>
         <p className="text-[13px] text-[#64748B] mt-0.5">View course units, descriptions, and learning materials.</p>
       </div>
       <div className="flex items-center gap-2.5 flex-wrap">
