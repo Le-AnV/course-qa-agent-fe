@@ -3,7 +3,8 @@ import {
   Palette,
   type LucideIcon,
   Home,
-  BookOpen
+  BookOpen,
+  UserCircle,
 } from "lucide-react";
 
 /** Roles mirror the backend RBAC (AI-27). Client-side filtering is UX only. */
@@ -39,6 +40,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
   },
 // Shared Routes
+  {
+    href: "/account",
+    label: "Account",
+    roles: ["student", "trainer", "teaching_assistant", "admin"],
+    icon: UserCircle,
+  },
   {
     href: "/styleguide",
     label: "Styleguide",
