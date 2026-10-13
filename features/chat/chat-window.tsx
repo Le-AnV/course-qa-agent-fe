@@ -5,6 +5,10 @@ import { MessageBubble } from './message-bubble';
 import { ChatInput } from './chat-input';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { getClassById } from '@/lib/classes';
+import { getSessionDetail } from '@/features/history/api';
+import type { ChatMessageItem } from '@/features/history/types';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Define message type
 type Message = {
@@ -14,7 +18,7 @@ type Message = {
 };
 
 // Initialize chat state
-// TODO (Task AI-95): Remove this and replace with chat history API call (GET /api/history)
+// History is fetched via getSessionDetail(activeSessionId) (Task AI-95)
 // History must be filtered by classId - each class has its own chat scope.
 const INITIAL_MESSAGES: Message[] = [
   { 
@@ -31,10 +35,17 @@ const SUGGESTED_QUESTIONS = [
   'What reading materials are required for unit 1?',
 ];
 
-export function ChatWindow({ classId }: { classId: string }) {
+export function ChatWindow({
+  classId,
+  activeSessionId,
+}: {
+  classId: string;
+  activeSessionId?: string | null;
+}) {
   const cls = getClassById(classId);
   const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
   const [isTyping, setIsTyping] = React.useState(false); // Waiting state for the first chunk (to show typing indicator)
+  const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
   
   // Message ID counter (stable IDs, avoid calling impure fn during render).
   const msgIdRef = React.useRef(0);
@@ -45,6 +56,50 @@ export function ChatWindow({ classId }: { classId: string }) {
 
   // Anchor to reference the bottom of the message list
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Load chat session history when activeSessionId changes (AC-07)
+  React.useEffect(() => {
+    if (!activeSessionId) {
+      const timer = setTimeout(() => {
+        setMessages(INITIAL_MESSAGES);
+        setIsLoadingHistory(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
+    let isMounted = true;
+    Promise.resolve().then(() => {
+      if (isMounted) {
+        setIsLoadingHistory(true);
+      }
+    });
+
+    getSessionDetail(activeSessionId)
+      .then((detail) => {
+        if (!isMounted) return;
+        const loaded: Message[] = (detail.messages || []).map((m: ChatMessageItem) => ({
+          id: m.id,
+          role: m.role.toLowerCase() === 'user' ? 'user' : 'ai',
+          content: m.content,
+        }));
+
+        setMessages(loaded.length > 0 ? loaded : INITIAL_MESSAGES);
+      })
+      .catch((err) => {
+        console.error('Failed to load session history:', err);
+        toast.error('Không thể tải lịch sử cuộc trò chuyện.');
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingHistory(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeSessionId]);
+
 
   // Step 3.2: Auto-scroll to bottom on new message
   React.useEffect(() => {
@@ -109,13 +164,26 @@ export function ChatWindow({ classId }: { classId: string }) {
       {/* Top area: Message list container (auto-scrolls if long) */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-8">
         <div className="max-w-4xl mx-auto">
-          {messages.map((msg) => (
-            <MessageBubble
-              key={msg.id}
-              role={msg.role}
-              content={msg.content}
-            />
-          ))}
+          {isLoadingHistory ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400 dark:text-slate-500">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="text-xs">Đang tải cuộc trò chuyện...</span>
+            </div>
+          ) : (
+            messages.map((msg, idx) => {
+              const isLastMessage = idx === messages.length - 1;
+              const isMessageStreaming = isStreaming && isLastMessage && msg.role === 'ai';
+
+              return (
+                <MessageBubble
+                  key={msg.id}
+                  role={msg.role}
+                  content={msg.content}
+                  isStreaming={isMessageStreaming}
+                />
+              );
+            })
+          )}
 
           {/* Suggested questions - only visible before user asks anything */}
           {messages.length <= 1 && !isTyping && (
