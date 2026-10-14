@@ -2,26 +2,26 @@ import { AUTH_TOKEN_KEY } from "@/components/ui/nav-config";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export type Course = { id: number; code: string; title: string; class_count: number };
+export type Course = { id: string; code: string; title: string; class_count: number };
 export type ClassSection = {
-  id: number;
-  course_id: number;
+  id: string;
+  course_id: string;
   course_code: string;
   code: string;
-  trainer_id: number | null;
+  trainer_id: string | null;
   trainer_name: string | null;
-  ta_id: number | null;
+  ta_id: string | null;
   ta_name: string | null;
   student_count: number;
   document_count: number;
   ticket_count: number;
 };
 export type AdminUser = {
-  id: number;
+  id: string;
   username: string;
   email: string;
   role: string;
-  class_id: number | null;
+  class_id: string | null;
   class_code: string | null;
   is_active: boolean;
 };
@@ -87,17 +87,20 @@ export const adminApi = {
   courses: () => apiFetch<Course[]>("/api/admin/courses"),
   createCourse: (code: string, title: string) =>
     apiFetch<Course>("/api/admin/courses", { method: "POST", body: JSON.stringify({ code, title }) }),
-  classes: (courseId?: number) =>
+  classes: (courseId?: string | number) =>
     apiFetch<ClassSection[]>(`/api/admin/classes${courseId ? `?course_id=${courseId}` : ""}`),
-  createClass: (course_id: number, code: string) =>
-    apiFetch<ClassSection>("/api/admin/classes", { method: "POST", body: JSON.stringify({ course_id, code }) }),
-  assignStaff: (classId: number, trainer_id: number | null, ta_id: number | null) =>
+  createClass: (course_id: string | number, code: string, name?: string, semester?: string, academic_year?: string, trainer_id?: string | number) =>
+    apiFetch<ClassSection>("/api/admin/classes", {
+      method: "POST",
+      body: JSON.stringify({ course_id, code, name, semester, academic_year, trainer_id: trainer_id || null }),
+    }),
+  assignStaff: (classId: string | number, trainer_id: string | number | null, ta_id: string | number | null) =>
     apiFetch<ClassSection>(`/api/admin/classes/${classId}/assign`, {
       method: "PATCH",
       body: JSON.stringify({ trainer_id, ta_id }),
     }),
-  deleteClass: (classId: number) =>
-    apiFetch<{ deleted: number; document_count: number; ticket_count: number; member_count: number }>(
+  deleteClass: (classId: string | number) =>
+    apiFetch<{ deleted: string; document_count: number; ticket_count: number; member_count: number }>(
       `/api/admin/classes/${classId}`,
       { method: "DELETE" },
     ),
@@ -109,23 +112,38 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify({ username, email, role, class_code: class_code || null }),
     }),
-  setActive: (userId: number, is_active: boolean) =>
+  setActive: (userId: string | number, is_active: boolean) =>
     apiFetch<AdminUser>(`/api/admin/users/${userId}/active`, {
       method: "PATCH",
       body: JSON.stringify({ is_active }),
     }),
-  resetPassword: (userId: number) =>
-    apiFetch<{ user_id: number; emailed_to: string }>(`/api/admin/users/${userId}/reset-password`, {
+  resetPassword: (userId: string | number) =>
+    apiFetch<{ user_id: string; emailed_to: string }>(`/api/admin/users/${userId}/reset-password`, {
       method: "POST",
     }),
-  deleteUser: (userId: number) =>
-    apiFetch<{ deleted: number }>(`/api/admin/users/${userId}?confirm=true`, { method: "DELETE" }),
+  deleteUser: (userId: string | number) =>
+    apiFetch<{ deleted: string }>(`/api/admin/users/${userId}?confirm=true`, { method: "DELETE" }),
 
   // Import (AC-05..AC-10)
   templateUrl: () => `${API_URL}/api/admin/import-template`,
   authToken: () => (typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null),
+  uploadImport: async (file: File): Promise<ImportBatch> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+    const res = await fetch(`${API_URL}/api/admin/imports`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error((body as { detail?: string }).detail ?? `Upload failed (${res.status})`);
+    }
+    return (await res.json()) as ImportBatch;
+  },
   imports: () => apiFetch<ImportBatch[]>("/api/admin/imports"),
-  importDetail: (batchId: number) => apiFetch<ImportBatchDetail>(`/api/admin/imports/${batchId}`),
+  importDetail: (batchId: number | string) => apiFetch<ImportBatchDetail>(`/api/admin/imports/${batchId}`),
 
   // Email (AC-08, AC-09)
   emailConfig: () => apiFetch<EmailConfig>("/api/admin/email-config"),
