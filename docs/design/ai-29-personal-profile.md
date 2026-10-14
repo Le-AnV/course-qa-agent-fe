@@ -226,7 +226,7 @@ expired/invalid session → clear session → redirect `/login`.
 
 - Email / role / class editing (admin-managed, AI-31).
 - Avatar upload (no BE column; remove mock button).
-- Legacy mock login contract (`POST /auth/login`, `demo-token`) — untouched.
+- Legacy mock login contract (`POST /auth/login`, `demo-token`) — removed; login is DB-only.
 - Admin user management UI (`/dashboard/accounts`) — separate ticket.
 - Adding `@tanstack/react-query` / `@tanstack/react-form`: needs team approval
   per no-dependency-changes rule — Implementation phase 1 uses `apiFetch` +

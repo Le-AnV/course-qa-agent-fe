@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { canAccessRoute, homeRouteFor, type Role, AUTH_ROLE_KEY } from './components/ui/nav-config';
 
 // Paths that don't require authentication
-const PUBLIC_PATHS = ['/login', '/styleguide'];
+const PUBLIC_PATHS = ['/', '/landing', '/login', '/styleguide'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
