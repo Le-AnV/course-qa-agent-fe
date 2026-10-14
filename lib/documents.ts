@@ -98,6 +98,29 @@ export const MOCK_DOCUMENTS: DocumentItem[] = [
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export function backendUrl(): string {
+  return API_URL;
+}
+
+/** HTTP error from the backend (network failures throw TypeError instead). */
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, detail?: string | null) {
+    super(detail ?? `Backend responded with ${status}`);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+async function throwForStatus(res: Response): Promise<never> {
+  const detail = await res
+    .json()
+    .then((b) => (b as { detail?: string }).detail)
+    .catch(() => null);
+  throw new ApiError(res.status, detail);
+}
+
 type AuthHeaders = {
   token: string;
 };
@@ -112,7 +135,7 @@ export async function fetchMyClasses(auth: AuthHeaders): Promise<ClassOption[]> 
   const res = await fetch(`${API_URL}/api/documents/classes/mine`, {
     headers: headers(auth),
   });
-  if (!res.ok) throw new Error(`Backend responded with ${res.status}`);
+  if (!res.ok) await throwForStatus(res);
   const rows = (await res.json()) as {
     id: string;
     course_id: string;
@@ -172,7 +195,7 @@ export async function fetchDocuments(
   const res = await fetch(`${API_URL}/api/documents/?${query.toString()}`, {
     headers: headers(auth),
   });
-  if (!res.ok) throw new Error(`Backend responded with ${res.status}`);
+  if (!res.ok) await throwForStatus(res);
   const body = (await res.json()) as {
     items: DocumentRow[];
     total: number;
@@ -181,6 +204,19 @@ export async function fetchDocuments(
     items: body.items.map(toItem),
     total: body.total,
   };
+}
+
+/** AI-41: approve pending -> processing (trainer/admin only, BE enforces). */
+export async function approveDocument(
+  auth: AuthHeaders,
+  documentId: string,
+): Promise<DocumentItem> {
+  const res = await fetch(
+    `${API_URL}/api/documents/${encodeURIComponent(documentId)}/approve`,
+    { method: "POST", headers: headers(auth) },
+  );
+  if (!res.ok) await throwForStatus(res);
+  return toItem((await res.json()) as DocumentRow);
 }
 
 export function formatFileSize(bytes: number): string {

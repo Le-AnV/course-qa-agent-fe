@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -46,8 +47,10 @@ export function DocumentList({
   filters,
   loading = false,
   error = null,
+  approvingId = null,
   onFiltersChange,
   onPageChange,
+  onApprove,
 }: {
   documents: DocumentItem[];
   classes: ClassOption[];
@@ -57,8 +60,10 @@ export function DocumentList({
   filters: DocumentFilters;
   loading?: boolean;
   error?: string | null;
+  approvingId?: string | null;
   onFiltersChange: (next: DocumentFilters) => void;
   onPageChange: (page: number) => void;
+  onApprove?: (documentId: string) => void;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -145,6 +150,7 @@ export function DocumentList({
                 <TableHead>Class</TableHead>
                 <TableHead>Uploaded</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -160,6 +166,19 @@ export function DocumentList({
                     <Badge variant={STATUS_VARIANT[d.status]}>
                       {d.status === "pending" ? "pending approval" : d.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {d.status === "pending" && onApprove && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={approvingId === d.id || loading}
+                        onClick={() => onApprove(d.id)}
+                      >
+                        {approvingId === d.id ? "Approving…" : "Approve"}
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
