@@ -103,3 +103,14 @@ export function homeRouteFor(role: Role): string {
   if (role === "admin") return "/admin/home";
   return "/login";
 }
+
+/**
+ * Settings route per role, or null when the role has no settings page.
+ * Only admin/teacher shells ship a settings route — there is no
+ * student/settings page, so the sidebar must not link to it (BUG-02).
+ */
+export function settingsHrefForRole(role: Role): string | null {
+  if (role === "student") return null;
+  if (role === "admin") return "/admin/settings";
+  return "/teacher/settings";
+}

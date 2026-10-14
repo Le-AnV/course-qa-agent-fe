@@ -15,7 +15,7 @@ import {
   PanelLeft,
   ChevronDown,
 } from "lucide-react";
-import { Role } from "@/components/ui/nav-config";
+import { Role, settingsHrefForRole } from "@/components/ui/nav-config";
 import { useAuth } from "@/components/ui/auth-guard";
 import { classesForRole } from "@/lib/classes";
 import { useProfile } from "@/features/profile/profile-context";
@@ -45,6 +45,11 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
   const roleLabel = roleBadgeLabel(profile?.role ?? role);
 
   const basePath = role === "admin" ? "/admin" : role === "student" ? "/student" : "/teacher";
+
+  // Settings page exists only for admin/teacher shells — there is no
+  // student/settings route, so hide the link for students instead of
+  // pointing at a 404 (BUG-02).
+  const settingsHref = settingsHrefForRole(role);
 
   // Parent highlight: sáng mục Classes khi đang ở trong 1 lớp con.
   const inClassWorkspace = pathname.startsWith(`${basePath}/class/`);
@@ -228,14 +233,16 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
               <User className="h-4 w-4 shrink-0" />
               {!collapsed && <span>Account</span>}
             </Link>
-            <Link
-              href={`${basePath}/settings`}
-              title="Settings"
-              className={linkCls(pathname === `${basePath}/settings`)}
-            >
-              <Settings className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>Settings</span>}
-            </Link>
+            {settingsHref && (
+              <Link
+                href={settingsHref}
+                title="Settings"
+                className={linkCls(pathname === settingsHref)}
+              >
+                <Settings className="h-4 w-4 shrink-0" />
+                {!collapsed && <span>Settings</span>}
+              </Link>
+            )}
           </nav>
         </div>
       </div>
@@ -253,13 +260,15 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
               >
                 View profile
               </Link>
-              <Link
-                href={`${basePath}/settings`}
-                className="block px-4 py-2 text-[12.5px] text-[#334155] hover:bg-slate-50"
-                onClick={() => setShowMenu(false)}
-              >
-                Account settings
-              </Link>
+              {settingsHref && (
+                <Link
+                  href={settingsHref}
+                  className="block px-4 py-2 text-[12.5px] text-[#334155] hover:bg-slate-50"
+                  onClick={() => setShowMenu(false)}
+                >
+                  Account settings
+                </Link>
+              )}
               <div className="my-1 border-t border-[#E2E8F0]" />
               <button
                 onClick={handleLogout}
