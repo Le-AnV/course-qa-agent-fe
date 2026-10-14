@@ -15,7 +15,7 @@ import {
   PanelLeft,
   ChevronDown,
 } from "lucide-react";
-import { Role } from "@/components/ui/nav-config";
+import { Role, settingsHrefForRole } from "@/components/ui/nav-config";
 import { useAuth } from "@/components/ui/auth-guard";
 import { classesForRole } from "@/lib/classes";
 import { useProfile } from "@/features/profile/profile-context";
@@ -49,7 +49,7 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
   // Settings page exists only for admin/teacher shells — there is no
   // student/settings route, so hide the link for students instead of
   // pointing at a 404 (BUG-02).
-  const settingsHref = role === "student" ? null : `${basePath}/settings`;
+  const settingsHref = settingsHrefForRole(role);
 
   // Parent highlight: sáng mục Classes khi đang ở trong 1 lớp con.
   const inClassWorkspace = pathname.startsWith(`${basePath}/class/`);
