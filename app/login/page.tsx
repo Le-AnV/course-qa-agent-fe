@@ -42,12 +42,13 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      let role: Role | null = null;
-      let token: string | null = null;
-
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-      // 1. Try DB Login first (AI-25 / AI-31): POST /api/auth/login {email, password}
+      // DB login only (AI-25): POST /api/auth/login {email, password}.
+      // No mock fallback — a failed login must surface here instead of issuing
+      // a fake session that later bounces on the first real API call.
+      let role: Role | null = null;
+      let token: string | null = null;
       try {
         const dbRes = await fetch(`${apiUrl}/api/auth/login`, {
           method: "POST",
@@ -61,62 +62,11 @@ export default function LoginPage() {
         } else if (dbRes.status === 401) {
           const errData = await dbRes.json().catch(() => null);
           setError(errData?.detail || "Invalid email or password.");
-          setIsLoading(false);
           return;
         }
       } catch {
-        // Network error or backend offline — fallback to mock logic
-      }
-
-      // 2. Fallback for demo environments or when DB is not ready
-      if (!role || !token) {
-        const useMock = process.env.NEXT_PUBLIC_USE_MOCK_LOGIN === "true";
-
-        if (useMock) {
-          await new Promise((resolve) => setTimeout(resolve, 800));
-          const normalized = cleanIdentifier.toLowerCase();
-          if (
-            (normalized === "student@academic.edu.vn" || normalized === "student") &&
-            password === "Student@123"
-          ) {
-            role = "student";
-          } else if (
-            (normalized === "admin@academic.edu.vn" || normalized === "admin") &&
-            password === "Admin@123"
-          ) {
-            role = "admin";
-          } else if (
-            (normalized === "teacher@academic.edu.vn" ||
-              normalized === "teacher" ||
-              normalized === "trainer") &&
-            (password === "Teacher@123" || password === "Admin@123")
-          ) {
-            role = "trainer";
-          }
-          if (role) token = "demo-token";
-        } else {
-          // Legacy backend adapter: POST /auth/login
-          try {
-            const res = await fetch(`${apiUrl}/auth/login`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ identifier: cleanIdentifier, password }),
-            });
-
-            if (res.ok) {
-              const data = await res.json();
-              role = data.role as Role;
-              token = data.token;
-            } else {
-              const errData = await res.json().catch(() => null);
-              setError(errData?.detail || "Invalid email or password.");
-              setIsLoading(false);
-              return;
-            }
-          } catch {
-            // Handled below if token remains null
-          }
-        }
+        setError("Unable to connect to the authentication service. Please verify your connection.");
+        return;
       }
 
       if (role && token) {
