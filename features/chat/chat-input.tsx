@@ -64,7 +64,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           className="h-10 w-10 shrink-0 rounded-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
         >
           <Send className="h-4 w-4" />
-          <span className="sr-only">Gửi</span>
+          <span className="sr-only">Send</span>
         </Button>
       </div>
     </div>
