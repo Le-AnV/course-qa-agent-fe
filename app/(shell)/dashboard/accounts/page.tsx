@@ -161,7 +161,7 @@ export default function AccountsPage() {
                 <option value="">Select a class…</option>
                 {classes.map((k) => (
                   <option key={k.id} value={k.code}>
-                    {k.code} ({k.course_code})
+                    {k.code}
                   </option>
                 ))}
               </select>

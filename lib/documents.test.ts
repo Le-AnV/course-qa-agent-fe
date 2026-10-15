@@ -105,8 +105,8 @@ describe("formatFileSize", () => {
 
 describe("resolveDefaultClassId (AI-41, AC-01)", () => {
   const classes: ClassOption[] = [
-    { id: "class-a", courseId: "course-cs101", name: "CS101 - Class A", code: "CS101-A" },
-    { id: "class-b", courseId: "course-cs101", name: "CS101 - Class B", code: "CS101-B" },
+    { id: "class-a", name: "CS101 - Class A", code: "CS101-A" },
+    { id: "class-b", name: "CS101 - Class B", code: "CS101-B" },
   ];
 
   it("keeps the current class when it still exists", () => {

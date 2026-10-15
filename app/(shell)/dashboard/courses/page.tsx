@@ -15,22 +15,24 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { adminApi, type AdminUser, type ClassSection, type Course } from "@/lib/admin-api";
+import { adminApi, type AdminUser, type ClassSection } from "@/lib/admin-api";
 
 /**
- * Courses & classes (AC-01, AC-02, AC-12).
- * Course first, then classes under it. One trainer per class.
- * Deleting a class warns first when it still has documents/tickets.
+ * Classes (each class IS the subject — no course binding).
+ * One trainer per class (AC-02). Credits are entered manually (1-6) and
+ * capped at 20 per student per semester at enrollment time.
+ * Deleting a class warns first when it still has documents/tickets (AC-12).
  */
 export default function CoursesPage() {
-  const [courses, setCourses] = React.useState<Course[]>([]);
   const [classes, setClasses] = React.useState<ClassSection[]>([]);
   const [trainers, setTrainers] = React.useState<AdminUser[]>([]);
   const [error, setError] = React.useState<string | null>(null);
-  const [courseCode, setCourseCode] = React.useState("");
-  const [courseTitle, setCourseTitle] = React.useState("");
-  const [classCourseId, setClassCourseId] = React.useState("");
   const [classCode, setClassCode] = React.useState("");
+  const [className, setClassName] = React.useState("");
+  const [classTrainerId, setClassTrainerId] = React.useState("");
+  const [classCredits, setClassCredits] = React.useState("3");
+  const [classSemester, setClassSemester] = React.useState("Fall");
+  const [classYear, setClassYear] = React.useState("2026");
   const [pendingDelete, setPendingDelete] = React.useState<ClassSection | null>(null);
 
   // NOTE: no synchronous setState here — this runs inside a useEffect,
@@ -38,10 +40,11 @@ export default function CoursesPage() {
   // Event handlers below clear `error` themselves before reloading.
   const load = React.useCallback(async () => {
     try {
-      const [c, k, u] = await Promise.all([adminApi.courses(), adminApi.classes(), adminApi.users()]);
-      setCourses(c);
+      const [k, u] = await Promise.all([adminApi.classes(), adminApi.users()]);
       setClasses(k);
-      setTrainers(u.filter((x) => x.role === "trainer" && x.is_active));
+      const activeTrainers = u.filter((x) => x.role === "trainer" && x.is_active);
+      setTrainers(activeTrainers);
+      setClassTrainerId((prev) => prev || activeTrainers[0]?.id || "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Load failed.");
     }
@@ -52,30 +55,25 @@ export default function CoursesPage() {
     void load();
   }, [load]);
 
-  async function createCourse(event: React.FormEvent) {
-    event.preventDefault();
-    setError(null);
-    try {
-      await adminApi.createCourse(courseCode.trim(), courseTitle.trim());
-      setCourseCode("");
-      setCourseTitle("");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Create failed.");
-    }
-  }
-
   async function createClass(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
     try {
-      const trainer = trainers[0];
-      if (!trainer) {
+      if (!classTrainerId) {
         setError("Create a trainer account first — a class requires a trainer.");
         return;
       }
-      await adminApi.createClass(classCourseId, classCode.trim(), String(trainer.id));
+      await adminApi.createClass({
+        code: classCode.trim(),
+        trainer_id: classTrainerId,
+        name: className.trim() || undefined,
+        semester: classSemester.trim() || undefined,
+        academic_year: classYear.trim() || undefined,
+        credits: Number(classCredits) || undefined,
+      });
       setClassCode("");
+      setClassName("");
+      setClassCredits("3");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed.");
@@ -107,9 +105,9 @@ export default function CoursesPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold">Courses &amp; classes</h1>
+        <h1 className="text-xl font-semibold">Classes</h1>
         <p className="text-sm text-muted-foreground">
-          Create a course first — a class cannot be assigned to anyone before it exists (AC-01).
+          Each class is a subject — create it directly with a trainer and manual credits (AC-01, AC-02).
         </p>
       </div>
       {error && (
@@ -118,64 +116,67 @@ export default function CoursesPage() {
         </p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>New course</CardTitle>
-            <CardDescription>Courses group classes (sections).</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={createCourse} className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                Code
-                <Input value={courseCode} onChange={(e) => setCourseCode(e.target.value)} placeholder="SE101" required />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                Title
-                <Input value={courseTitle} onChange={(e) => setCourseTitle(e.target.value)} placeholder="Intro to SE" required />
-              </label>
-              <Button type="submit">Create course</Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>New class</CardTitle>
-            <CardDescription>A class lives under exactly one course.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={createClass} className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                Course
-                <select
-                  className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                  value={classCourseId}
-                  onChange={(e) => setClassCourseId(e.target.value)}
-                  required
-                >
-                  <option value="">Select a course…</option>
-                  {courses.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code} — {c.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                Class code
-                <Input value={classCode} onChange={(e) => setClassCode(e.target.value)} placeholder="SE101-A" required />
-              </label>
-              <Button type="submit" disabled={!classCourseId}>
+      <Card>
+        <CardHeader>
+          <CardTitle>New class</CardTitle>
+          <CardDescription>A class requires exactly one trainer. Credits are manual (1-6).</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={createClass} className="grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Class code
+              <Input value={classCode} onChange={(e) => setClassCode(e.target.value)} placeholder="SE101-A" required />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Class name
+              <Input value={className} onChange={(e) => setClassName(e.target.value)} placeholder="Intro to SE - Section 1" />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Trainer
+              <select
+                className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+                value={classTrainerId}
+                onChange={(e) => setClassTrainerId(e.target.value)}
+                required
+              >
+                <option value="">Select a trainer…</option>
+                {trainers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.username} ({t.email})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Credits (1-6)
+              <Input
+                type="number"
+                min={1}
+                max={6}
+                value={classCredits}
+                onChange={(e) => setClassCredits(e.target.value)}
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Semester
+              <Input value={classSemester} onChange={(e) => setClassSemester(e.target.value)} placeholder="Fall" />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Academic year
+              <Input value={classYear} onChange={(e) => setClassYear(e.target.value)} placeholder="2026" />
+            </label>
+            <div className="sm:col-span-2">
+              <Button type="submit" disabled={!classTrainerId}>
                 Create class
               </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       {classes.length === 0 ? (
-        <EmptyState title="No classes yet" description="Create a course, then add its first class above." />
+        <EmptyState title="No classes yet" description="Create the first class above." />
       ) : (
         <Card>
           <CardHeader>
@@ -187,8 +188,8 @@ export default function CoursesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Class</TableHead>
-                  <TableHead>Course</TableHead>
                   <TableHead>Trainer</TableHead>
+                  <TableHead>Credits</TableHead>
                   <TableHead>Students</TableHead>
                   <TableHead>Content</TableHead>
                   <TableHead />
@@ -198,7 +199,6 @@ export default function CoursesPage() {
                 {classes.map((k) => (
                   <TableRow key={k.id}>
                     <TableCell className="font-medium">{k.code}</TableCell>
-                    <TableCell>{k.course_code}</TableCell>
                     <TableCell>
                       <select
                         className="h-7 rounded-md border border-input bg-transparent px-1.5 text-xs"
@@ -214,6 +214,7 @@ export default function CoursesPage() {
                         ))}
                       </select>
                     </TableCell>
+                    <TableCell>{k.credits}</TableCell>
                     <TableCell>{k.student_count}</TableCell>
                     <TableCell>
                       {k.document_count + k.ticket_count > 0 ? (

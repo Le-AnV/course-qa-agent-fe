@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { adminApi } from "@/lib/admin-api";
 
 /**
- * Admin dashboard (AI-31): entry point for courses, classes, accounts,
+ * Admin dashboard (AI-31): entry point for classes, accounts,
  * bulk import and the email sender. Shows live queue counts (AC-09).
  */
 export default function DashboardPage() {
@@ -23,8 +23,8 @@ export default function DashboardPage() {
     {
       href: "/dashboard/courses",
       icon: BookOpen,
-      title: "Courses & classes",
-      description: "Create a course first, then classes under it. Assign one trainer per class (AC-01, AC-02).",
+      title: "Classes",
+      description: "Create each class directly as a subject with a trainer and manual credits (AC-01, AC-02).",
     },
     {
       href: "/dashboard/accounts",
@@ -52,7 +52,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-xl font-semibold">Admin dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            Set up courses and classes, onboard accounts, and watch credential emails go out.
+            Set up classes, onboard accounts, and watch credential emails go out.
           </p>
         </div>
         {stats && (

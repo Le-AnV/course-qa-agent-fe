@@ -25,13 +25,14 @@ export default function TeacherClassesPage() {
   }, []);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time fetch; load() only sets state after await, never synchronously.
     void load();
   }, [load]);
 
   const q = search.trim().toLowerCase();
   const filtered = q
     ? classes.filter((c) =>
-        [c.name, c.code, c.course_title, c.course_code].some((f) =>
+        [c.name, c.code].some((f) =>
           f.toLowerCase().includes(q),
         ),
       )
@@ -46,7 +47,7 @@ export default function TeacherClassesPage() {
           <span>{termFor(cls)}</span>
         </div>
         <h3 className="text-[16px] font-heading font-bold text-[#1e293b] leading-snug mb-1.5 group-hover:text-[#2563EB] transition-colors">{cls.name}</h3>
-        <p className="text-[13px] text-[#64748b] mb-1">{cls.course_title}</p>
+        <p className="text-[13px] text-[#64748b] mb-1">{cls.credits} credits</p>
         <p className="text-[12px] text-[#94a3b8] mb-6">Trainer: {cls.trainer_name ?? "—"}</p>
 
         <div className="flex items-center gap-4 text-[12.5px] text-[#64748b] font-medium mt-auto mb-5">

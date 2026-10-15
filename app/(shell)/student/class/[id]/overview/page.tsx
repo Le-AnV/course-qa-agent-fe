@@ -92,9 +92,9 @@ export default function StudentClassOverviewPage() {
             <div className="w-8 h-8 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
               <BookOpen className="w-4 h-4" />
             </div>
-            <span className="text-[13px] font-semibold text-[#64748B]">Course</span>
+            <span className="text-[13px] font-semibold text-[#64748B]">Credits</span>
           </div>
-          <p className="text-2xl font-bold text-[#172033]">{cls.course_code}</p>
+          <p className="text-2xl font-bold text-[#172033]">{cls.credits}</p>
         </div>
       </div>
 

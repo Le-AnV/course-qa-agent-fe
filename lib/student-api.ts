@@ -6,9 +6,8 @@ export type StudentClass = {
   id: string;
   code: string;
   name: string;
-  course_code: string;
-  course_title: string;
   trainer_name: string | null;
+  credits: number;
   semester: string;
   academic_year: string;
   member_count: number;
