@@ -1,175 +1,74 @@
-"use client";
-import React from "react";
 import Link from "next/link";
+import { ArrowRight, Menu, MessagesSquare } from "lucide-react";
 
-interface LandingHeaderProps {
-  isHeaderActive: boolean;
-  isNavActive: boolean;
-  toggleNav: () => void;
-  closeNav: () => void;
-}
+import { Button } from "@/components/ui/button";
 
-export function LandingHeader({ isHeaderActive, isNavActive, toggleNav, closeNav }: LandingHeaderProps) {
+const navigation = [
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#workspace", label: "Workspace" },
+];
+
+export function LandingHeader() {
   return (
-    <header className={`header ${isHeaderActive ? "active" : ""}`} data-header>
-      <div className="container">
-        {/* LOGO: C box fused with text */}
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
         <Link
           href="/"
-          className="logo group no-underline shrink-0"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 0, whiteSpace: 'nowrap', textDecoration: 'none' }}
+          className="flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-4"
+          aria-label="Course Q&A Agent home"
         >
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '50%',
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
-              flexShrink: 0,
-            }}
-          >
-            <img
-              src="/image/right.png"
-              alt="Course Q&A Logo"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                transform: 'scale(1.35)',
-              }}
-            />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '48px',
-              padding: '0 14px 0 8px',
-              fontWeight: 800,
-              fontSize: '24px',
-              color: '#0f172a',
-              whiteSpace: 'nowrap',
-              lineHeight: 1,
-            }}
-          >
-            Course&nbsp;<span style={{ color: '#2563eb' }}>Q&amp;A</span>
-          </div>
+          <span className="flex size-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20">
+            <MessagesSquare className="size-5" aria-hidden="true" />
+          </span>
+          <span className="text-sm font-semibold tracking-tight text-slate-950 sm:text-base">
+            Course Q&amp;A Agent
+          </span>
         </Link>
 
-        <nav className={`navbar ${isNavActive ? "active" : ""}`} data-navbar>
-          <div className="wrapper">
+        <nav className="hidden items-center gap-8 lg:flex" aria-label="Main navigation">
+          {navigation.map((item) => (
             <Link
-              href="/"
-              className="logo no-underline shrink-0"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 0, whiteSpace: 'nowrap', textDecoration: 'none' }}
+              key={item.href}
+              href={item.href}
+              className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-4"
             >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '48px',
-                  height: '48px',
-                  backgroundColor: '#2563eb',
-                  color: 'white',
-                  fontWeight: 800,
-                  fontSize: '28px',
-                  borderRadius: '14px 0 0 14px',
-                  flexShrink: 0,
-                  lineHeight: 1,
-                  boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
-                }}
-              >
-                C
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '48px',
-                  padding: '0 14px 0 4px',
-                  backgroundColor: '#eff6ff',
-                  borderRadius: '0 14px 14px 0',
-                  fontWeight: 800,
-                  fontSize: '28px',
-                  color: '#0f172a',
-                  whiteSpace: 'nowrap',
-                  lineHeight: 1,
-                  boxShadow: '0 4px 12px rgba(37,99,235,0.1)',
-                }}
-              >
-                ourse&nbsp;<span style={{ color: '#2563eb' }}>Q&amp;A</span>
-              </div>
+              {item.label}
             </Link>
-
-            <button
-              className="nav-close-btn"
-              aria-label="close menu"
-              onClick={toggleNav}
-            >
-              <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
-            </button>
-          </div>
-
-          <ul className="navbar-list">
-            <li className="navbar-item">
-              <a href="#home" className="navbar-link" onClick={closeNav}>
-                Home
-              </a>
-            </li>
-            <li className="navbar-item">
-              <a href="#about" className="navbar-link" onClick={closeNav}>
-                About
-              </a>
-            </li>
-            <li className="navbar-item">
-              <a href="#courses" className="navbar-link" onClick={closeNav}>
-                Courses
-              </a>
-            </li>
-            <li className="navbar-item">
-              <a href="#blog" className="navbar-link" onClick={closeNav}>
-                Blog
-              </a>
-            </li>
-            <li className="navbar-item">
-              <a href="#contact" className="navbar-link" onClick={closeNav}>
-                Contact
-              </a>
-            </li>
-          </ul>
+          ))}
         </nav>
 
-        <div className="header-actions">
-          <button className="header-action-btn" aria-label="toggle search" title="Search">
-            <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
-          </button>
-
-          {/* DEDICATED LOGIN BUTTON LINK */}
-          <Link href="/login" className="btn has-before cursor-pointer">
-            <span className="span">Log in</span>
-            <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
-          </Link>
-
-          <button
-            className="header-action-btn"
-            aria-label="open menu"
-            onClick={toggleNav}
-          >
-            <ion-icon name="menu-outline" aria-hidden="true"></ion-icon>
-          </button>
+        <div className="hidden items-center lg:flex">
+          <Button asChild className="h-10 bg-blue-600 px-4 text-white hover:bg-blue-700">
+            <Link href="/login">
+              Open workspace
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </Button>
         </div>
 
-        <div
-          className={`overlay ${isNavActive ? "active" : ""}`}
-          onClick={toggleNav}
-        ></div>
+        <details className="group relative lg:hidden">
+          <summary className="flex size-10 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 [&::-webkit-details-marker]:hidden">
+            <Menu className="size-5" aria-hidden="true" />
+            <span className="sr-only">Open menu</span>
+          </summary>
+          <nav
+            className="absolute right-0 top-12 flex w-64 flex-col gap-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-950/10"
+            aria-label="Mobile navigation"
+          >
+            {navigation.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-950"
+              >
+                {item.label}
+              </Link>
+            ))}
+            <Button asChild className="mt-2 h-10 bg-blue-600 text-white hover:bg-blue-700">
+              <Link href="/login">Open workspace</Link>
+            </Button>
+          </nav>
+        </details>
       </div>
     </header>
   );

@@ -1,11 +1,34 @@
-"use client";
-import React from "react";
+import Link from "next/link";
+import { MessagesSquare } from "lucide-react";
 
 export function LandingFooter() {
   return (
-    <footer className="footer bg-gray-900 text-gray-400 py-6 text-center text-sm border-t border-gray-800">
-      <div className="container mx-auto px-4">
-        <p>&quot;Believe you can and you&apos;re halfway there.&quot; - Keep learning, keep growing.</p>
+    <footer className="border-t border-slate-200 bg-white">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-5 py-10 sm:px-8 md:flex-row md:items-end md:justify-between lg:px-10">
+        <div className="max-w-md">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-3"
+            aria-label="Course Q&A Agent home"
+          >
+            <span className="flex size-9 items-center justify-center rounded-xl bg-blue-600 text-white">
+              <MessagesSquare className="size-5" aria-hidden="true" />
+            </span>
+            <span className="font-semibold tracking-tight text-slate-950">Course Q&amp;A Agent</span>
+          </Link>
+          <p className="mt-4 text-sm leading-6 text-slate-600">
+            Course questions answered from the materials that belong to your class.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-slate-600">
+          <Link href="#how-it-works" className="hover:text-slate-950">How it works</Link>
+          <Link href="#workspace" className="hover:text-slate-950">Workspace</Link>
+          <Link href="/login" className="text-blue-700 hover:text-blue-800">Log in</Link>
+        </div>
+      </div>
+      <div className="border-t border-slate-100 px-5 py-5 text-center text-xs text-slate-500">
+        © {new Date().getFullYear()} Course Q&amp;A Agent
       </div>
     </footer>
   );
