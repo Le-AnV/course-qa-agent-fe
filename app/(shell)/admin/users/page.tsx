@@ -379,7 +379,7 @@ export default function AdminUsersPage() {
                     <code className="px-1.5 py-0.5 bg-slate-100 rounded text-[12px] font-mono">fullname, email, type, mssv</code>.
                     Leave mssv blank to auto-generate (initials + 4 random digits, e.g. TVA_4821).
                     Accounts are created class-less — students request classes afterwards.
-                    Full history + retry live at <Link href="/admin/import" className="text-[#2563EB] font-semibold hover:underline">Import page</Link>.
+                    Full history + retry live at <Link href="/admin/history" className="text-[#2563EB] font-semibold hover:underline">History page</Link>.
                   </p>
                   <label className="border-2 border-dashed border-[#E2E8F0] rounded-xl p-10 flex flex-col items-center justify-center text-center hover:border-blue-300 hover:bg-[#EFF6FF]/50 transition-colors cursor-pointer">
                     <input type="file" accept=".xlsx" className="hidden" onChange={(e) => void handleFileSelect(e)} disabled={importing} />

@@ -15,7 +15,7 @@ import {
   PanelLeft,
   ChevronDown,
   Mail,
-  FileSpreadsheet,
+  History,
   FolderOpen,
 } from "lucide-react";
 import { Role, settingsHrefForRole } from "@/components/ui/nav-config";
@@ -182,12 +182,12 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
                   {!collapsed && <span>Reports</span>}
                 </Link>
                 <Link
-                  href="/admin/import"
-                  title="Import"
-                  className={linkCls(pathname.startsWith("/admin/import"))}
+                  href="/admin/history"
+                  title="History"
+                  className={linkCls(pathname.startsWith("/admin/history"))}
                 >
-                  <FileSpreadsheet className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span>Import</span>}
+                  <History className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span>History</span>}
                 </Link>
                 <Link
                   href="/admin/email"
