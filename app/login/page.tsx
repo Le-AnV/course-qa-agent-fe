@@ -18,7 +18,7 @@ import {
   homeRouteFor,
   type Role,
 } from "@/components/ui/nav-config";
-import { InteractiveBookshelf } from "@/features/login/interactive-bookshelf";
+import { CourseAiVisualPanel } from "@/features/login/course-ai-visual-panel";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -91,9 +91,9 @@ export default function LoginPage() {
 
   return (
     <div className="w-screen h-screen flex overflow-hidden bg-white text-slate-900 selection:bg-blue-600 selection:text-white">
-      {/* CỘT TRÁI (60% - BÀN HỌC TƯƠNG TÁC) */}
+      {/* CỘT TRÁI (60% - COURSE AI VISUAL HERO) */}
       <section className="hidden lg:flex lg:w-[60%] relative h-full overflow-hidden">
-        <InteractiveBookshelf />
+        <CourseAiVisualPanel />
       </section>
 
       {/* CỘT PHẢI (40% - LOGIN FORM) */}
@@ -105,13 +105,9 @@ export default function LoginPage() {
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors group py-1"
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            <span>Back to Home</span>
+            <span>Back</span>
           </Link>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold shadow-2xs">
-            <GraduationCap className="w-4 h-4" />
-            <span>Academic Portal</span>
-          </div>
         </header>
 
         {/* Center: Auth Form Container with Enriched Typography & Larger Inputs */}
