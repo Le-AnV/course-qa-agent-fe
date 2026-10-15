@@ -14,7 +14,6 @@ export type DocumentStatus =
 
 export type ClassOption = {
   id: string;
-  courseId: string;
   name: string;
   code: string;
 };
@@ -64,8 +63,8 @@ export const ACCEPTED_TYPES: AcceptedType[] = [
 export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 
 export const MOCK_CLASSES: ClassOption[] = [
-  { id: "class-a", courseId: "course-cs101", name: "CS101 - Class A", code: "CS101-A" },
-  { id: "class-b", courseId: "course-cs101", name: "CS101 - Class B", code: "CS101-B" },
+  { id: "class-a", name: "CS101 - Class A", code: "CS101-A" },
+  { id: "class-b", name: "CS101 - Class B", code: "CS101-B" },
 ];
 
 export const MOCK_DOCUMENTS: DocumentItem[] = [
@@ -138,11 +137,10 @@ export async function fetchMyClasses(auth: AuthHeaders): Promise<ClassOption[]> 
   if (!res.ok) await throwForStatus(res);
   const rows = (await res.json()) as {
     id: string;
-    course_id: string;
     name: string;
     code: string;
   }[];
-  return rows.map((r) => ({ id: r.id, courseId: r.course_id, name: r.name, code: r.code }));
+  return rows.map((r) => ({ id: r.id, name: r.name, code: r.code }));
 }
 
 type DocumentRow = {

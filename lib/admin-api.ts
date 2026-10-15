@@ -2,14 +2,12 @@ import { AUTH_TOKEN_KEY } from "@/components/ui/nav-config";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export type Course = { id: string; code: string; title: string; class_count: number };
 export type ClassSection = {
   id: string;
-  course_id: string;
-  course_code: string;
   code: string;
   trainer_id: string | null;
   trainer_name: string | null;
+  credits: number;
   student_count: number;
   document_count: number;
   ticket_count: number;
@@ -21,6 +19,7 @@ export type AdminUser = {
   role: string;
   class_id: string | null;
   class_code: string | null;
+  student_code: string | null;
   is_active: boolean;
 };
 export type ImportRow = {
@@ -32,6 +31,7 @@ export type ImportRow = {
   class_raw: string;
   status: "imported" | "skipped" | "failed";
   message: string;
+  student_code: string | null;
 };
 export type ImportBatch = {
   id: number;
@@ -100,16 +100,20 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 }
 
 export const adminApi = {
-  // Courses & classes (AC-01, AC-02, AC-12)
-  courses: () => apiFetch<Course[]>("/api/admin/courses"),
-  createCourse: (code: string, title: string) =>
-    apiFetch<Course>("/api/admin/courses", { method: "POST", body: JSON.stringify({ code, title }) }),
-  classes: (courseId?: string | number) =>
-    apiFetch<ClassSection[]>(`/api/admin/classes${courseId ? `?course_id=${courseId}` : ""}`),
-  createClass: (course_id: string, code: string, trainer_id: string, name?: string, semester?: string, academic_year?: string) =>
+  // Classes (standalone: class IS the subject). Course endpoints are legacy
+  // and no longer used by the UI.
+  classes: () => apiFetch<ClassSection[]>("/api/admin/classes"),
+  createClass: (args: {
+    code: string;
+    trainer_id: string;
+    name?: string;
+    semester?: string;
+    academic_year?: string;
+    credits?: number;
+  }) =>
     apiFetch<ClassSection>("/api/admin/classes", {
       method: "POST",
-      body: JSON.stringify({ course_id, code, trainer_id, name, semester, academic_year }),
+      body: JSON.stringify(args),
     }),
   assignStaff: (classId: string, trainer_id: string | null) =>
     apiFetch<ClassSection>(`/api/admin/classes/${classId}/assign`, {

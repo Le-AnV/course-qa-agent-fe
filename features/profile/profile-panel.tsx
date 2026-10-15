@@ -170,6 +170,14 @@ export function ProfilePanel({ signOut }: { signOut: () => void }) {
                 {profile.email}
               </dd>
             </div>
+            {profile.student_code && (
+              <div className="flex items-center gap-2">
+                <dt className="sr-only">Student ID</dt>
+                <dd className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[12px] font-bold tracking-wide text-[#334155]" title="Student ID (MSSV)">
+                  {profile.student_code}
+                </dd>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <dt className="sr-only">Status</dt>
               <dd className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#15803D]">

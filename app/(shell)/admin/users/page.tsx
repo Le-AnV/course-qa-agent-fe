@@ -43,6 +43,7 @@ export default function AdminUsersPage() {
   }, []);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time fetch; loadUsers() only sets state after await, never synchronously.
     void loadUsers();
   }, [loadUsers]);
 
@@ -158,7 +159,8 @@ export default function AdminUsersPage() {
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.username.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase());
+      user.email.toLowerCase().includes(search.toLowerCase()) ||
+      (user.student_code ?? "").toLowerCase().includes(search.toLowerCase());
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? user.is_active : !user.is_active);
     return matchesSearch && matchesRole && matchesStatus;
@@ -170,11 +172,6 @@ export default function AdminUsersPage() {
       subtitle="Manage user accounts and platform access. Passwords are always emailed, never shown."
       actions={
         <>
-          <button onClick={() => void downloadTemplate()}
-            className="flex items-center gap-1.5 px-4 py-2 border border-[#E2E8F0] bg-white hover:bg-slate-50 text-[#334155] rounded-[8px] text-[13px] font-semibold transition-colors shadow-sm">
-            <FileSpreadsheet className="w-4 h-4" />
-            Template
-          </button>
           <button onClick={() => setIsCreateOpen(true)}
             className="flex items-center gap-1.5 px-4 py-2 border border-[#E2E8F0] bg-white hover:bg-slate-50 text-[#334155] rounded-[8px] text-[13px] font-semibold transition-colors shadow-sm">
             <Plus className="w-4 h-4" />
@@ -245,6 +242,7 @@ export default function AdminUsersPage() {
               <tr className="bg-slate-50 border-b border-[#E2E8F0] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Email</th>
+                <th className="px-5 py-3">MSSV</th>
                 <th className="px-5 py-3">Role</th>
                 <th className="px-5 py-3">Class</th>
                 <th className="px-5 py-3">Status</th>
@@ -254,7 +252,7 @@ export default function AdminUsersPage() {
             <tbody className="divide-y divide-[#E2E8F0]">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-[#64748B] text-[13px]">
+                  <td colSpan={7} className="px-5 py-8 text-center text-[#64748B] text-[13px]">
                     No users found
                   </td>
                 </tr>
@@ -271,6 +269,9 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="text-[13px] text-[#64748B]">{user.email}</span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="text-[12.5px] font-mono text-[#334155]">{user.student_code || "—"}</span>
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="text-[12.5px] text-[#334155] capitalize">{user.role.replace("_", " ")}</span>
@@ -375,9 +376,10 @@ export default function AdminUsersPage() {
                 <div className="space-y-6">
                   <p className="text-[13.5px] text-[#64748B]">
                     Upload an Excel file containing user information. Columns exactly:{" "}
-                    <code className="px-1.5 py-0.5 bg-slate-100 rounded text-[12px] font-mono">username, gmail, type</code>.
+                    <code className="px-1.5 py-0.5 bg-slate-100 rounded text-[12px] font-mono">fullname, email, type, mssv</code>.
+                    Leave mssv blank to auto-generate (initials + 4 random digits, e.g. TVA_4821).
                     Accounts are created class-less — students request classes afterwards.
-                    Full history + retry live at <Link href="/admin/import" className="text-[#2563EB] font-semibold hover:underline">Import page</Link>.
+                    Full history + retry live at <Link href="/admin/history" className="text-[#2563EB] font-semibold hover:underline">History page</Link>.
                   </p>
                   <label className="border-2 border-dashed border-[#E2E8F0] rounded-xl p-10 flex flex-col items-center justify-center text-center hover:border-blue-300 hover:bg-[#EFF6FF]/50 transition-colors cursor-pointer">
                     <input type="file" accept=".xlsx" className="hidden" onChange={(e) => void handleFileSelect(e)} disabled={importing} />
@@ -418,6 +420,7 @@ export default function AdminUsersPage() {
                             <th className="px-4 py-3">Row</th>
                             <th className="px-4 py-3">Full Name</th>
                             <th className="px-4 py-3">Email</th>
+                            <th className="px-4 py-3">MSSV</th>
                             <th className="px-4 py-3">Role</th>
                             <th className="px-4 py-3">Status</th>
                             <th className="px-4 py-3"></th>
@@ -429,6 +432,7 @@ export default function AdminUsersPage() {
                               <td className="px-4 py-3 text-[13px] text-[#64748B]">{row.row_number}</td>
                               <td className="px-4 py-3 text-[13px] text-[#172033]">{row.username || "—"}</td>
                               <td className="px-4 py-3 text-[13px] text-[#64748B]">{row.email}</td>
+                              <td className="px-4 py-3 text-[12.5px] font-mono text-[#334155]">{row.student_code || "—"}</td>
                               <td className="px-4 py-3 text-[13px] text-[#64748B] capitalize">{row.role_raw}</td>
                               <td className="px-4 py-3">
                                 {row.status === "imported" ? (

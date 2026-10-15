@@ -80,8 +80,8 @@ export default function AdminHomePage() {
             detail: `${b.imported_count} imported, ${b.failed_count} failed, ${b.skipped_count} skipped.`,
             context: b.filename,
             time: formatDate(b.created_at),
-            href: "/admin/import",
-            action: "View import",
+            href: "/admin/history",
+            action: "View history",
             unread: b.failed_count > 0,
           });
         });
