@@ -2,22 +2,39 @@
 
 import * as React from "react";
 import { Search } from "lucide-react";
+import { useParams } from "next/navigation";
+import { studentApi, type ClassMember } from "@/lib/student-api";
+import { useProfile } from "@/features/profile/profile-context";
 
 export default function StudentMembersPage() {
+  const params = useParams();
+  const id = params.id as string;
   const [search, setSearch] = React.useState("");
+  const [members, setMembers] = React.useState<ClassMember[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const { profile } = useProfile();
 
-  const members = [
-    { name: "Minh", role: "Teacher", email: "minh@university.edu" },
-    { name: "Trần Gia Linh", role: "Student", email: "linh.tran@student.edu" },
-    { name: "Nguyễn Văn Nam", role: "Student", email: "nam.nguyen@student.edu" },
-    { name: "Lê Hoàng Tuấn", role: "Student", email: "tuan.le@student.edu" },
-  ];
+  const load = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setMembers(await studentApi.members(id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load members");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
-  // Ô search lọc thật theo tên / email (trước đây gõ không lọc gì).
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
   const q = search.trim().toLowerCase();
   const filteredMembers = q
     ? members.filter((m) =>
-        [m.name, m.email, m.role].some((f) => f.toLowerCase().includes(q)),
+        [m.username, m.email, m.role].some((f) => f.toLowerCase().includes(q)),
       )
     : members;
 
@@ -43,43 +60,71 @@ export default function StudentMembersPage() {
         </div>
       </div>
 
-      <div className="bg-white border border-[#E2E8F0] rounded-lg overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 border-b border-[#E2E8F0] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3 hidden sm:table-cell">Email</th>
-              <th className="px-4 py-3">Role</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E2E8F0]">
-            {filteredMembers.map((member, i) => (
-              <tr key={i} className="hover:bg-[#F8FAFC] transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[12px] font-bold text-slate-600 shrink-0">
-                      {member.name.charAt(0)}
-                    </div>
-                    <span className="text-[13.5px] font-semibold text-[#172033]">{member.name} {member.name === "Trần Gia Linh" && "(You)"}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 hidden sm:table-cell">
-                  <span className="text-[13px] text-[#64748B]">{member.email}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${
-                    member.role === "Teacher" 
-                      ? "bg-blue-50 text-blue-700 border border-blue-200" 
-                      : "bg-slate-100 text-slate-600 border border-slate-200"
-                  }`}>
-                    {member.role}
-                  </span>
-                </td>
+      {loading ? (
+        <div className="bg-white border border-[#E2E8F0] rounded-lg p-8 text-center text-[#64748B] text-[13px]">
+          Loading members…
+        </div>
+      ) : error ? (
+        <div className="bg-rose-50 border border-rose-200 rounded-lg p-6 text-center text-[13px]">
+          <p className="text-rose-700">{error}</p>
+          <button onClick={() => void load()} className="mt-2 text-[#2563EB] font-semibold hover:underline">
+            Retry
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white border border-[#E2E8F0] rounded-lg overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-[#E2E8F0] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3 hidden sm:table-cell">Email</th>
+                <th className="px-4 py-3">Role</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-[#E2E8F0]">
+              {filteredMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-4 py-8 text-center text-[#64748B] text-[13px]">
+                    {q ? `Nothing matches "${search}".` : "No members yet."}
+                  </td>
+                </tr>
+              ) : (
+                filteredMembers.map((member) => {
+                  const isYou =
+                    profile?.email?.toLowerCase() === member.email.toLowerCase();
+                  const isTrainer = member.role === "trainer";
+                  return (
+                    <tr key={member.id} className="hover:bg-[#F8FAFC] transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[12px] font-bold text-slate-600 shrink-0">
+                            {member.username.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-[13.5px] font-semibold text-[#172033]">
+                            {member.username} {isYou && "(You)"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell">
+                        <span className="text-[13px] text-[#64748B]">{member.email}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold capitalize ${
+                          isTrainer
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            : "bg-slate-100 text-slate-600 border border-slate-200"
+                        }`}>
+                          {member.role.replace("_", " ")}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

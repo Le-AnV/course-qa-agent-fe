@@ -88,9 +88,7 @@ export default function ImportPage() {
 
   async function downloadTemplate() {
     try {
-      const res = await fetch(adminApi.templateUrl(), { headers: authHeader() });
-      if (!res.ok) throw new Error("Template download failed.");
-      const blob = await res.blob();
+      const blob = await adminApi.downloadTemplate();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -128,7 +126,7 @@ export default function ImportPage() {
       <div>
         <h1 className="text-xl font-semibold">Bulk import</h1>
         <p className="text-sm text-muted-foreground">
-          Columns are exactly: username, gmail, type, class — no password column (AC-05).
+          Columns are exactly: username, gmail, type — accounts are created class-less (students request classes, TA approves).
         </p>
       </div>
       {error && (

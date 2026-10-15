@@ -35,6 +35,7 @@ export default function EmailPage() {
   const [rate, setRate] = React.useState("");
   const [dryRun, setDryRun] = React.useState(true);
   const [testTo, setTestTo] = React.useState("");
+  const [processing, setProcessing] = React.useState(false);
 
   // NOTE: no synchronous setState here — this runs inside a useEffect,
   // so all state updates happen after the await (async continuation).
@@ -99,12 +100,17 @@ export default function EmailPage() {
   }
 
   async function processNow() {
+    if (processing) return;
+    setProcessing(true);
     setError(null);
     try {
-      await adminApi.processQueue();
+      const r = await adminApi.processQueue();
+      if (r.busy) setError("Another drain is already running — wait a few seconds and retry.");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Process failed.");
+    } finally {
+      setProcessing(false);
     }
   }
 
@@ -213,8 +219,8 @@ export default function EmailPage() {
               </Button>
             </form>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => void processNow()}>
-                Process queue now
+              <Button variant="outline" onClick={() => void processNow()} disabled={processing}>
+                {processing ? "Processing…" : "Process queue now"}
               </Button>
               <select
                 className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"

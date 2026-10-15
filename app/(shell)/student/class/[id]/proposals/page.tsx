@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Plus, Clock, CheckCircle2, XCircle, FileText } from "lucide-react";
+import { MockBadge } from "@/components/shared/MockBadge";
 
 export default function StudentProposalsPage() {
   return (
@@ -15,6 +16,13 @@ export default function StudentProposalsPage() {
           <Plus className="w-4 h-4" />
           Submit Proposal
         </button>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
+        <MockBadge />
+        <p className="text-[12.5px] text-amber-800">
+          Sample proposals below — the proposals backend is not built yet, remember to replace with real data.
+        </p>
       </div>
 
       <div className="space-y-8">
