@@ -13,6 +13,7 @@ export type MeProfile = {
   email: string;
   role: string;
   class_id: string | null;
+  student_code: string | null;
   is_active: boolean;
 };
 

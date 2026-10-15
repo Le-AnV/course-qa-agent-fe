@@ -186,6 +186,7 @@ export default function AccountsPage() {
                 <TableRow>
                   <TableHead>Username</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>MSSV</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Class</TableHead>
                   <TableHead>Status</TableHead>
@@ -197,6 +198,7 @@ export default function AccountsPage() {
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.username}</TableCell>
                     <TableCell>{u.email}</TableCell>
+                    <TableCell>{u.student_code ?? "—"}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{u.role.replace("_", " ")}</Badge>
                     </TableCell>

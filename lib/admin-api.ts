@@ -19,6 +19,7 @@ export type AdminUser = {
   role: string;
   class_id: string | null;
   class_code: string | null;
+  student_code: string | null;
   is_active: boolean;
 };
 export type ImportRow = {
@@ -30,6 +31,7 @@ export type ImportRow = {
   class_raw: string;
   status: "imported" | "skipped" | "failed";
   message: string;
+  student_code: string | null;
 };
 export type ImportBatch = {
   id: number;
