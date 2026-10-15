@@ -6,7 +6,7 @@ import { CourseBanner } from "@/components/shared/CourseBanner";
 import { CourseTabs, CourseTabItem } from "@/components/shared/CourseTabs";
 import { useParams, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { classesForRole, getClassById } from "@/lib/classes";
+import { studentApi, accentFor, termFor, type StudentClass } from "@/lib/student-api";
 
 export default function StudentClassWorkspaceLayout({
   children,
@@ -16,11 +16,35 @@ export default function StudentClassWorkspaceLayout({
   const params = useParams();
   const pathname = usePathname();
   const id = params.id as string;
+  const [cls, setCls] = React.useState<StudentClass | null>(null);
+  const [myClasses, setMyClasses] = React.useState<StudentClass[]>([]);
 
-  // Title/banner theo đúng lớp đang xem (trước đây cứng "Introduction to Artificial Intelligence").
-  const cls = getClassById(id);
-  const title = cls?.title ?? "Class workspace";
-  const meta = cls ? `${cls.code} · ${cls.term}` : undefined;
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [detail, all] = await Promise.all([
+          studentApi.classDetail(id).catch(() => null),
+          studentApi.classes().catch(() => []),
+        ]);
+        if (!cancelled) {
+          setCls(detail);
+          setMyClasses(all);
+        }
+      } catch {
+        if (!cancelled) {
+          setCls(null);
+          setMyClasses([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const title = cls?.name ?? "Class workspace";
+  const meta = cls ? `${cls.code} · ${termFor(cls)}` : undefined;
 
   const tabs: CourseTabItem[] = [
     { id: "overview", label: "Overview", href: `/student/class/${id}/overview` },
@@ -40,14 +64,13 @@ export default function StudentClassWorkspaceLayout({
         title={title}
         backHref="/student/classes"
         accentColor="#EFF6FF"
-        teacherName={cls?.teacherName ?? "Minh"}
+        teacherName={cls?.trainer_name ?? ""}
         meta={meta}
       />
       <CourseTabs tabs={tabs} />
 
-      {/* Mobile class-switcher: sidebar ẩn dưới lg nên cần chỗ đổi lớp nhanh.
-          Sidebar đã có list đầy đủ — đây chỉ là chip chuyển lớp gọn. */}
-      <ClassSwitcherChips currentId={id} />
+      {/* Mobile class-switcher: sidebar ẩn dưới lg nên cần chỗ đổi lớp nhanh. */}
+      <ClassSwitcherChips currentId={id} classes={myClasses} />
 
       {isAgentPage ? (
         <div className="flex-1 min-h-0 overflow-hidden p-4 md:p-6">
@@ -64,13 +87,12 @@ export default function StudentClassWorkspaceLayout({
   );
 }
 
-function ClassSwitcherChips({ currentId }: { currentId: string }) {
-  const myClasses = classesForRole("student");
-  if (myClasses.length < 2) return null;
+function ClassSwitcherChips({ currentId, classes }: { currentId: string; classes: StudentClass[] }) {
+  if (classes.length < 2) return null;
 
   return (
     <div className="flex lg:hidden items-center gap-2 overflow-x-auto px-4 py-2 bg-white border-b border-[#E2E8F0] shrink-0">
-      {myClasses.map((c) => {
+      {classes.map((c) => {
         const active = c.id === currentId;
         return (
           <Link
@@ -85,7 +107,7 @@ function ClassSwitcherChips({ currentId }: { currentId: string }) {
           >
             <span
               className="w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ backgroundColor: c.accentColor }}
+              style={{ backgroundColor: accentFor(c.id) }}
             />
             {c.code}
           </Link>

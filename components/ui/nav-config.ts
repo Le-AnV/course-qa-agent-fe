@@ -5,6 +5,7 @@ import {
   Home,
   BookOpen,
   UserCircle,
+  FolderOpen,
 } from "lucide-react";
 
 /** Roles mirror the backend RBAC (AI-27). Client-side filtering is UX only. */
@@ -58,6 +59,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Teacher Portal",
     roles: ["trainer", "teaching_assistant", "admin"],
     icon: BookOpen,
+  },
+  {
+    href: "/teacher/materials",
+    label: "Materials",
+    roles: ["trainer", "teaching_assistant", "admin"],
+    icon: FolderOpen,
   },
   // Admin Routes
   {

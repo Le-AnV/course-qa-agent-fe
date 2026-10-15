@@ -69,7 +69,12 @@ export default function CoursesPage() {
     event.preventDefault();
     setError(null);
     try {
-      await adminApi.createClass(Number(classCourseId), classCode.trim());
+      const trainer = trainers[0];
+      if (!trainer) {
+        setError("Create a trainer account first — a class requires a trainer.");
+        return;
+      }
+      await adminApi.createClass(classCourseId, classCode.trim(), String(trainer.id));
       setClassCode("");
       await load();
     } catch (err) {
@@ -80,7 +85,7 @@ export default function CoursesPage() {
   async function setTrainer(section: ClassSection, trainerId: string) {
     setError(null);
     try {
-      await adminApi.assignStaff(section.id, trainerId ? Number(trainerId) : null, section.ta_id);
+      await adminApi.assignStaff(section.id, trainerId ? trainerId : null);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Assign failed.");
@@ -184,7 +189,6 @@ export default function CoursesPage() {
                   <TableHead>Class</TableHead>
                   <TableHead>Course</TableHead>
                   <TableHead>Trainer</TableHead>
-                  <TableHead>TA</TableHead>
                   <TableHead>Students</TableHead>
                   <TableHead>Content</TableHead>
                   <TableHead />
@@ -210,7 +214,6 @@ export default function CoursesPage() {
                         ))}
                       </select>
                     </TableCell>
-                    <TableCell>{k.ta_name ?? "—"}</TableCell>
                     <TableCell>{k.student_count}</TableCell>
                     <TableCell>
                       {k.document_count + k.ticket_count > 0 ? (

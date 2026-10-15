@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useParams } from 'next/navigation';
 import { ChatWindow } from '@/features/chat/chat-window';
 import { ChatHistorySidebar } from '@/features/history/chat-history-sidebar';
+import { MockBadge } from '@/components/shared/MockBadge';
 
 export default function AgentPage({
   params,
@@ -15,7 +16,14 @@ export default function AgentPage({
   const [activeSessionId, setActiveSessionId] = React.useState<string | null>(null);
 
   return (
-    <div className="flex h-full w-full gap-4">
+    <div className="flex h-full w-full flex-col gap-2">
+      <div className="flex items-center gap-2 px-1">
+        <MockBadge />
+        <p className="text-[11.5px] text-amber-700">
+          Chat backend chưa có — đang dùng dữ liệu giả, nhớ thay bằng API thật.
+        </p>
+      </div>
+    <div className="flex h-full w-full gap-4 min-h-0 flex-1">
       {/* Cột Trái: Lịch sử Chat (AI-95) */}
       <ChatHistorySidebar
         classId={classId}
@@ -45,6 +53,7 @@ export default function AgentPage({
           </p>
         </div>
       </div>
+    </div>
     </div>
   );
 }

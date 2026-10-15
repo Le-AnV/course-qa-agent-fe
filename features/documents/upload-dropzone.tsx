@@ -104,9 +104,13 @@ export function UploadDropzone({
         onUploaded?.();
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : "Upload failed.";
       setState({
         status: "error",
-        message: err instanceof Error ? err.message : "Upload failed.",
+        message:
+          msg === "Failed to fetch"
+            ? `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), or open this page via http://localhost:3000 (BE CORS only allows that origin).`
+            : msg,
       });
     }
   }

@@ -10,8 +10,6 @@ export type ClassSection = {
   code: string;
   trainer_id: string | null;
   trainer_name: string | null;
-  ta_id: string | null;
-  ta_name: string | null;
   student_count: number;
   document_count: number;
   ticket_count: number;
@@ -64,6 +62,18 @@ export type EmailConfig = {
   smtp_rate_per_minute: number;
   email_dry_run: boolean;
 };
+export type AdminSettings = {
+  llm: { model: string; api_key_configured: boolean };
+  email: {
+    smtp_host: string;
+    smtp_port: number;
+    smtp_security: string;
+    sender_email: string | null;
+    rate_limit_per_minute: number;
+    app_password_configured: boolean;
+  };
+};
+export type ConnectionTest = { success: boolean; message: string };
 
 function authHeaders(): HeadersInit {
   const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
@@ -71,10 +81,17 @@ function authHeaders(): HeadersInit {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...authHeaders(), ...(init?.headers ?? {}) },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...authHeaders(), ...(init?.headers ?? {}) },
+    });
+  } catch {
+    throw new Error(
+      `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), then Retry.`,
+    );
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { detail?: string }).detail ?? `Request failed (${res.status})`);
@@ -89,15 +106,15 @@ export const adminApi = {
     apiFetch<Course>("/api/admin/courses", { method: "POST", body: JSON.stringify({ code, title }) }),
   classes: (courseId?: string | number) =>
     apiFetch<ClassSection[]>(`/api/admin/classes${courseId ? `?course_id=${courseId}` : ""}`),
-  createClass: (course_id: string | number, code: string, name?: string, semester?: string, academic_year?: string, trainer_id?: string | number) =>
+  createClass: (course_id: string, code: string, trainer_id: string, name?: string, semester?: string, academic_year?: string) =>
     apiFetch<ClassSection>("/api/admin/classes", {
       method: "POST",
-      body: JSON.stringify({ course_id, code, name, semester, academic_year, trainer_id: trainer_id || null }),
+      body: JSON.stringify({ course_id, code, trainer_id, name, semester, academic_year }),
     }),
-  assignStaff: (classId: string | number, trainer_id: string | number | null, ta_id: string | number | null) =>
+  assignStaff: (classId: string, trainer_id: string | null) =>
     apiFetch<ClassSection>(`/api/admin/classes/${classId}/assign`, {
       method: "PATCH",
-      body: JSON.stringify({ trainer_id, ta_id }),
+      body: JSON.stringify({ trainer_id }),
     }),
   deleteClass: (classId: string | number) =>
     apiFetch<{ deleted: string; document_count: number; ticket_count: number; member_count: number }>(
@@ -131,11 +148,18 @@ export const adminApi = {
     const formData = new FormData();
     formData.append("file", file);
     const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    const res = await fetch(`${API_URL}/api/admin/imports`, {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL}/api/admin/imports`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+    } catch {
+      throw new Error(
+        `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up).`,
+      );
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error((body as { detail?: string }).detail ?? `Upload failed (${res.status})`);
@@ -152,7 +176,7 @@ export const adminApi = {
   emailStats: () => apiFetch<EmailStats>("/api/admin/email-queue/stats"),
   emailQueue: (status?: string) =>
     apiFetch<EmailEntry[]>(`/api/admin/email-queue${status ? `?status=${status}` : ""}`),
-  processQueue: () => apiFetch<{ processed: number; sent: number; failed: number }>("/api/admin/email-queue/process", { method: "POST" }),
+  processQueue: () => apiFetch<{ processed: number; sent: number; failed: number; busy?: boolean }>("/api/admin/email-queue/process", { method: "POST" }),
   retryEmail: (emailId: number) =>
     apiFetch<{ id: number; status: string }>(`/api/admin/email-queue/${emailId}/retry`, { method: "POST" }),
   sendTestEmail: (to_email: string) =>
@@ -160,4 +184,30 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify({ to_email }),
     }),
+  retryImportRow: (rowId: number) =>
+    apiFetch<ImportRow>(`/api/admin/import-rows/${rowId}/retry`, { method: "POST" }),
+  // AI-105 runtime settings (read-only from UI, secrets never returned)
+  adminSettings: () => apiFetch<AdminSettings>("/api/admin/settings"),
+  testLlm: () => apiFetch<ConnectionTest>("/api/admin/llm/test-connection", { method: "POST" }),
+  downloadTemplate: async (): Promise<Blob> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+    if (!token) throw new Error("Not logged in — please log in as admin first.");
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL}/api/admin/import-template`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      throw new Error(
+        `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up).`,
+      );
+    }
+    if (res.status === 401) throw new Error("Session expired — please log in again as admin.");
+    if (res.status === 403) throw new Error("Admin only — your account is not an admin.");
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error((body as { detail?: string }).detail ?? `Template download failed (${res.status})`);
+    }
+    return await res.blob();
+  },
 };

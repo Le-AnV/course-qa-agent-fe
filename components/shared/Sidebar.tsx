@@ -14,6 +14,9 @@ import {
   MessageSquare,
   PanelLeft,
   ChevronDown,
+  Mail,
+  FileSpreadsheet,
+  FolderOpen,
 } from "lucide-react";
 import { Role, settingsHrefForRole } from "@/components/ui/nav-config";
 import { useAuth } from "@/components/ui/auth-guard";
@@ -36,8 +39,35 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
     }
   };
 
+  // Class lists come from the backend (student enrollments / trainer ownership);
+  // admin keeps the shared mock list (no class workspace for admins).
+  const [realClasses, setRealClasses] = React.useState<
+    { id: string; code: string; title: string; accentColor: string }[] | null
+  >(null);
+  React.useEffect(() => {
+    if (role === "admin") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { studentApi, accentFor } = await import("@/lib/student-api");
+        const list = await studentApi.classes();
+        if (!cancelled) {
+          setRealClasses(
+            list.map((c) => ({ id: c.id, code: c.code, title: c.name, accentColor: accentFor(c.id) })),
+          );
+        }
+      } catch {
+        if (!cancelled) setRealClasses([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [role]);
+
   // Một nguồn data duy nhất với trang My Classes + banner (lib/classes.ts).
-  const myClasses = classesForRole(role);
+  const myClasses =
+    role === "admin" ? classesForRole(role) : (realClasses ?? []);
 
   // Identity block — real profile (AI-29), not a hardcoded demo name.
   const { profile, loading: profileLoading } = useProfile();
@@ -151,6 +181,22 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
                   <MessageSquare className="h-4 w-4 shrink-0" />
                   {!collapsed && <span>Reports</span>}
                 </Link>
+                <Link
+                  href="/admin/import"
+                  title="Import"
+                  className={linkCls(pathname.startsWith("/admin/import"))}
+                >
+                  <FileSpreadsheet className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span>Import</span>}
+                </Link>
+                <Link
+                  href="/admin/email"
+                  title="Email"
+                  className={linkCls(pathname.startsWith("/admin/email"))}
+                >
+                  <Mail className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span>Email</span>}
+                </Link>
               </>
             )}
 
@@ -211,6 +257,16 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
                       Xem tất cả →
                     </Link>
                   </div>
+                )}
+                {(role === "trainer" || role === "teaching_assistant") && (
+                  <Link
+                    href="/teacher/materials"
+                    title="Materials"
+                    className={linkCls(pathname.startsWith("/teacher/materials"))}
+                  >
+                    <FolderOpen className="h-4 w-4 shrink-0" />
+                    {!collapsed && <span>Materials</span>}
+                  </Link>
                 )}
               </>
             )}
