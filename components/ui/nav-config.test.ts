@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { settingsHrefForRole } from "./nav-config";
+import { NAV_ITEMS, settingsHrefForRole } from "./nav-config";
 
 describe("settingsHrefForRole", () => {
   it("returns null for student (no student/settings route exists)", () => {
@@ -13,5 +13,14 @@ describe("settingsHrefForRole", () => {
 
   it("returns the admin settings route for admin", () => {
     expect(settingsHrefForRole("admin")).toBe("/admin/settings");
+  });
+});
+
+describe("admin navigation (AI-109)", () => {
+  it("exposes the System Health page to admins only", () => {
+    const item = NAV_ITEMS.find((entry) => entry.href === "/admin/system");
+    expect(item).toBeDefined();
+    expect(item?.label).toBe("System Health");
+    expect(item?.roles).toEqual(["admin"]);
   });
 });
