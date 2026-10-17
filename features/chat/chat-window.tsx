@@ -9,12 +9,14 @@ import { getSessionDetail } from '@/features/history/api';
 import type { ChatMessageItem } from '@/features/history/types';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import type { ChatCitation } from '@/lib/sse';
 
 // Define message type
 type Message = {
   id: string;
   role: 'user' | 'ai';
   content: string;
+  citations?: ChatCitation[];
 };
 
 // Initialize chat state
@@ -81,13 +83,14 @@ export function ChatWindow({
           id: m.id,
           role: m.role.toLowerCase() === 'user' ? 'user' : 'ai',
           content: m.content,
+          citations: [],
         }));
 
         setMessages(loaded.length > 0 ? loaded : INITIAL_MESSAGES);
       })
       .catch((err) => {
         console.error('Failed to load session history:', err);
-        toast.error('Không thể tải lịch sử cuộc trò chuyện.');
+        toast.error('The conversation history could not be loaded.');
       })
       .finally(() => {
         if (isMounted) {
@@ -124,8 +127,20 @@ export function ChatWindow({
         return [...prev.slice(0, -1), updatedMsg];
       });
     },
-    onError: () => {
+    onCitation: (citation) => {
+      setMessages(prev => {
+        const lastMsg = prev[prev.length - 1];
+        if (!lastMsg || lastMsg.role !== 'ai') return prev;
+        const updatedMsg = {
+          ...lastMsg,
+          citations: [...(lastMsg.citations ?? []), citation],
+        };
+        return [...prev.slice(0, -1), updatedMsg];
+      });
+    },
+    onError: (error) => {
       setIsTyping(false);
+      toast.error(error.message);
     }
   });
 
@@ -133,7 +148,7 @@ export function ChatWindow({
   const handleSend = (text: string) => {
     // 1. Append User message AND an empty AI message to the list
     const newUserMsg: Message = { id: nextMsgId(), role: 'user', content: text };
-    const emptyAiMsg: Message = { id: nextMsgId(), role: 'ai', content: '' };
+    const emptyAiMsg: Message = { id: nextMsgId(), role: 'ai', content: '', citations: [] };
     setMessages(prev => [...prev, newUserMsg, emptyAiMsg]);
     
     // 2. Enable AI typing indicator
@@ -167,7 +182,7 @@ export function ChatWindow({
           {isLoadingHistory ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400 dark:text-slate-500">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="text-xs">Đang tải cuộc trò chuyện...</span>
+              <span className="text-xs">Loading conversation...</span>
             </div>
           ) : (
             messages.map((msg, idx) => {
@@ -180,6 +195,7 @@ export function ChatWindow({
                   role={msg.role}
                   content={msg.content}
                   isStreaming={isMessageStreaming}
+                  citations={msg.citations}
                 />
               );
             })

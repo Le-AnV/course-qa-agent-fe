@@ -1,13 +1,16 @@
 import * as React from 'react';
+import { CitationChip } from '@/features/citations/citation-chip';
+import type { ChatCitation } from '@/lib/sse';
 
 interface MessageBubbleProps {
   role: 'user' | 'ai';
   content: string;
   isLoading?: boolean;
   isStreaming?: boolean;
+  citations?: ChatCitation[];
 }
 
-export function MessageBubble({ role, content, isLoading, isStreaming }: MessageBubbleProps) {
+export function MessageBubble({ role, content, isLoading, isStreaming, citations = [] }: MessageBubbleProps) {
   const isUser = role === 'user';
 
   return (
@@ -39,15 +42,12 @@ export function MessageBubble({ role, content, isLoading, isStreaming }: Message
           </div>
         )}
 
-        {/* AC-04: Placeholder for Citations */}
-        {/* Only show this Citation box if it's an AI message and streaming is complete */}
-        {!isUser && !isLoading && !isStreaming && (
+        {!isUser && !isLoading && !isStreaming && citations.length > 0 && (
           <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/60">
             <div className="flex flex-wrap gap-2">
-              {/* Dedicated spot for the Epic E5 team to embed their Component */}
-              <span className="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 ring-1 ring-inset ring-slate-500/10">
-                [1] Course Material Source
-              </span>
+              {citations.map((citation) => (
+                <CitationChip key={`${citation.marker}-${citation.document_id}`} citation={citation} />
+              ))}
             </div>
           </div>
         )}
