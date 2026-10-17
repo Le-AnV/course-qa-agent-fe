@@ -74,6 +74,17 @@ export type AdminSettings = {
   };
 };
 export type ConnectionTest = { success: boolean; message: string };
+export type HealthComponent = {
+  name: string;
+  status: "up" | "down" | "configured" | "unconfigured";
+  healthy: boolean;
+  detail: string;
+};
+export type SystemHealth = {
+  status: "ok" | "degraded";
+  service: string;
+  components: HealthComponent[];
+};
 
 function authHeaders(): HeadersInit {
   const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
@@ -193,6 +204,8 @@ export const adminApi = {
   // AI-105 runtime settings (read-only from UI, secrets never returned)
   adminSettings: () => apiFetch<AdminSettings>("/api/admin/settings"),
   testLlm: () => apiFetch<ConnectionTest>("/api/admin/llm/test-connection", { method: "POST" }),
+  // AI-109 system monitoring: live DB/Qdrant/LLM component health.
+  systemHealth: () => apiFetch<SystemHealth>("/api/admin/system/health"),
   downloadTemplate: async (): Promise<Blob> => {
     const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
     if (!token) throw new Error("Not logged in — please log in as admin first.");

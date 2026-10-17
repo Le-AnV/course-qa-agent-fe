@@ -17,6 +17,7 @@ import {
   Mail,
   History,
   FolderOpen,
+  Activity,
 } from "lucide-react";
 import { Role, settingsHrefForRole } from "@/components/ui/nav-config";
 import { useAuth } from "@/components/ui/auth-guard";
@@ -196,6 +197,14 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
                 >
                   <Mail className="h-4 w-4 shrink-0" />
                   {!collapsed && <span>Email</span>}
+                </Link>
+                <Link
+                  href="/admin/system"
+                  title="System Health"
+                  className={linkCls(pathname.startsWith("/admin/system"))}
+                >
+                  <Activity className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span>System</span>}
                 </Link>
               </>
             )}
