@@ -39,11 +39,11 @@ function StatusBadge({ component }: { component: HealthComponent }) {
     <span
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-semibold border ${
         component.healthy
-          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-          : "bg-rose-50 text-rose-700 border-rose-200"
+          ? "bg-white text-[#111111] border-[#CFCFCF]"
+          : "bg-white text-[#9D4C38] border-[#DFB2A6]"
       }`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${component.healthy ? "bg-emerald-500" : "bg-rose-500"}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${component.healthy ? "bg-[#4B9E76]" : "bg-[#C4644C]"}`} />
       {label}
     </span>
   );
@@ -88,7 +88,7 @@ export default function AdminSystemPage() {
       subtitle="Live status of the database, vector store and AI model."
       actions={
         <>
-          <label className="flex items-center gap-2 px-3 py-2 text-[13px] text-[#334155]">
+          <label className="flex items-center gap-2 px-3 py-2 text-[13px] text-[#111111]">
             <input
               type="checkbox"
               checked={auto}
@@ -100,7 +100,7 @@ export default function AdminSystemPage() {
           <button
             onClick={() => void load()}
             disabled={loading}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-[8px] text-[13px] font-semibold transition-colors shadow-sm disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-2 border border-[#CFCFCF] bg-white text-[#111111] shadow-xs hover:bg-[#F7F7F7] rounded-[8px] text-[13px] font-semibold transition-colors shadow-sm disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
@@ -109,7 +109,7 @@ export default function AdminSystemPage() {
       }
     >
       {error && (
-        <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 text-rose-700 text-[13px]">
+        <div className="bg-white border border-[#DFB2A6] rounded-xl p-4 text-[#9D4C38] text-[13px]">
           {error}
           <button onClick={() => void load()} className="ml-2 underline">Retry</button>
         </div>
@@ -120,28 +120,29 @@ export default function AdminSystemPage() {
         <div className="flex items-center gap-3">
           <div
             className={`flex h-10 w-10 items-center justify-center rounded-full ${
-              allHealthy ? "bg-emerald-50" : "bg-rose-50"
+              allHealthy ? "bg-[#F7F7F7]" : "bg-[#F7F7F7]"
             }`}
           >
-            <Activity className={`h-5 w-5 ${allHealthy ? "text-emerald-600" : "text-rose-600"}`} />
+            <Activity className={`h-5 w-5 ${allHealthy ? "text-[#3B7D5D]" : "text-[#C4644C]"}`} />
           </div>
           <div>
-            <p className="text-[15px] font-bold text-[#172033]">
+            <p className="text-[15px] font-bold text-[#111111]">
               {loading && !health ? "Checking…" : allHealthy ? "All systems operational" : "Degraded"}
             </p>
-            <p className="text-[12.5px] text-[#64748B]">
+            <p className="text-[12.5px] text-[#5A5A5A]">
               {checkedAt ? `Last checked ${checkedAt}` : "—"}
             </p>
           </div>
         </div>
         {health && (
           <span
-            className={`px-3 py-1 rounded-full text-[12px] font-semibold border ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold border ${
               allHealthy
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : "bg-amber-50 text-amber-700 border-amber-200"
+                ? "bg-white text-[#3B7D5D] border-[#C8E2D5]"
+                : "bg-white text-[#9D4C38] border-[#DFB2A6]"
             }`}
           >
+            <span className={`h-1.5 w-1.5 rounded-full ${allHealthy ? "bg-[#4B9E76]" : "bg-[#C4644C]"}`} />
             {health.status === "ok" ? "OK" : "DEGRADED"}
           </span>
         )}
@@ -149,7 +150,7 @@ export default function AdminSystemPage() {
 
       {/* Per-component cards */}
       {loading && !health ? (
-        <div className={`${ADMIN_CARD} p-8 text-center text-[#64748B] text-[13px]`}>
+        <div className={`${ADMIN_CARD} p-8 text-center text-[#5A5A5A] text-[13px]`}>
           Loading system health…
         </div>
       ) : (
@@ -162,15 +163,15 @@ export default function AdminSystemPage() {
                   <div
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
                       component.healthy
-                        ? "bg-emerald-50 text-emerald-600"
-                        : "bg-rose-50 text-rose-600"
+                        ? "bg-[#F7F7F7] text-[#111111]"
+                        : "bg-white text-[#C4644C]"
                     }`}
                   >
                     {meta.icon}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[14px] font-bold text-[#172033]">{meta.label}</p>
-                    <p className="text-[12.5px] text-[#64748B] truncate">
+                    <p className="text-[14px] font-bold text-[#111111]">{meta.label}</p>
+                    <p className="text-[12.5px] text-[#5A5A5A] truncate">
                       {component.detail || meta.blurb}
                     </p>
                   </div>
@@ -182,7 +183,7 @@ export default function AdminSystemPage() {
         </div>
       )}
 
-      <p className="text-[12px] text-[#94A3B8]">
+      <p className="text-[12px] text-[#6F6F6F]">
         Health checks run server-side; secrets are never returned to the browser.
       </p>
     </AdminPageShell>
