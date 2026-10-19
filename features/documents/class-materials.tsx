@@ -5,12 +5,23 @@ import { useRouter } from "next/navigation";
 import { FileText, Upload, X } from "lucide-react";
 import { AUTH_TOKEN_KEY } from "@/components/ui/nav-config";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   ACCEPTED_TYPES,
   ApiError,
   acceptedExtensions,
   approveDocument,
+  deleteDocument,
   fetchDocuments,
   formatFileSize,
+  replaceNameError,
+  uploadDocuments,
   validationError,
   type DocumentFilters,
   type DocumentItem,
@@ -24,6 +35,7 @@ const STATUS_LABEL: Record<DocumentItem["status"], string> = {
   indexed: "Indexed",
   rejected: "Rejected",
   failed: "Failed",
+  replaced: "Replaced",
 };
 
 const STATUS_DOT: Record<DocumentItem["status"], string> = {
@@ -32,6 +44,7 @@ const STATUS_DOT: Record<DocumentItem["status"], string> = {
   indexed: "bg-[#4B9E76]",
   rejected: "bg-[#C4644C]",
   failed: "bg-[#C4644C]",
+  replaced: "bg-[#B9B9B9]",
 };
 
 const STATUS_TEXT: Record<DocumentItem["status"], string> = {
@@ -40,6 +53,7 @@ const STATUS_TEXT: Record<DocumentItem["status"], string> = {
   indexed: "text-[#3B7D5D]",
   rejected: "text-[#9D4C38]",
   failed: "text-[#9D4C38]",
+  replaced: "text-[#5A5A5A]",
 };
 
 type UploadState =
@@ -69,6 +83,12 @@ export function ClassMaterials({
   const [loading, setLoading] = React.useState(true);
   const [listError, setListError] = React.useState<string | null>(null);
   const [approvingId, setApprovingId] = React.useState<string | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [replacingId, setReplacingId] = React.useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = React.useState<DocumentItem | null>(null);
+  const [replaceTarget, setReplaceTarget] = React.useState<DocumentItem | null>(null);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const replaceInputRef = React.useRef<HTMLInputElement>(null);
 
   const [files, setFiles] = React.useState<File[]>([]);
   const [fileErrors, setFileErrors] = React.useState<string[]>([]);
@@ -205,6 +225,83 @@ export function ClassMaterials({
     }
   }
 
+  async function confirmDelete() {
+    const target = pendingDelete;
+    if (!target) return;
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      setActionError("Not authenticated. Please log in again.");
+      setPendingDelete(null);
+      return;
+    }
+    setDeletingId(target.id);
+    setActionError(null);
+    try {
+      await deleteDocument({ token }, target.id);
+      setPendingDelete(null);
+      const nextPage = documents.length === 1 && page > 1 ? page - 1 : page;
+      if (nextPage !== page) setPage(nextPage);
+      await load(filters, nextPage);
+    } catch (err) {
+      setPendingDelete(null);
+      if (err instanceof ApiError && err.status === 401) {
+        router.push("/login");
+        return;
+      }
+      setActionError(
+        err instanceof ApiError ? `Delete failed (${err.status}).` : "Delete failed.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  function startReplace(document: DocumentItem) {
+    setReplaceTarget(document);
+    setActionError(null);
+    if (replaceInputRef.current) {
+      replaceInputRef.current.value = "";
+      replaceInputRef.current.click();
+    }
+  }
+
+  async function onReplacementChosen(chosen: FileList | null) {
+    const target = replaceTarget;
+    setReplaceTarget(null);
+    if (!target || !chosen || chosen.length === 0) return;
+    const file = chosen[0];
+    const nameError = replaceNameError(target, file);
+    if (nameError) {
+      setActionError(nameError);
+      return;
+    }
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      setActionError("Not authenticated. Please log in again.");
+      return;
+    }
+    setReplacingId(target.id);
+    setActionError(null);
+    try {
+      const [outcome] = await uploadDocuments({ token }, target.classId, [file]);
+      if (!outcome || outcome.error || !outcome.item) {
+        setActionError(outcome?.error ?? "Replace failed.");
+      } else {
+        await load(filters, page);
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        router.push("/login");
+        return;
+      }
+      setActionError(
+        err instanceof ApiError ? `Replace failed (${err.status}).` : "Replace failed.",
+      );
+    } finally {
+      setReplacingId(null);
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
@@ -254,6 +351,7 @@ export function ClassMaterials({
             <option value="indexed">Indexed</option>
             <option value="rejected">Rejected</option>
             <option value="failed">Failed</option>
+            <option value="replaced">Replaced</option>
           </select>
           <button
             type="button"
@@ -370,6 +468,17 @@ export function ClassMaterials({
         </div>
       )}
 
+      <input
+        ref={replaceInputRef}
+        id="class-material-replace"
+        type="file"
+        accept={acceptedExtensions().join(",")}
+        onChange={(e) => void onReplacementChosen(e.target.files)}
+        className="sr-only"
+        aria-label="Choose a replacement file"
+        tabIndex={-1}
+      />
+
       {listError && (
         <div className="mb-3 flex items-center gap-2 rounded border border-[#DFB2A6] bg-white p-3 text-[13px] text-[#9D4C38]">
           <span className="flex-1">{listError}</span>
@@ -380,6 +489,10 @@ export function ClassMaterials({
             Retry
           </button>
         </div>
+      )}
+
+      {actionError && (
+        <p className="mb-3 text-[13px] text-[#9D4C38]">{actionError}</p>
       )}
 
       {loading ? (
@@ -400,7 +513,7 @@ export function ClassMaterials({
                 <th className="hidden px-4 py-3 md:table-cell">Size</th>
                 <th className="hidden px-4 py-3 md:table-cell">Uploaded</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="w-28 px-4 py-3"></th>
+                <th className="w-56 px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#DADADA]">
@@ -433,17 +546,52 @@ export function ClassMaterials({
                       </span>
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    {d.status === "pending" && (
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      {d.status === "pending" && (
+                        <button
+                          type="button"
+                          onClick={() => void handleApprove(d.id)}
+                          disabled={
+                            approvingId === d.id ||
+                            deletingId === d.id ||
+                            replacingId === d.id ||
+                            loading
+                          }
+                          className="rounded border border-[#CFCFCF] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+                        >
+                          {approvingId === d.id ? "Approving…" : "Approve"}
+                        </button>
+                      )}
+                      {d.status !== "replaced" && (
+                        <button
+                          type="button"
+                          onClick={() => startReplace(d)}
+                          disabled={
+                            replacingId === d.id ||
+                            deletingId === d.id ||
+                            approvingId === d.id ||
+                            loading
+                          }
+                          className="rounded border border-[#CFCFCF] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+                        >
+                          {replacingId === d.id ? "Replacing…" : "Replace"}
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => void handleApprove(d.id)}
-                        disabled={approvingId === d.id || loading}
-                        className="rounded border border-[#CFCFCF] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+                        onClick={() => setPendingDelete(d)}
+                        disabled={
+                          deletingId === d.id ||
+                          approvingId === d.id ||
+                          replacingId === d.id ||
+                          loading
+                        }
+                        className="rounded border border-[#DFB2A6] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#9D4C38] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
                       >
-                        {approvingId === d.id ? "Approving…" : "Approve"}
+                        {deletingId === d.id ? "Deleting…" : "Delete"}
                       </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -485,6 +633,40 @@ export function ClassMaterials({
           </div>
         </div>
       )}
+
+      <Dialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {pendingDelete?.fileName}?</DialogTitle>
+            <DialogDescription>
+              v{pendingDelete?.version} of this file is removed permanently and its
+              chunks are deleted from the knowledge base, so the chatbot will no
+              longer answer from it. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setPendingDelete(null)}
+              disabled={deletingId !== null}
+              className="rounded border border-[#CFCFCF] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void confirmDelete()}
+              disabled={deletingId !== null}
+              className="rounded border border-[#DFB2A6] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#9D4C38] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+            >
+              {deletingId !== null ? "Deleting…" : "Delete"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
