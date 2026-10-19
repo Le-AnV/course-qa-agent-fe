@@ -1,8 +1,7 @@
 /**
  * E2 documents client (AI-35/37/41/39): upload, list/search/filter, class
- * tags, delete & replace. Talks to `GET|POST|DELETE /api/documents` when the
- * backend runs; the materials page (/teacher/materials) falls back to mock
- * data so the UI is reviewable without the backend.
+ * tags, delete & replace. Talks to `GET|POST|DELETE /api/documents`; the
+ * materials surface (`ClassMaterials`) renders inside the class syllabus page.
  */
 
 export type DocumentStatus =
@@ -12,12 +11,6 @@ export type DocumentStatus =
   | "rejected"
   | "failed"
   | "replaced";
-
-export type ClassOption = {
-  id: string;
-  name: string;
-  code: string;
-};
 
 export type DocumentItem = {
   id: string;
@@ -64,41 +57,6 @@ export const ACCEPTED_TYPES: AcceptedType[] = [
 
 export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 
-export const MOCK_CLASSES: ClassOption[] = [
-  { id: "class-a", name: "CS101 - Class A", code: "CS101-A" },
-  { id: "class-b", name: "CS101 - Class B", code: "CS101-B" },
-];
-
-export const MOCK_DOCUMENTS: DocumentItem[] = [
-  {
-    id: "doc-1",
-    fileName: "syllabus.pdf",
-    fileType: ".pdf",
-    mimeType: "application/pdf",
-    sizeBytes: 245760,
-    uploaderId: "trainer-1",
-    classId: "class-a",
-    className: "CS101 - Class A",
-    status: "indexed",
-    version: 1,
-    createdAt: "2026-10-01T09:00:00Z",
-  },
-  {
-    id: "doc-2",
-    fileName: "week1-slides.pptx",
-    fileType: ".pptx",
-    mimeType:
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    sizeBytes: 5242880,
-    uploaderId: "trainer-1",
-    classId: "class-a",
-    className: "CS101 - Class A",
-    status: "pending",
-    version: 1,
-    createdAt: "2026-10-08T14:30:00Z",
-  },
-];
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export function backendUrl(): string {
@@ -132,19 +90,6 @@ function headers(auth: AuthHeaders): HeadersInit {
   return {
     Authorization: `Bearer ${auth.token}`,
   };
-}
-
-export async function fetchMyClasses(auth: AuthHeaders): Promise<ClassOption[]> {
-  const res = await fetch(`${API_URL}/api/documents/classes/mine`, {
-    headers: headers(auth),
-  });
-  if (!res.ok) await throwForStatus(res);
-  const rows = (await res.json()) as {
-    id: string;
-    name: string;
-    code: string;
-  }[];
-  return rows.map((r) => ({ id: r.id, name: r.name, code: r.code }));
 }
 
 type DocumentRow = {
@@ -331,19 +276,6 @@ export function acceptedExtensions(): string[] {
   return ACCEPTED_TYPES.map((t) => t.extension);
 }
 
-/**
- * AI-41 (AC-01): keep the upload target class valid when the async class
- * list arrives after mount. Keeps `current` if it still exists, otherwise
- * falls back to the first class ("" when the list is empty, blocking upload).
- */
-export function resolveDefaultClassId(
-  classes: ClassOption[],
-  current: string,
-): string {
-  if (current && classes.some((c) => c.id === current)) return current;
-  return classes[0]?.id ?? "";
-}
-
 /** Upload AC-01/AC-07 client validation (pure, unit-tested). */
 export function validationError(file: Pick<File, "name" | "size">): string | null {
   const dot = file.name.lastIndexOf(".");
@@ -355,24 +287,4 @@ export function validationError(file: Pick<File, "name" | "size">): string | nul
     return `${file.name}: exceeds 100MB per file.`;
   }
   return null;
-}
-
-/** Mock fallback for the materials list when the backend is unreachable (pure, unit-tested). */
-export function applyMockFallback(
-  all: DocumentItem[],
-  filters: DocumentFilters,
-  page: number,
-  pageSize: number,
-): { items: DocumentItem[]; total: number } {
-  const needle = filters.search.trim().toLowerCase();
-  const filtered = all.filter((d) => {
-    if (needle && !d.fileName.toLowerCase().includes(needle)) return false;
-    if (filters.classId !== "all" && d.classId !== filters.classId) return false;
-    if (filters.fileType !== "all" && d.fileType !== filters.fileType) return false;
-    if (filters.status !== "all" && d.status !== filters.status) return false;
-    return true;
-  });
-  const total = filtered.length;
-  const start = (page - 1) * pageSize;
-  return { items: filtered.slice(start, start + pageSize), total };
 }
