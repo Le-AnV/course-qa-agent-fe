@@ -8,6 +8,6 @@
 | AI-41 | Tag Documents by Class | nguyenvu040905 | pick class from admin-created list only |
 | AI-43 | Preview & Download | Unassigned | preview original file, download |
 
-**Planned files:** `upload-dropzone.tsx`, `document-list.tsx`, `document-row.tsx`, `preview-dialog.tsx`.
+**Components:** `class-materials.tsx` (`ClassMaterials`) — upload, list/search/filter, approve, delete & replace; rendered inside the class syllabus page.
 
-Route: `/dashboard` (trainer).
+Route: `/teacher/class/[id]/syllabus` (trainer).
