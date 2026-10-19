@@ -17,6 +17,7 @@ import {
   ApiError,
   acceptedExtensions,
   approveDocument,
+  backendUrl,
   deleteDocument,
   fetchDocuments,
   formatFileSize,
@@ -130,7 +131,7 @@ export function ClassMaterials({
         setListError(
           err instanceof ApiError
             ? `Backend error ${err.status}: ${err.message}`
-            : "Cannot reach the backend — check it is running, then Retry.",
+            : `Cannot reach backend at ${backendUrl()} — check the BE is running (docker compose up), then Retry; or open this page via http://localhost:3000 (BE CORS only allows that origin).`,
         );
       } finally {
         setLoading(false);
@@ -201,7 +202,7 @@ export function ClassMaterials({
         message:
           err instanceof ApiError
             ? `Upload failed (${err.status}).`
-            : "Cannot reach the backend — check it is running.",
+            : `Cannot reach backend at ${backendUrl()} — check the BE is running (docker compose up), or open this page via http://localhost:3000 (BE CORS only allows that origin).`,
       });
     }
   }
