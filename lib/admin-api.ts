@@ -123,7 +123,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     });
   } catch {
     throw new Error(
-      `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), then Retry.`,
+      `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), then Retry; or open this app via http://localhost:3000 (BE CORS only allows local dev origins).`,
     );
   }
   if (!res.ok) {
@@ -211,7 +211,7 @@ export const adminApi = {
       });
     } catch {
       throw new Error(
-        `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up).`,
+        `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), or open this app via http://localhost:3000 (BE CORS only allows local dev origins).`,
       );
     }
     if (!res.ok) {
@@ -255,7 +255,7 @@ export const adminApi = {
       });
     } catch {
       throw new Error(
-        `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up).`,
+        `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), or open this app via http://localhost:3000 (BE CORS only allows local dev origins).`,
       );
     }
     if (res.status === 401) throw new Error("Session expired — please log in again as admin.");
