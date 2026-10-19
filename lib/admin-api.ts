@@ -2,13 +2,25 @@ import { AUTH_TOKEN_KEY } from "@/components/ui/nav-config";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export type ClassTrainer = {
+  trainer_id: string;
+  name: string | null;
+  email: string | null;
+  is_primary: boolean;
+};
 export type ClassSection = {
   id: string;
   code: string;
   trainer_id: string | null;
   trainer_name: string | null;
+  // Primary trainer first, then co-trainers. Optional: an older backend build
+  // does not send it, so the UI falls back to trainer_id/trainer_name.
+  trainers?: ClassTrainer[];
   credits: number;
   student_count: number;
+  // P5: roster capacity (None = unlimited). P7: ACTIVE | ARCHIVED.
+  capacity?: number | null;
+  status?: string;
   document_count: number;
   ticket_count: number;
 };
@@ -43,7 +55,18 @@ export type ImportBatch = {
   created_at: string;
 };
 export type ImportBatchDetail = ImportBatch & { rows: ImportRow[] };
-export type EmailStats = { pending: number; sent: number; failed: number };
+export type EmailStats = {
+  pending: number;
+  sent: number;
+  failed: number;
+  // Live drain progress (AC-09) — present while "Process queue now" is running.
+  draining?: boolean;
+  drain_started_at?: string | null;
+  drain_total?: number;
+  drain_done?: number;
+  drain_sent?: number;
+  drain_failed?: number;
+};
 export type EmailEntry = {
   id: number;
   to_email: string;
@@ -130,6 +153,22 @@ export const adminApi = {
     apiFetch<ClassSection>(`/api/admin/classes/${classId}/assign`, {
       method: "PATCH",
       body: JSON.stringify({ trainer_id }),
+    }),
+  // Co-teaching / mid-semester handover: teacher A starts, teacher B joins.
+  addTrainer: (classId: string, trainer_id: string) =>
+    apiFetch<ClassSection>(`/api/admin/classes/${classId}/trainers`, {
+      method: "POST",
+      body: JSON.stringify({ trainer_id }),
+    }),
+  removeTrainer: (classId: string, trainerId: string) =>
+    apiFetch<ClassSection>(`/api/admin/classes/${classId}/trainers/${trainerId}`, {
+      method: "DELETE",
+    }),
+  // P7: archive hides the class from teachers/students; ACTIVE restores it.
+  setClassStatus: (classId: string, status: "ACTIVE" | "ARCHIVED") =>
+    apiFetch<ClassSection>(`/api/admin/classes/${classId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
     }),
   deleteClass: (classId: string | number) =>
     apiFetch<{ deleted: string; document_count: number; ticket_count: number; member_count: number }>(
