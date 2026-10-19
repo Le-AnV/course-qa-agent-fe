@@ -489,14 +489,10 @@ export default function AdminUsersPage() {
                     <h3 className="text-[15px] font-bold text-[#111111]">{importing ? "Uploading..." : "Click to browse or drag file here"}</h3>
                     <p className="text-[13px] text-[#5A5A5A] mt-1">Accepts only .xlsx files</p>
                   </label>
-                  <div className="text-center flex items-center justify-center gap-3">
+                  <div className="text-center">
                     <button onClick={() => void downloadTemplate()} className="text-[13px] font-semibold text-[#111111] hover:underline">
                       Download template
                     </button>
-                    <span className="text-slate-300">·</span>
-                    <a href="/samples/account-import-sample.xlsx" download="account-import-sample.xlsx" className="text-[13px] font-semibold text-[#111111] hover:underline">
-                      Filled sample
-                    </a>
                   </div>
                 </div>
               )}
