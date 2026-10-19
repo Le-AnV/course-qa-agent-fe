@@ -41,7 +41,7 @@ export function CourseAiVisualPanel() {
         paddingLeft: "clamp(32px, 4.5vw, 80px)",
         paddingRight: "clamp(32px, 4.5vw, 80px)",
         background:
-          "linear-gradient(110deg, #EEF4FF 0%, #F4F7FF 60%, #FFFFFF 100%)",
+          "linear-gradient(110deg, #F7F7F7 0%, #F7F7F7 60%, #FFFFFF 100%)",
       }}
     >
       {/* ============================================================== */}
@@ -49,12 +49,12 @@ export function CourseAiVisualPanel() {
       {/* ============================================================== */}
       <header className="flex items-center gap-3 shrink-0">
         <div
-          className="w-[34px] h-[34px] rounded-[10px] bg-[#2563EB] text-white flex items-center justify-center shadow-xs"
+          className="w-[34px] h-[34px] rounded-[10px] border border-[#CFCFCF] bg-white flex items-center justify-center shadow-xs"
           aria-hidden="true"
         >
-          <GraduationCap className="w-[18px] h-[18px] text-white" />
+          <GraduationCap className="w-[18px] h-[18px] text-[#111111]" />
         </div>
-        <span className="font-sans text-[17px] font-bold tracking-tight text-[#172B4D]">
+        <span className="font-sans text-[17px] font-bold tracking-tight text-[#111111]">
           Course AI
         </span>
       </header>
@@ -69,18 +69,18 @@ export function CourseAiVisualPanel() {
             className="font-sans font-bold tracking-tight"
             style={{
               fontSize: "clamp(32px, 3vw, 48px)",
-              fontWeight: 700,
+              fontWeight: 600,
               lineHeight: 1.15,
             }}
           >
-            <span className="block text-[#172B4D]">Ask questions.</span>
-            <span className="block text-[#2563EB] mt-1">
+            <span className="block text-[#111111]">Ask questions.</span>
+            <span className="block text-[#111111] mt-1">
               Get answers from your <span className="inline-block whitespace-nowrap">course materials.</span>
             </span>
           </h1>
 
           <p
-            className="text-[#64748B] font-normal mt-4"
+            className="text-[#5A5A5A] font-normal mt-4"
             style={{
               fontSize: "clamp(16px, 1.15vw, 18px)",
               lineHeight: 1.6,
@@ -111,15 +111,15 @@ export function CourseAiVisualPanel() {
               <defs>
                 {/* Vibrant blue gradient for the AI answer speech bubble */}
                 <linearGradient id="speechBubbleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#3B82F6" />
-                  <stop offset="60%" stopColor="#2563EB" />
-                  <stop offset="100%" stopColor="#1D4ED8" />
+                  <stop offset="0%" stopColor="#6F6F6F" />
+                  <stop offset="60%" stopColor="#111111" />
+                  <stop offset="100%" stopColor="#111111" />
                 </linearGradient>
 
                 {/* Soft gradient for student circular avatar */}
                 <linearGradient id="studentBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#F0F7FF" />
-                  <stop offset="100%" stopColor="#DBEAFE" />
+                  <stop offset="0%" stopColor="#F7F7F7" />
+                  <stop offset="100%" stopColor="#F0F0F0" />
                 </linearGradient>
 
                 {/* Multi-layered soft shadow for Course AI card */}
@@ -135,7 +135,7 @@ export function CourseAiVisualPanel() {
                     dx="0"
                     dy="8"
                     stdDeviation="14"
-                    floodColor="#2563EB"
+                    floodColor="#111111"
                     floodOpacity="0.09"
                   />
                 </filter>
@@ -153,7 +153,7 @@ export function CourseAiVisualPanel() {
                     dx="0"
                     dy="4"
                     stdDeviation="6"
-                    floodColor="#0F172A"
+                    floodColor="#111111"
                     floodOpacity="0.07"
                   />
                 </filter>
@@ -171,7 +171,7 @@ export function CourseAiVisualPanel() {
                     dx="0"
                     dy="4"
                     stdDeviation="8"
-                    floodColor="#2563EB"
+                    floodColor="#111111"
                     floodOpacity="0.18"
                   />
                 </filter>
@@ -189,7 +189,7 @@ export function CourseAiVisualPanel() {
                     dx="0"
                     dy="8"
                     stdDeviation="14"
-                    floodColor="#2563EB"
+                    floodColor="#111111"
                     floodOpacity="0.32"
                   />
                 </filter>
@@ -206,7 +206,7 @@ export function CourseAiVisualPanel() {
                   y1="110"
                   x2="246"
                   y2="110"
-                  stroke="#CBDDF8"
+                  stroke="#CFCFCF"
                   strokeWidth="2"
                   strokeLinecap="round"
                 />
@@ -217,7 +217,7 @@ export function CourseAiVisualPanel() {
                   y1="110"
                   x2="545"
                   y2="110"
-                  stroke="#CBDDF8"
+                  stroke="#CFCFCF"
                   strokeWidth="2"
                   strokeLinecap="round"
                 />
@@ -233,7 +233,7 @@ export function CourseAiVisualPanel() {
                   x="80"
                   y="38"
                   textAnchor="middle"
-                  fill="#64748B"
+                  fill="#5A5A5A"
                   fontSize="12"
                   fontWeight="700"
                   fontFamily="inherit"
@@ -249,7 +249,7 @@ export function CourseAiVisualPanel() {
                   width="40"
                   height="54"
                   rx="5"
-                  fill="#E2E8F0"
+                  fill="#DADADA"
                   opacity="0.75"
                   transform="rotate(-7 80 111)"
                 />
@@ -261,8 +261,8 @@ export function CourseAiVisualPanel() {
                   width="40"
                   height="54"
                   rx="5"
-                  fill="#F1F5F9"
-                  stroke="#CBD5E1"
+                  fill="#F7F7F7"
+                  stroke="#E2E2E2"
                   strokeWidth="1.2"
                   transform="rotate(5 80 110)"
                 />
@@ -272,20 +272,20 @@ export function CourseAiVisualPanel() {
                   <path
                     d="M 65 82 H 89 L 101 94 V 132 A 6 6 0 0 1 95 138 H 65 A 6 6 0 0 1 59 132 V 88 A 6 6 0 0 1 65 82 Z"
                     fill="#FFFFFF"
-                    stroke="#94A3B8"
+                    stroke="#6F6F6F"
                     strokeWidth="1.4"
                   />
                   {/* Folded upper-right corner flap with blue accent */}
                   <path
                     d="M 89 82 V 94 H 101 Z"
-                    fill="#DBEAFE"
-                    stroke="#93C5FD"
+                    fill="#F0F0F0"
+                    stroke="#E2E2E2"
                     strokeWidth="1.3"
                     strokeLinejoin="round"
                   />
 
                   {/* Header category pill accent */}
-                  <rect x="66" y="90" width="16" height="4" rx="2" fill="#3B82F6" />
+                  <rect x="66" y="90" width="16" height="4" rx="2" fill="#6F6F6F" />
 
                   {/* Evenly spaced placeholder text lines */}
                   <line
@@ -293,7 +293,7 @@ export function CourseAiVisualPanel() {
                     y1="102"
                     x2="93"
                     y2="102"
-                    stroke="#CBD5E1"
+                    stroke="#E2E2E2"
                     strokeWidth="2"
                     strokeLinecap="round"
                   />
@@ -302,7 +302,7 @@ export function CourseAiVisualPanel() {
                     y1="110"
                     x2="90"
                     y2="110"
-                    stroke="#E2E8F0"
+                    stroke="#DADADA"
                     strokeWidth="2"
                     strokeLinecap="round"
                   />
@@ -311,7 +311,7 @@ export function CourseAiVisualPanel() {
                     y1="118"
                     x2="84"
                     y2="118"
-                    stroke="#E2E8F0"
+                    stroke="#DADADA"
                     strokeWidth="2"
                     strokeLinecap="round"
                   />
@@ -320,7 +320,7 @@ export function CourseAiVisualPanel() {
                     y1="126"
                     x2="76"
                     y2="126"
-                    stroke="#E2E8F0"
+                    stroke="#DADADA"
                     strokeWidth="2"
                     strokeLinecap="round"
                   />
@@ -340,7 +340,7 @@ export function CourseAiVisualPanel() {
                   height="80"
                   rx="18"
                   fill="#FFFFFF"
-                  stroke="#BFDBFE"
+                  stroke="#CFCFCF"
                   strokeWidth="1.75"
                   filter="url(#courseAiShadow)"
                 >
@@ -352,7 +352,7 @@ export function CourseAiVisualPanel() {
                         dur="7.5s"
                         repeatCount="indefinite"
                         keyTimes="0; 0.240; 0.286; 0.333; 1"
-                        values="#BFDBFE; #BFDBFE; #3B82F6; #BFDBFE; #BFDBFE"
+                        values="#CFCFCF; #CFCFCF; #6F6F6F; #CFCFCF; #CFCFCF"
                       />
                       <animate
                         attributeName="stroke-width"
@@ -384,15 +384,15 @@ export function CourseAiVisualPanel() {
                     {/* Back conversation bubble (smaller, lighter blue, top-right) */}
                     <path
                       d="M -38 -15 H -24 A 4.5 4.5 0 0 1 -19.5 -10.5 V -4.5 A 4.5 4.5 0 0 1 -24 0 H -30 L -35 4 V 0 H -38 A 4.5 4.5 0 0 1 -42.5 -4.5 V -10.5 A 4.5 4.5 0 0 1 -38 -15 Z"
-                      fill="#93C5FD"
-                      stroke="#60A5FA"
+                      fill="#E2E2E2"
+                      stroke="#6F6F6F"
                       strokeWidth="1"
                     />
 
                     {/* Front conversation bubble (primary, brand blue, bottom-left) */}
                     <path
                       d="M -47 -8 H -29 A 5 5 0 0 1 -24 -3 V 4 A 5 5 0 0 1 -29 9 H -38 L -44 14 V 9 H -47 A 5 5 0 0 1 -52 4 V -3 A 5 5 0 0 1 -47 -8 Z"
-                      fill="#2563EB"
+                      fill="#111111"
                     />
                     {/* Two tiny white chat lines inside the front bubble */}
                     <line
@@ -419,7 +419,7 @@ export function CourseAiVisualPanel() {
                   <text
                     x="-14"
                     y="6"
-                    fill="#172B4D"
+                    fill="#111111"
                     fontSize="16"
                     fontWeight="700"
                     fontFamily="inherit"
@@ -440,7 +440,7 @@ export function CourseAiVisualPanel() {
                   x="580"
                   y="38"
                   textAnchor="middle"
-                  fill="#64748B"
+                  fill="#5A5A5A"
                   fontSize="12"
                   fontWeight="700"
                   fontFamily="inherit"
@@ -456,7 +456,7 @@ export function CourseAiVisualPanel() {
                     cy="110"
                     r="30"
                     fill="none"
-                    stroke="#3B82F6"
+                    stroke="#6F6F6F"
                     strokeWidth="1.75"
                     opacity="0"
                   >
@@ -490,7 +490,7 @@ export function CourseAiVisualPanel() {
                   cy="110"
                   r="30"
                   fill="url(#studentBgGrad)"
-                  stroke="#BFDBFE"
+                  stroke="#CFCFCF"
                   strokeWidth="1.75"
                 />
 
@@ -500,7 +500,7 @@ export function CourseAiVisualPanel() {
                   cy="110"
                   r="26"
                   fill="none"
-                  stroke="#DBEAFE"
+                  stroke="#F0F0F0"
                   strokeWidth="1"
                   opacity="0.8"
                 />
@@ -511,12 +511,12 @@ export function CourseAiVisualPanel() {
                   cx="580"
                   cy="101"
                   r="7.5"
-                  fill="#2563EB"
+                  fill="#111111"
                 />
                 {/* Contoured shoulders */}
                 <path
                   d="M 566 123 C 566 114 572 111 580 111 C 588 111 594 114 594 123 C 594 124.5 593 125 591.5 125 H 568.5 C 567 125 566 124.5 566 123 Z"
-                  fill="#2563EB"
+                  fill="#111111"
                 />
               </g>
 
@@ -553,20 +553,20 @@ export function CourseAiVisualPanel() {
                     <path
                       d="M -12 -19 H 5 L 14 -10 V 17 A 3 3 0 0 1 11 20 H -12 A 3 3 0 0 1 -15 17 V -16 A 3 3 0 0 1 -12 -19 Z"
                       fill="#FFFFFF"
-                      stroke="#2563EB"
+                      stroke="#111111"
                       strokeWidth="1.6"
                     />
                     {/* Folded corner flap */}
                     <path
                       d="M 5 -19 V -10 H 14 Z"
-                      fill="#DBEAFE"
-                      stroke="#2563EB"
+                      fill="#F0F0F0"
+                      stroke="#111111"
                       strokeWidth="1.5"
                       strokeLinejoin="round"
                     />
 
                     {/* Category pill accent */}
-                    <rect x="-9" y="-13" width="10" height="3" rx="1.5" fill="#3B82F6" />
+                    <rect x="-9" y="-13" width="10" height="3" rx="1.5" fill="#6F6F6F" />
 
                     {/* Evenly spaced text lines */}
                     <line
@@ -574,7 +574,7 @@ export function CourseAiVisualPanel() {
                       y1="-5"
                       x2="6"
                       y2="-5"
-                      stroke="#93C5FD"
+                      stroke="#E2E2E2"
                       strokeWidth="1.6"
                       strokeLinecap="round"
                     />
@@ -583,7 +583,7 @@ export function CourseAiVisualPanel() {
                       y1="2"
                       x2="4"
                       y2="2"
-                      stroke="#93C5FD"
+                      stroke="#E2E2E2"
                       strokeWidth="1.6"
                       strokeLinecap="round"
                     />
@@ -592,7 +592,7 @@ export function CourseAiVisualPanel() {
                       y1="9"
                       x2="1"
                       y2="9"
-                      stroke="#93C5FD"
+                      stroke="#E2E2E2"
                       strokeWidth="1.6"
                       strokeLinecap="round"
                     />
@@ -601,7 +601,7 @@ export function CourseAiVisualPanel() {
                       y1="14"
                       x2="-3"
                       y2="14"
-                      stroke="#93C5FD"
+                      stroke="#E2E2E2"
                       strokeWidth="1.6"
                       strokeLinecap="round"
                     />

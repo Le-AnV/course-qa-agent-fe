@@ -11,7 +11,7 @@ export function LandingFooter() {
             className="inline-flex items-center gap-3"
             aria-label="Course Q&A Agent home"
           >
-            <span className="flex size-9 items-center justify-center rounded-xl bg-blue-600 text-white">
+            <span className="flex size-9 items-center justify-center rounded-xl border border-[#CFCFCF] bg-white text-[#111111] shadow-xs">
               <MessagesSquare className="size-5" aria-hidden="true" />
             </span>
             <span className="font-semibold tracking-tight text-slate-950">Course Q&amp;A Agent</span>
@@ -24,7 +24,7 @@ export function LandingFooter() {
         <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-slate-600">
           <Link href="#how-it-works" className="hover:text-slate-950">How it works</Link>
           <Link href="#workspace" className="hover:text-slate-950">Workspace</Link>
-          <Link href="/login" className="text-blue-700 hover:text-blue-800">Log in</Link>
+          <Link href="/login" className="text-[var(--brand-ink)] hover:text-[var(--brand-ink)]">Log in</Link>
         </div>
       </div>
       <div className="border-t border-slate-100 px-5 py-5 text-center text-xs text-slate-500">

@@ -90,7 +90,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-screen h-screen flex overflow-hidden bg-white text-slate-900 selection:bg-blue-600 selection:text-white">
+    <div className="w-screen h-screen flex overflow-hidden bg-white text-slate-900 selection:bg-[var(--brand-soft-strong)] selection:text-[#111111]">
       {/* CỘT TRÁI (60% - COURSE AI VISUAL HERO) */}
       <section className="hidden lg:flex lg:w-[60%] relative h-full overflow-hidden">
         <CourseAiVisualPanel />
@@ -102,7 +102,7 @@ export default function LoginPage() {
         <header className="w-full flex items-center justify-between shrink-0">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors group py-1"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-[var(--brand-ink)] transition-colors group py-1"
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
             <span>Back</span>
@@ -114,10 +114,10 @@ export default function LoginPage() {
         <main className="w-full max-w-[390px] sm:max-w-[410px] mx-auto my-auto py-2 sm:py-3">
           {/* Welcome Header */}
           <div className="mb-5 sm:mb-6">
-            <div className="w-12 h-12 rounded-[12px] bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-600/30 mb-3.5 ring-4 ring-blue-50">
+            <div className="w-12 h-12 rounded-[12px] border border-[#CFCFCF] bg-white text-[#111111] flex items-center justify-center shadow-xs mb-3.5">
               <GraduationCap className="w-6 h-6" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-heading">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 font-heading">
               Welcome back
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
@@ -131,7 +131,7 @@ export default function LoginPage() {
               role="alert"
               className="mb-4 flex items-start gap-2.5 rounded-[8px] border border-red-200 bg-red-50/95 p-3 text-xs sm:text-sm text-red-800 animate-in fade-in duration-150"
             >
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+              <AlertCircle className="w-4 h-4 shrink-0 text-[#C4644C] mt-0.5" />
               <span className="font-medium leading-tight">{error}</span>
             </div>
           )}
@@ -140,9 +140,9 @@ export default function LoginPage() {
           {redirectNotice && (
             <div
               role="status"
-              className="mb-4 flex items-center gap-2.5 rounded-[8px] border border-blue-200 bg-blue-50/95 p-3 text-xs sm:text-sm text-blue-800 animate-in fade-in duration-150"
+              className="mb-4 flex items-center gap-2.5 rounded-[8px] border border-[var(--brand-line)] bg-[var(--brand-soft)]/95 p-3 text-xs sm:text-sm text-[var(--brand-ink)] animate-in fade-in duration-150"
             >
-              <Loader2 className="w-4 h-4 shrink-0 text-blue-600 animate-spin" />
+              <Loader2 className="w-4 h-4 shrink-0 text-[var(--brand-ink)] animate-spin" />
               <span className="font-semibold leading-tight">{redirectNotice}</span>
             </div>
           )}
@@ -153,7 +153,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="identifier"
-                className="block text-xs sm:text-[13px] font-bold uppercase tracking-wider text-slate-700 mb-1.5"
+                className="block text-xs sm:text-[13px] font-medium text-slate-700 mb-1.5"
               >
                 Email or Username <span className="text-red-500">*</span>
               </label>
@@ -168,7 +168,7 @@ export default function LoginPage() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="name@academic.edu.vn"
-                  className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-slate-50/90 border border-slate-300 rounded-[8px] text-sm sm:text-base text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-3 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
+                  className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-slate-50/90 border border-slate-300 rounded-[8px] text-sm sm:text-base text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-3 focus:ring-[var(--brand)]/30 focus:border-[var(--brand-ink)] transition-all shadow-2xs"
                 />
               </div>
             </div>
@@ -177,7 +177,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-xs sm:text-[13px] font-bold uppercase tracking-wider text-slate-700 mb-1.5"
+                className="block text-xs sm:text-[13px] font-medium text-slate-700 mb-1.5"
               >
                 Password <span className="text-red-500">*</span>
               </label>
@@ -192,7 +192,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full pl-11 pr-11 py-3 sm:py-3.5 bg-slate-50/90 border border-slate-300 rounded-[8px] text-sm sm:text-base text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-3 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
+                  className="w-full pl-11 pr-11 py-3 sm:py-3.5 bg-slate-50/90 border border-slate-300 rounded-[8px] text-sm sm:text-base text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-3 focus:ring-[var(--brand)]/30 focus:border-[var(--brand-ink)] transition-all shadow-2xs"
                 />
                 <button
                   type="button"
@@ -213,7 +213,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 py-3 sm:py-3.5 px-5 rounded-[8px] bg-[#2B59C3] hover:bg-[#20459c] active:bg-[#1a3880] text-white font-semibold text-sm sm:text-base shadow-sm shadow-[#2B59C3]/30 hover:shadow-md hover:shadow-[#2B59C3]/40 transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
+              className="w-full mt-2 py-3 sm:py-3.5 px-5 rounded-[10px] border border-[var(--brand-pressed)]/30 bg-[var(--brand)] text-[#111111] hover:bg-[var(--brand-hover)] shadow-xs hover:shadow-sm font-semibold text-sm sm:text-base transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
             >
               {isLoading ? (
                 <>
