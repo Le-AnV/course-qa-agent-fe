@@ -5,7 +5,9 @@ import {
   acceptedExtensions,
   deleteDocument,
   formatFileSize,
+  rejectDocument,
   replaceNameError,
+  retryDocument,
   validationError,
 } from "./documents";
 
@@ -122,6 +124,77 @@ describe("deleteDocument (AI-39 AC-01)", () => {
       await expect(deleteDocument({ token: "t" }, "gone")).rejects.toThrow(
         "Document not found.",
       );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+describe("retryDocument (AI-55)", () => {
+  it("posts to the retry endpoint and maps the failure reason", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      calls.push({ url: String(url), init });
+      return new Response(
+        JSON.stringify({
+          id: "doc-1",
+          file_name: "lesson.pdf",
+          file_type: ".pdf",
+          mime_type: "application/pdf",
+          size_bytes: 100,
+          uploader_id: "user-1",
+          class_id: "class-1",
+          class_name: "AI Class",
+          status: "processing",
+          failure_reason: null,
+          version: 1,
+          created_at: "2026-10-19T00:00:00Z",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }) as typeof fetch;
+    try {
+      const result = await retryDocument({ token: "t" }, "doc-1");
+      expect(result.status).toBe("processing");
+      expect(result.failureReason).toBeNull();
+      expect(calls[0].url).toContain("/api/documents/doc-1/retry");
+      expect(calls[0].init?.method).toBe("POST");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+describe("rejectDocument (AI-55)", () => {
+  it("posts to the reject endpoint and maps the rejected status", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      calls.push({ url: String(url), init });
+      return new Response(
+        JSON.stringify({
+          id: "doc-1",
+          file_name: "lesson.pdf",
+          file_type: ".pdf",
+          mime_type: "application/pdf",
+          size_bytes: 100,
+          uploader_id: "user-1",
+          class_id: "class-1",
+          class_name: "AI Class",
+          status: "rejected",
+          failure_reason: null,
+          version: 1,
+          created_at: "2026-10-19T00:00:00Z",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }) as typeof fetch;
+    try {
+      const result = await rejectDocument({ token: "t" }, "doc-1");
+      expect(result.status).toBe("rejected");
+      expect(calls[0].url).toContain("/api/documents/doc-1/reject");
+      expect(calls[0].init?.method).toBe("POST");
     } finally {
       globalThis.fetch = originalFetch;
     }

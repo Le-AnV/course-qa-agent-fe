@@ -21,7 +21,9 @@ import {
   deleteDocument,
   fetchDocuments,
   formatFileSize,
+  rejectDocument,
   replaceNameError,
+  retryDocument,
   uploadDocuments,
   validationError,
   type DocumentFilters,
@@ -84,6 +86,8 @@ export function ClassMaterials({
   const [loading, setLoading] = React.useState(true);
   const [listError, setListError] = React.useState<string | null>(null);
   const [approvingId, setApprovingId] = React.useState<string | null>(null);
+  const [rejectingId, setRejectingId] = React.useState<string | null>(null);
+  const [retryingId, setRetryingId] = React.useState<string | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [replacingId, setReplacingId] = React.useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = React.useState<DocumentItem | null>(null);
@@ -99,13 +103,13 @@ export function ClassMaterials({
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = React.useCallback(
-    async (f: DocumentFilters, p: number) => {
+    async (f: DocumentFilters, p: number, silent = false) => {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) {
         router.push("/login");
         return;
       }
-      setLoading(true);
+      if (!silent) setLoading(true);
       try {
         const { items, total: t } = await fetchDocuments(
           { token },
@@ -134,7 +138,7 @@ export function ClassMaterials({
             : `Cannot reach backend at ${backendUrl()} — check the BE is running (docker compose up), then Retry; or open this page via http://localhost:3000 (BE CORS only allows that origin).`,
         );
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     },
     [classId, router],
@@ -145,6 +149,16 @@ export function ClassMaterials({
     void load(filters, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only initial sync
   }, [classId]);
+
+  const hasProcessingDocuments = documents.some((document) => document.status === "processing");
+
+  React.useEffect(() => {
+    if (!hasProcessingDocuments) return;
+    const interval = window.setInterval(() => {
+      void load(filters, page, true);
+    }, 3000);
+    return () => window.clearInterval(interval);
+  }, [filters, hasProcessingDocuments, load, page]);
 
   function handleFiltersChange(next: DocumentFilters) {
     setFilters(next);
@@ -223,6 +237,54 @@ export function ClassMaterials({
       );
     } finally {
       setApprovingId(null);
+    }
+  }
+
+  async function handleRetry(documentId: string) {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    setRetryingId(documentId);
+    setActionError(null);
+    try {
+      await retryDocument({ token }, documentId);
+      await load(filters, page);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        router.push("/login");
+        return;
+      }
+      setActionError(
+        err instanceof ApiError ? `Retry failed: ${err.message}` : "Retry failed.",
+      );
+    } finally {
+      setRetryingId(null);
+    }
+  }
+
+  async function handleReject(documentId: string) {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    setRejectingId(documentId);
+    setActionError(null);
+    try {
+      await rejectDocument({ token }, documentId);
+      await load(filters, page);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        router.push("/login");
+        return;
+      }
+      setActionError(
+        err instanceof ApiError ? `Reject failed: ${err.message}` : "Reject failed.",
+      );
+    } finally {
+      setRejectingId(null);
     }
   }
 
@@ -540,8 +602,29 @@ export function ClassMaterials({
                     {new Date(d.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${STATUS_DOT[d.status]}`} />
+                    <span
+                      className={`inline-flex items-center gap-2 ${
+                        d.status === "failed"
+                          ? "cursor-help underline decoration-dotted underline-offset-4"
+                          : ""
+                      }`}
+                      title={d.status === "failed" ? (d.failureReason ?? "Document processing failed.") : undefined}
+                      aria-label={
+                        d.status === "failed"
+                          ? `Failed: ${d.failureReason ?? "Document processing failed."}`
+                          : undefined
+                      }
+                      tabIndex={d.status === "failed" ? 0 : undefined}
+                    >
+                      {d.status === "processing" ? (
+                        <span className="inline-flex items-center gap-1" aria-hidden="true">
+                          <span className="material-processing-dot h-1.5 w-1.5 rounded-full bg-[#4B9E76]" />
+                          <span className="material-processing-dot h-1.5 w-1.5 rounded-full bg-[#4B9E76]" />
+                          <span className="material-processing-dot h-1.5 w-1.5 rounded-full bg-[#4B9E76]" />
+                        </span>
+                      ) : (
+                        <span className={`h-2 w-2 rounded-full ${STATUS_DOT[d.status]}`} />
+                      )}
                       <span className={`text-[12.5px] ${STATUS_TEXT[d.status]}`}>
                         {STATUS_LABEL[d.status]}
                       </span>
@@ -550,18 +633,51 @@ export function ClassMaterials({
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center justify-end gap-1.5">
                       {d.status === "pending" && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => void handleApprove(d.id)}
+                            disabled={
+                              approvingId === d.id ||
+                              rejectingId === d.id ||
+                              deletingId === d.id ||
+                              replacingId === d.id ||
+                              loading
+                            }
+                            className="rounded border border-[#CFCFCF] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+                          >
+                            {approvingId === d.id ? "Approving…" : "Approve"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleReject(d.id)}
+                            disabled={
+                              approvingId === d.id ||
+                              rejectingId === d.id ||
+                              deletingId === d.id ||
+                              replacingId === d.id ||
+                              loading
+                            }
+                            className="rounded border border-[#E1B4A8] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#9D4C38] shadow-xs transition-colors hover:bg-[#FFF7F5] disabled:opacity-50"
+                          >
+                            {rejectingId === d.id ? "Rejecting…" : "Reject"}
+                          </button>
+                        </>
+                      )}
+                      {d.status === "failed" && (
                         <button
                           type="button"
-                          onClick={() => void handleApprove(d.id)}
+                          onClick={() => void handleRetry(d.id)}
                           disabled={
-                            approvingId === d.id ||
+                            retryingId === d.id ||
+                            rejectingId === d.id ||
                             deletingId === d.id ||
                             replacingId === d.id ||
                             loading
                           }
                           className="rounded border border-[#CFCFCF] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
                         >
-                          {approvingId === d.id ? "Approving…" : "Approve"}
+                          {retryingId === d.id ? "Retrying…" : "Retry"}
                         </button>
                       )}
                       {d.status !== "replaced" && (
@@ -570,6 +686,8 @@ export function ClassMaterials({
                           onClick={() => startReplace(d)}
                           disabled={
                             replacingId === d.id ||
+                            retryingId === d.id ||
+                            rejectingId === d.id ||
                             deletingId === d.id ||
                             approvingId === d.id ||
                             loading
@@ -585,6 +703,8 @@ export function ClassMaterials({
                         disabled={
                           deletingId === d.id ||
                           approvingId === d.id ||
+                          rejectingId === d.id ||
+                          retryingId === d.id ||
                           replacingId === d.id ||
                           loading
                         }
