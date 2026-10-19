@@ -5,7 +5,6 @@ import {
   Home,
   BookOpen,
   UserCircle,
-  FolderOpen,
   Activity,
 } from "lucide-react";
 
@@ -60,12 +59,6 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Teacher Portal",
     roles: ["trainer", "teaching_assistant", "admin"],
     icon: BookOpen,
-  },
-  {
-    href: "/teacher/materials",
-    label: "Materials",
-    roles: ["trainer", "teaching_assistant", "admin"],
-    icon: FolderOpen,
   },
   // Admin Routes
   {

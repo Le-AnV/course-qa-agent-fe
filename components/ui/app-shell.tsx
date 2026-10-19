@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </main>
           </div>
-          <Toaster position="top-right" richColors />
+          <Toaster position="top-right" closeButton />
         </div>
       )}
     </AuthGuard>
