@@ -175,6 +175,13 @@ export const adminApi = {
       `/api/admin/classes/${classId}`,
       { method: "DELETE" },
     ),
+  // Roster capacity is an admin-owned setting (PATCH /api/classes/{id}/config);
+  // class trainers read it but cannot change it (backend rejects with 403).
+  setClassCapacity: (classId: string, capacity: number | null) =>
+    apiFetch<{ class_id: string; capacity: number | null }>(`/api/classes/${classId}/config`, {
+      method: "PATCH",
+      body: JSON.stringify({ capacity }),
+    }),
 
   // Accounts (AC-03, AC-11, AC-12)
   users: () => apiFetch<AdminUser[]>("/api/admin/users"),

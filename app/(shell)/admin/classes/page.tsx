@@ -34,6 +34,10 @@ export default function AdminClassesPage() {
   const [manageClass, setManageClass] = React.useState<ClassSection | null>(null);
   const [newCoTrainer, setNewCoTrainer] = React.useState("");
   const [manageBusy, setManageBusy] = React.useState(false);
+  // Admin-owned roster capacity (P5): set or clear the per-class limit.
+  const [capacityClass, setCapacityClass] = React.useState<ClassSection | null>(null);
+  const [capacityText, setCapacityText] = React.useState("");
+  const [capacitySaving, setCapacitySaving] = React.useState(false);
 
   const loadData = React.useCallback(async () => {
     try {
@@ -146,6 +150,41 @@ export default function AdminClassesPage() {
       toast.error(err instanceof Error ? err.message : "Failed to remove co-trainer");
     } finally {
       setManageBusy(false);
+    }
+  };
+
+  // Capacity is edited as text so the field can be emptied (= no limit).
+  const capacityValue = (() => {
+    const raw = capacityText.trim();
+    if (raw === "") return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? Math.trunc(parsed) : Number.NaN;
+  })();
+
+  const capacityError =
+    Number.isNaN(capacityValue as number)
+      ? "Enter a whole number, or leave empty for no limit."
+      : capacityValue !== null && (capacityValue < 1 || capacityValue > 500)
+        ? "Capacity must be between 1 and 500."
+        : null;
+
+  const handleSaveCapacity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!capacityClass || capacityError) return;
+    setCapacitySaving(true);
+    try {
+      await adminApi.setClassCapacity(String(capacityClass.id), capacityValue);
+      setNotice(
+        capacityValue === null
+          ? `Capacity cleared for ${capacityClass.code} — no limit.`
+          : `Capacity set to ${capacityValue} for ${capacityClass.code}.`,
+      );
+      setCapacityClass(null);
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to set capacity");
+    } finally {
+      setCapacitySaving(false);
     }
   };
 
@@ -293,6 +332,7 @@ export default function AdminClassesPage() {
                         direction={idx === filteredClasses.length - 1 ? "up" : "down"}
                         items={[
                           { label: "Manage trainers", icon: <Users className="w-3.5 h-3.5" />, onSelect: () => { setManageClass(cls); setNewCoTrainer(""); } },
+                          { label: "Set capacity", onSelect: () => { setCapacityClass(cls); setCapacityText(cls.capacity == null ? "" : String(cls.capacity)); } },
                           isArchived(cls)
                             ? { label: "Restore class", onSelect: () => setPendingArchive(cls) }
                             : { label: "Archive class", onSelect: () => setPendingArchive(cls) },
@@ -456,6 +496,57 @@ export default function AdminClassesPage() {
             </div>
           </div>
         )}
+      </Modal>
+      <Modal
+        isOpen={capacityClass !== null}
+        onClose={() => setCapacityClass(null)}
+        title={`Student capacity — ${capacityClass?.code ?? ""}`}
+        subtitle="Admin-owned: how many students this class accepts. Empty means no limit; the capacity can never go below the current roster."
+        widthClass="max-w-[440px]"
+      >
+        <form onSubmit={(e) => void handleSaveCapacity(e)} className="space-y-4">
+          <div>
+            <label htmlFor="class-capacity" className="block text-[13px] font-medium text-[#111111] mb-1.5">Student capacity</label>
+            <input
+              id="class-capacity"
+              type="number"
+              min={1}
+              max={500}
+              inputMode="numeric"
+              placeholder="No limit"
+              value={capacityText}
+              onChange={(e) => setCapacityText(e.target.value)}
+              aria-describedby="class-capacity-help"
+              aria-invalid={capacityError !== null}
+              className="w-full max-w-[200px] bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]"
+            />
+            <p
+              id="class-capacity-help"
+              className={`mt-1.5 text-[11.5px] ${capacityError ? "text-[#9D4C38]" : "text-[#5A5A5A]"}`}
+            >
+              {capacityError ??
+                (capacityClass
+                  ? `Currently ${capacityClass.student_count} student${capacityClass.student_count === 1 ? "" : "s"} — the capacity can't go below that.`
+                  : "")}
+            </p>
+          </div>
+          <div className="flex justify-end gap-3 border-t border-[#F0F0F0] pt-4">
+            <button
+              type="button"
+              onClick={() => setCapacityClass(null)}
+              className="rounded-md border border-[#DADADA] bg-white px-4 py-2 text-[13px] font-semibold text-[#111111] transition-colors hover:bg-[#F7F7F7]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={capacitySaving || capacityError !== null}
+              className="rounded-md border border-[#CFCFCF] bg-white px-4 py-2 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+            >
+              {capacitySaving ? "Saving…" : "Save capacity"}
+            </button>
+          </div>
+        </form>
       </Modal>
       <ConfirmDialog
         isOpen={pendingArchive !== null}

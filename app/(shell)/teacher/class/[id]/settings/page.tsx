@@ -40,7 +40,8 @@ const SELECT_CLASS =
   "w-full rounded-lg border border-[#DADADA] bg-white px-3 py-2 text-[13px] text-[#111111] outline-none focus:border-[#111111]";
 const INPUT_CLASS = SELECT_CLASS;
 
-type Draft = Omit<ClassConfig, "class_id">;
+// Capacity is admin-owned and shown read-only, so it is not part of the draft.
+type Draft = Omit<ClassConfig, "class_id" | "capacity">;
 type InfoDraft = {
   description: string;
   meeting_url: string;
@@ -75,7 +76,6 @@ const DELIVERY_LABELS: Record<Draft["delivery_mode"], string> = {
 
 function toDraft(cfg: ClassConfig): Draft {
   return {
-    capacity: cfg.capacity,
     delivery_mode: cfg.delivery_mode,
     default_language: cfg.default_language,
     answer_scope: cfg.answer_scope,
@@ -95,7 +95,6 @@ export default function ClassSettingsPage() {
   const [infoDraft, setInfoDraft] = React.useState<InfoDraft>(EMPTY_INFO);
   const [infoSaving, setInfoSaving] = React.useState(false);
   const [infoSaved, setInfoSaved] = React.useState(false);
-  const [capacityText, setCapacityText] = React.useState("");
   const [sources, setSources] = React.useState<ClassConfigSource[]>([]);
   const [isCopyOpen, setIsCopyOpen] = React.useState(false);
   const [copySource, setCopySource] = React.useState("");
@@ -121,7 +120,6 @@ export default function ClassSettingsPage() {
       setInfo(page);
       setInfoDraft(toInfoDraft(page));
       setInfoSaved(false);
-      setCapacityText(cfg.capacity === null ? "" : String(cfg.capacity));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load class");
     } finally {
@@ -134,36 +132,17 @@ export default function ClassSettingsPage() {
     void load();
   }, [load]);
 
-  // Capacity is edited as text so the field can be emptied (= no limit).
-  const normalizedCapacity = (() => {
-    const raw = capacityText.trim();
-    if (raw === "") return null;
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) ? Math.trunc(parsed) : Number.NaN;
-  })();
-
-  const capacityError =
-    Number.isNaN(normalizedCapacity as number)
-      ? "Enter a whole number, or leave empty for no limit."
-      : normalizedCapacity !== null && (normalizedCapacity < 1 || normalizedCapacity > 500)
-        ? "Capacity must be between 1 and 500."
-        : null;
-
   const changes = React.useMemo(() => {
     if (!config || !draft) return {} as Partial<Draft>;
-    const effective = {
-      ...draft,
-      capacity: capacityError ? draft.capacity : normalizedCapacity,
-    };
     const diff: Partial<Draft> = {};
-    (Object.keys(effective) as (keyof Draft)[]).forEach((key) => {
-      if (effective[key] !== config[key]) {
+    (Object.keys(draft) as (keyof Draft)[]).forEach((key) => {
+      if (draft[key] !== config[key]) {
         // The generic index across a union of field types is intentional here.
-        (diff as Record<string, Draft[keyof Draft]>)[key] = effective[key];
+        (diff as Record<string, Draft[keyof Draft]>)[key] = draft[key];
       }
     });
     return diff;
-  }, [config, draft, capacityError, normalizedCapacity]);
+  }, [config, draft]);
 
   const dirty = Object.keys(changes).length > 0;
 
@@ -198,17 +177,12 @@ export default function ClassSettingsPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (capacityError) {
-      toast.error(capacityError);
-      return;
-    }
     if (!dirty) return;
     setSaving(true);
     try {
       const updated = await studentApi.updateConfig(id, changes);
       setConfig(updated);
       setDraft(toDraft(updated));
-      setCapacityText(updated.capacity === null ? "" : String(updated.capacity));
       setSaved(true);
       toast.success("Class configuration saved.");
     } catch (err) {
@@ -236,7 +210,6 @@ export default function ClassSettingsPage() {
       const updated = await studentApi.copyConfig(id, copySource);
       setConfig(updated);
       setDraft(toDraft(updated));
-      setCapacityText(updated.capacity === null ? "" : String(updated.capacity));
       setIsCopyOpen(false);
       setCopySource("");
       setSaved(true);
@@ -415,14 +388,14 @@ export default function ClassSettingsPage() {
         </form>
       )}
 
-      {!loading && !error && draft && (
+      {!loading && !error && draft && config && (
         <form onSubmit={(e) => void handleSave(e)} className="rounded-lg border border-[#DADADA] bg-white p-6">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-[14px] font-bold text-[#111111]">Class configuration</h3>
               <p className="mt-0.5 max-w-lg text-[12.5px] text-[#5A5A5A]">
-                Student limit, delivery mode and session length for this class. Copy them onto another
-                class to reuse the same setup.
+                Delivery mode, language, answer rules and session length for this class. Copy them
+                onto another class to reuse the same setup. Student capacity is managed by admin.
               </p>
             </div>
             <button
@@ -437,32 +410,14 @@ export default function ClassSettingsPage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label htmlFor="cfg-capacity" className="mb-1.5 block text-[13px] font-medium text-[#111111]">
-                Student capacity
-              </label>
-              <input
-                id="cfg-capacity"
-                type="number"
-                min={1}
-                max={500}
-                inputMode="numeric"
-                placeholder="No limit"
-                value={capacityText}
-                onChange={(e) => {
-                  setCapacityText(e.target.value);
-                  setSaved(false);
-                }}
-                aria-describedby="cfg-capacity-help"
-                aria-invalid={capacityError !== null}
-                className={`${INPUT_CLASS} max-w-[200px]`}
+              <ReadOnlyField
+                label="Student capacity"
+                value={
+                  config.capacity === null
+                    ? "No limit — managed by admin"
+                    : `${config.capacity} students — managed by admin`
+                }
               />
-              <p
-                id="cfg-capacity-help"
-                className={`mt-1 text-[11.5px] ${capacityError ? "text-[#9D4C38]" : "text-[#5A5A5A]"}`}
-              >
-                {capacityError ??
-                  "Leave empty for no limit; new join requests are blocked once the class is full."}
-              </p>
             </div>
 
             <div>
@@ -522,7 +477,7 @@ export default function ClassSettingsPage() {
             </button>
             <button
               type="submit"
-              disabled={!dirty || saving || capacityError !== null}
+              disabled={!dirty || saving}
               className="rounded-md border border-[#CFCFCF] bg-white px-4 py-2 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save changes"}
