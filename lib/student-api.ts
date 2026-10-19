@@ -86,7 +86,7 @@ async function studentFetch<T>(path: string, init?: RequestInit): Promise<T> {
     res = await fetch(`${API_URL}${path}`, { ...init, headers: { ...authHeaders(), ...(init?.headers ?? {}) } });
   } catch {
     throw new Error(
-      `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up).`,
+      `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), then Retry; or open this app via http://localhost:3000 (BE CORS only allows local dev origins).`,
     );
   }
   if (res.status === 401) throw new Error("Session expired — please log in again.");
