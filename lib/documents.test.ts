@@ -64,11 +64,12 @@ const DOCS: DocumentItem[] = [
 ];
 
 describe("acceptedExtensions", () => {
-  it("matches the 7 accepted material formats", () => {
+  it("matches the 6 accepted material formats", () => {
     expect(acceptedExtensions()).toEqual(
       ACCEPTED_TYPES.map((t) => t.extension),
     );
-    expect(acceptedExtensions()).toHaveLength(7);
+    expect(acceptedExtensions()).toHaveLength(6);
+    expect(acceptedExtensions()).not.toContain(".csv");
   });
 });
 

@@ -40,7 +40,7 @@ export type AcceptedType = {
   label: string;
 };
 
-/** Upload AC-01/AC-07: the 7 accepted material formats, max 100MB per file. */
+/** Upload AC-01/AC-07: the 6 accepted material formats, max 100MB per file. */
 export const ACCEPTED_TYPES: AcceptedType[] = [
   { extension: ".pdf", mime: "application/pdf", label: "PDF document" },
   {
@@ -60,7 +60,6 @@ export const ACCEPTED_TYPES: AcceptedType[] = [
     mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     label: "Excel",
   },
-  { extension: ".csv", mime: "text/csv", label: "CSV" },
 ];
 
 export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
