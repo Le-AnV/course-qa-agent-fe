@@ -15,9 +15,9 @@ import { GENERIC_AUTH_ERROR, validateNewPassword, validatePasswordConfirm } from
 import { errorMessage, isSessionError, profileApi } from "./api";
 
 const FIELD_CLASSES =
-  "mt-1.5 w-full rounded-lg border border-[#E2E8F0] bg-white px-3.5 py-2.5 text-[14px] text-[#1e293b] placeholder:text-[#94A3B8] transition-colors focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 disabled:bg-[#F8FAFC]";
+  "mt-1.5 w-full rounded-lg border border-[#DADADA] bg-white px-3.5 py-2.5 text-[14px] text-[#111111] placeholder:text-[#6F6F6F] transition-colors focus:border-[#111111] focus:outline-none focus:ring-2 focus:ring-[#111111]/20 disabled:bg-[#FFFFFF]";
 
-const LABEL_CLASSES = "block text-[12.5px] font-semibold text-[#334155]";
+const LABEL_CLASSES = "block text-[12.5px] font-semibold text-[#111111]";
 
 type PasswordDialogProps = {
   open: boolean;
@@ -100,16 +100,16 @@ export function PasswordDialog({ open, onOpenChange, onSessionExpired }: Passwor
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="rounded-lg border-[#E2E8F0] bg-white ring-0 sm:max-w-[440px]"
+        className="rounded-lg border-[#DADADA] bg-white ring-0 sm:max-w-[440px]"
         onEscapeKeyDown={guardDismiss}
         onPointerDownOutside={guardDismiss}
       >
         <form onSubmit={(event) => void submit(event)}>
           <DialogHeader>
-            <DialogTitle className="font-heading text-[18px] font-bold text-[#1e293b]">
+            <DialogTitle className="font-heading text-[18px] font-bold text-[#111111]">
               Change password
             </DialogTitle>
-            <DialogDescription className="text-[13px] text-[#64748B]">
+            <DialogDescription className="text-[13px] text-[#5A5A5A]">
               Enter your old password, then pick a new one. You stay signed in on this device.
             </DialogDescription>
           </DialogHeader>
@@ -117,7 +117,7 @@ export function PasswordDialog({ open, onOpenChange, onSessionExpired }: Passwor
             {banner && (
               <div
                 role="alert"
-                className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-[13px] text-[#B91C1C]"
+                className="rounded-lg border border-[#ECD2CB] bg-[#FBF5F4] px-4 py-3 text-[13px] text-[#9D4C38]"
               >
                 {banner}
               </div>
@@ -138,7 +138,7 @@ export function PasswordDialog({ open, onOpenChange, onSessionExpired }: Passwor
                 className={FIELD_CLASSES}
               />
               {oldError && (
-                <p id="password-old-error" className="mt-1.5 text-[12.5px] text-[#DC2626]">
+                <p id="password-old-error" className="mt-1.5 text-[12.5px] text-[#C4644C]">
                   {oldError}
                 </p>
               )}
@@ -159,11 +159,11 @@ export function PasswordDialog({ open, onOpenChange, onSessionExpired }: Passwor
                 className={FIELD_CLASSES}
               />
               {nextError ? (
-                <p id="password-new-error" className="mt-1.5 text-[12.5px] text-[#DC2626]">
+                <p id="password-new-error" className="mt-1.5 text-[12.5px] text-[#C4644C]">
                   {nextError}
                 </p>
               ) : (
-                <p id="password-new-hint" className="mt-1.5 text-[12.5px] text-[#64748B]">
+                <p id="password-new-hint" className="mt-1.5 text-[12.5px] text-[#5A5A5A]">
                   At least 8 characters, different from the old one.
                 </p>
               )}
@@ -184,24 +184,24 @@ export function PasswordDialog({ open, onOpenChange, onSessionExpired }: Passwor
                 className={FIELD_CLASSES}
               />
               {confirmError && (
-                <p id="password-confirm-error" className="mt-1.5 text-[12.5px] text-[#DC2626]">
+                <p id="password-confirm-error" className="mt-1.5 text-[12.5px] text-[#C4644C]">
                   {confirmError}
                 </p>
               )}
             </div>
           </div>
-          <DialogFooter className="-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-lg border-t border-[#E2E8F0] p-4 sm:flex-row sm:justify-end">
+          <DialogFooter className="-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-lg border-t border-[#DADADA] p-4 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="inline-flex items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#334155] shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+              className="inline-flex items-center justify-center rounded-lg border border-[#DADADA] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#111111] shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/40"
             >
               Cancel
             </button>
             <button
               type="submit"
               aria-busy={saving}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#2563EB] px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#1D4ED8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40"
+              className="inline-flex items-center gap-2 rounded-lg border border-[#CFCFCF] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
               {saving ? "Updating…" : "Update password"}

@@ -49,7 +49,7 @@ export default function StudentClassWorkspaceLayout({
   const tabs: CourseTabItem[] = [
     { id: "overview", label: "Overview", href: `/student/class/${id}/overview` },
     { id: "syllabus", label: "Syllabus", href: `/student/class/${id}/syllabus` },
-    { id: "agent", label: "Q&A Agent", href: `/student/class/${id}/agent` },
+    { id: "agent", label: "Q&A Chat", href: `/student/class/${id}/agent` },
     { id: "proposals", label: "My Proposals", href: `/student/class/${id}/proposals` },
     { id: "members", label: "Members", href: `/student/class/${id}/members` },
   ];
@@ -59,11 +59,11 @@ export default function StudentClassWorkspaceLayout({
   const isAgentPage = pathname?.endsWith("/agent");
 
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFC]">
+    <div className="flex flex-col h-full bg-[#F5F5F5]">
       <CourseBanner
         title={title}
         backHref="/student/classes"
-        accentColor="#EFF6FF"
+        accentColor="#F7F7F7"
         teacherName={cls?.trainer_name ?? ""}
         meta={meta}
       />
@@ -91,7 +91,7 @@ function ClassSwitcherChips({ currentId, classes }: { currentId: string; classes
   if (classes.length < 2) return null;
 
   return (
-    <div className="flex lg:hidden items-center gap-2 overflow-x-auto px-4 py-2 bg-white border-b border-[#E2E8F0] shrink-0">
+    <div className="flex lg:hidden items-center gap-2 overflow-x-auto px-4 py-2 bg-white border-b border-[#DADADA] shrink-0">
       {classes.map((c) => {
         const active = c.id === currentId;
         return (
@@ -101,8 +101,8 @@ function ClassSwitcherChips({ currentId, classes }: { currentId: string; classes
             className={cn(
               "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors",
               active
-                ? "border-[#2563EB] bg-[#EFF6FF] text-[#2563EB]"
-                : "border-[#E2E8F0] bg-white text-[#64748B]",
+                ? "border-[#111111] bg-[#F7F7F7] text-[#111111]"
+                : "border-[#DADADA] bg-white text-[#5A5A5A]",
             )}
           >
             <span

@@ -12,6 +12,36 @@ export type StudentClass = {
   academic_year: string;
   member_count: number;
   document_count: number;
+  // Optional: an older backend build does not send these.
+  capacity?: number | null;
+  status?: string;
+};
+
+export type ClassConfig = {
+  class_id: string;
+  capacity: number | null;
+  delivery_mode: "on_campus" | "online" | "hybrid";
+  default_language: "en" | "vi";
+  answer_scope: "syllabus_only" | "syllabus_first" | "open";
+  citation_required: boolean;
+  max_answer_words: number;
+  session_length_minutes: number;
+};
+
+export type ClassConfigSource = {
+  id: string;
+  code: string;
+  name: string;
+};
+
+/** The class page (Phase B): written by teachers/admins, read by members. */
+export type ClassInfo = {
+  class_id: string;
+  description: string | null;
+  meeting_url: string | null;
+  group_url: string | null;
+  schedule_note: string | null;
+  note: string | null;
 };
 
 export type ClassMember = {
@@ -91,10 +121,33 @@ export const studentApi = {
     studentFetch<{ rejected: string }>(`/api/student/classes/${classId}/requests/${studentId}/reject`, {
       method: "POST",
     }),
+  // Class configuration (capacity + typed teaching config), trainer/admin only.
+  config: (id: string) => studentFetch<ClassConfig>(`/api/classes/${id}/config`),
+  updateConfig: (id: string, changes: Partial<Omit<ClassConfig, "class_id">>) =>
+    studentFetch<ClassConfig>(`/api/classes/${id}/config`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changes),
+    }),
+  configSources: () => studentFetch<ClassConfigSource[]>("/api/classes/config-sources"),
+  copyConfig: (id: string, sourceClassId: string) =>
+    studentFetch<ClassConfig>(`/api/classes/${id}/config/copy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source_class_id: sourceClassId }),
+    }),
+  // Class page: description, links, schedule and notes for this class.
+  info: (id: string) => studentFetch<ClassInfo>(`/api/classes/${id}/info`),
+  updateInfo: (id: string, changes: Partial<Omit<ClassInfo, "class_id">>) =>
+    studentFetch<ClassInfo>(`/api/classes/${id}/info`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changes),
+    }),
 };
 
-/** Accent color per class, stable by id (UI only). */
-const ACCENTS = ["#2563EB", "#0EA5E9", "#6366F1", "#10B981", "#F59E0B", "#EC4899"];
+/** Accent color per class, stable by id (UI only). Muted set — class identity, not decoration. */
+const ACCENTS = ["#5B7C99", "#4B9E76", "#B4881F", "#7C6E9E", "#C4644C", "#6F6F6F"];
 
 export function accentFor(id: string): string {
   let h = 0;

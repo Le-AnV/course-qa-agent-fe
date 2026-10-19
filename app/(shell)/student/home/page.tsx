@@ -1,55 +1,108 @@
 "use client";
 
 import * as React from "react";
-import { FileText, MessageSquare, ChevronRight } from "lucide-react";
+import { BookOpen, ChevronRight, Users, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useProfile } from "@/features/profile/profile-context";
+import { studentApi, accentFor, type StudentClass } from "@/lib/student-api";
 
 export default function StudentHomePage() {
   const router = useRouter();
+  const { profile, loading: profileLoading } = useProfile();
+  const [classes, setClasses] = React.useState<StudentClass[] | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const load = React.useCallback(async () => {
+    try {
+      setError(null);
+      setClasses(await studentApi.classes());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load your classes");
+      setClasses([]);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time fetch; load() only sets state after await.
+    void load();
+  }, [load]);
+
+  const greetingName = profile?.username ?? (profileLoading ? "…" : "there");
 
   return (
-    <div className="w-full max-w-[920px] mx-auto px-6 pt-8 pb-12 space-y-8 bg-[#F8FAFC]">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="mx-auto w-full max-w-[920px] space-y-8 bg-[#F5F5F5] px-6 pb-12 pt-8">
+      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
         <div>
-          <h1 className="text-[28px] font-heading font-bold text-[#1e293b] tracking-tight">Welcome back, Trần Gia Linh</h1>
-          <p className="text-[14px] text-[#64748B] mt-1">
-            Here is your latest activity and upcoming deadlines.
-          </p>
+          <h1 className="text-[28px] font-heading font-bold tracking-tight text-[#111111]">
+            Welcome back, {greetingName}
+          </h1>
+          <p className="mt-1 text-[14px] text-[#5A5A5A]">Here is your workspace at a glance.</p>
         </div>
       </div>
 
-      {/* Notifications */}
       <div className="w-full">
-        {/* Important Updates */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
-            <h2 className="text-[15px] font-heading font-bold text-[#1e293b]">Important Updates</h2>
-            <span className="px-2.5 py-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/60 rounded uppercase tracking-wider">Unread</span>
+        <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-50 px-6 py-4">
+            <h2 className="text-[15px] font-heading font-bold text-[#111111]">Your Classes</h2>
+            <button
+              onClick={() => router.push("/student/classes")}
+              className="text-[12.5px] font-semibold text-[#111111] hover:underline"
+            >
+              View all
+            </button>
           </div>
-          <div className="p-6 space-y-5">
-            <div className="flex items-center gap-4 group cursor-pointer" onClick={() => router.push("/student/class/cs-401/proposals")}>
-              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-[14px] font-bold text-[#1e293b] group-hover:text-[#2563eb] transition-colors">Proposal Approved</h3>
-                <p className="text-[12.5px] text-[#64748b] mt-0.5">Your project proposal for CS 401 was approved</p>
-              </div>
-              <span className="text-[12.5px] font-semibold text-[#2563eb] flex items-center gap-0.5">View <ChevronRight className="w-3 h-3" /></span>
+
+          {classes === null ? (
+            <p className="px-6 py-8 text-center text-[13px] text-[#5A5A5A]">Loading your classes…</p>
+          ) : error ? (
+            <div className="px-6 py-8 text-center text-[13px]">
+              <p className="text-[#9D4C38]">{error}</p>
+              <button onClick={() => void load()} className="mt-2 font-semibold text-[#111111] hover:underline">
+                Retry
+              </button>
             </div>
-            
-            <div className="flex items-center gap-4 group cursor-pointer" onClick={() => router.push("/student/class/cs-401/agent")}>
-              <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-[14px] font-bold text-[#1e293b] group-hover:text-[#2563eb] transition-colors">Agent replied</h3>
-                <p className="text-[12.5px] text-[#64748b] mt-0.5">New answer for: &quot;What is A* search?&quot;</p>
-              </div>
-              <span className="text-[12.5px] font-semibold text-[#2563eb] flex items-center gap-0.5">Read <ChevronRight className="w-3 h-3" /></span>
+          ) : classes.length === 0 ? (
+            <div className="px-6 py-10 text-center">
+              <p className="text-[13.5px] font-semibold text-[#111111]">You&apos;re not enrolled in a class yet</p>
+              <p className="mx-auto mt-1 max-w-sm text-[12.5px] text-[#5A5A5A]">
+                Classes appear here once an admin or trainer adds you.
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="divide-y divide-[#F0F0F0]">
+              {classes.map((cls) => (
+                <div
+                  key={cls.id}
+                  onClick={() => router.push(`/student/class/${cls.id}/overview`)}
+                  className="group flex cursor-pointer items-center gap-4 px-6 py-4 transition-colors hover:bg-[#FAFAFA]"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F7F7F7] text-[#111111]">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-[14px] font-bold text-[#111111]">{cls.name}</h3>
+                    <p className="mt-0.5 truncate text-[12.5px] text-[#5A5A5A]">
+                      {cls.code}
+                      {cls.trainer_name ? ` · ${cls.trainer_name}` : ""}
+                    </p>
+                  </div>
+                  <div className="hidden shrink-0 items-center gap-4 text-[12.5px] text-[#5A5A5A] sm:flex">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5" /> {cls.member_count}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5" /> {cls.document_count}
+                    </span>
+                  </div>
+                  <span
+                    className="hidden h-1.5 w-1.5 shrink-0 rounded-full sm:block"
+                    style={{ backgroundColor: accentFor(cls.id) }}
+                  />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#CFCFCF] transition-colors group-hover:text-[#111111]" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

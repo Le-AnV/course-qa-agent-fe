@@ -1,13 +1,24 @@
 import * as React from 'react';
+import { ThinkingTrace } from './thinking-trace';
 
 interface MessageBubbleProps {
   role: 'user' | 'ai';
   content: string;
   isLoading?: boolean;
   isStreaming?: boolean;
+  /** Reasoning steps recorded while this answer was being produced. */
+  trace?: string[] | null;
+  thinkingMs?: number;
 }
 
-export function MessageBubble({ role, content, isLoading, isStreaming }: MessageBubbleProps) {
+export function MessageBubble({
+  role,
+  content,
+  isLoading,
+  isStreaming,
+  trace,
+  thinkingMs,
+}: MessageBubbleProps) {
   const isUser = role === 'user';
 
   return (
@@ -15,37 +26,25 @@ export function MessageBubble({ role, content, isLoading, isStreaming }: Message
       <div 
         className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 ${
           isUser 
-            ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-tr-sm' 
-            : 'bg-white border border-slate-200 text-slate-800 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-200 rounded-tl-sm shadow-sm'
+            ? 'bg-[#F7F7F7] text-[#111111] rounded-tr-sm' 
+            : 'bg-white border border-[#DADADA] text-[#111111] rounded-tl-sm shadow-xs'
         }`}
       >
-        {/* Message content or Loading indicator */}
-        {isLoading ? (
-          // AC-04: Pulsing dots typing indicator (...)
-          <div className="flex items-center space-x-1 h-5">
-            <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
-        ) : (
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">
-            {content}
-            {isStreaming && (
-              <span 
-                aria-hidden="true"
-                className="inline-block w-1.5 h-4 ml-1 bg-blue-600 dark:bg-blue-400 align-middle animate-pulse rounded-xs" 
-              />
-            )}
-          </div>
+        {/* Reasoning trace: live while thinking, collapsed summary afterwards */}
+        {!isUser && trace && trace.length > 0 && (
+          <ThinkingTrace steps={trace} running={isLoading} thinkingMs={thinkingMs} />
         )}
 
-        {/* AC-04: Placeholder for Citations */}
-        {/* Only show this Citation box if it's an AI message and streaming is complete */}
-        {!isUser && !isLoading && !isStreaming && (
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/60">
+        {/* Message content (a waiting answer shows no bubble body yet) */}
+        {isLoading && !trace?.length ? null : (
+          <div className="whitespace-pre-wrap text-sm leading-relaxed">{content}</div>
+        )}
+
+        {/* Citations — rendered once the answer has finished streaming */}
+        {!isUser && !isLoading && !isStreaming && content.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-[#F0F0F0]">
             <div className="flex flex-wrap gap-2">
-              {/* Dedicated spot for the Epic E5 team to embed their Component */}
-              <span className="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 ring-1 ring-inset ring-slate-500/10">
+              <span className="inline-flex items-center rounded-md bg-[#F7F7F7] px-2 py-1 text-xs font-medium text-[#5A5A5A] ring-1 ring-inset ring-[#DADADA]">
                 [1] Course Material Source
               </span>
             </div>

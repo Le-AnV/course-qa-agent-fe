@@ -27,9 +27,11 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     onSend(trimmed);
     setContent('');
     
-    // Reset height to default after sending
+    // Reset height to default after sending, and keep the caret in the box so
+    // the next turn can be typed straight away (Enter or click on Send).
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
+      textareaRef.current.focus();
     }
   };
 
@@ -45,23 +47,23 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <div className="p-4 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
-      <div className="max-w-4xl mx-auto relative flex items-end gap-2 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-2 focus-within:ring-2 focus-within:ring-slate-400 focus-within:ring-offset-2 transition-all">
+    <div className="p-4 bg-white border-t border-[#F0F0F0]">
+      <div className="max-w-4xl mx-auto relative flex items-end gap-2 bg-[#F7F7F7] rounded-2xl border border-[#DADADA] p-2 focus-within:ring-2 focus-within:ring-[#CFCFCF] focus-within:ring-offset-2 transition-all">
         <textarea
           ref={textareaRef}
           value={content}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          disabled={disabled}
-          placeholder="Ask the AI assistant anything about the course... (Shift + Enter for new line)"
-          className="flex-1 max-h-[200px] min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm focus:outline-none dark:text-slate-100 placeholder:text-slate-500"
+          aria-disabled={disabled}
+          placeholder="Ask about this course... (Shift + Enter for a new line)"
+          className="flex-1 max-h-[200px] min-h-[44px] w-full resize-none bg-transparent px-3 py-3 text-sm text-[#111111] focus:outline-none placeholder:text-[#6F6F6F] disabled:cursor-not-allowed"
           rows={1}
         />
         <Button 
           onClick={handleSend} 
           disabled={disabled || !content.trim()}
           size="icon"
-          className="h-10 w-10 shrink-0 rounded-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+          className="h-10 w-10 shrink-0 rounded-full border border-[#CFCFCF] bg-white text-[#111111] hover:bg-[#F7F7F7] shadow-xs"
         >
           <Send className="h-4 w-4" />
           <span className="sr-only">Send</span>

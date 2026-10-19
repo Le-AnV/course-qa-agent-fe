@@ -10,15 +10,16 @@ type MockBadgeProps = {
 
 /**
  * Honest marker for surfaces still on sample data (chat, proposals).
- * Visible so nobody mistakes mock content for production data.
+ * Labelled in the user's language, not the developer's: the surface is a
+ * preview of a feature whose backend does not exist yet.
  */
-export function MockBadge({ label = "MOCK", className, title }: MockBadgeProps) {
+export function MockBadge({ label = "Preview", className, title }: MockBadgeProps) {
   return (
     <span
-      title={title ?? "Sample data — backend for this surface is not built yet"}
+      title={title ?? "Preview data — this feature isn't connected to a backend yet"}
       className={cn(
-        "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest",
-        "bg-amber-50 text-amber-700 border border-amber-200",
+        "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium",
+        "bg-white text-[#8F6B16] border border-[#ECDCB8]",
         className,
       )}
     >

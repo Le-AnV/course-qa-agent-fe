@@ -51,43 +51,43 @@ export default function StudentClassSyllabusPage() {
     <div className="max-w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-1">
         <div>
-          <h2 className="text-xl font-bold font-heading text-[#172033]">Syllabus</h2>
-          <p className="text-[13px] text-[#64748B] mt-0.5">Approved learning materials for this class.</p>
+          <h2 className="text-xl font-bold font-heading text-[#111111]">Syllabus</h2>
+          <p className="text-[13px] text-[#5A5A5A] mt-0.5">Approved learning materials for this class.</p>
         </div>
         <div className="flex items-center gap-2.5 flex-wrap">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#64748B]" />
+            <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#5A5A5A]" />
             <input
               type="text"
               placeholder="Search materials"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-56 bg-slate-50 border border-[#E2E8F0] rounded pl-8 pr-3 py-1.5 text-[12.5px] outline-none focus:border-[#2563EB]"
+              className="w-56 bg-slate-50 border border-[#DADADA] rounded pl-8 pr-3 py-1.5 text-[12.5px] outline-none focus:border-[#111111]"
             />
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="bg-white border border-[#E2E8F0] rounded-lg p-8 mt-4 text-center text-[#64748B] text-[13px]">
+        <div className="bg-white border border-[#DADADA] rounded-lg p-8 mt-4 text-center text-[#5A5A5A] text-[13px]">
           Loading materials…
         </div>
       ) : error ? (
-        <div className="bg-rose-50 border border-rose-200 rounded-lg p-6 mt-4 text-center text-[13px]">
-          <p className="text-rose-700">{error}</p>
-          <button onClick={() => void load()} className="mt-2 text-[#2563EB] font-semibold hover:underline">
+        <div className="bg-[#F7F7F7] border border-[#DFB2A6] rounded-lg p-6 mt-4 text-center text-[13px]">
+          <p className="text-[#9D4C38]">{error}</p>
+          <button onClick={() => void load()} className="mt-2 text-[#111111] font-semibold hover:underline">
             Retry
           </button>
         </div>
       ) : filtered.length === 0 ? (
-        <p className="text-[13px] text-[#64748B] text-center py-8">
-          {q ? `Không tìm thấy tài liệu nào khớp "${search.trim()}".` : "No approved materials yet — your trainer hasn't published any."}
+        <p className="text-[13px] text-[#5A5A5A] text-center py-8">
+          {q ? `No materials match "${search.trim()}".` : "No approved materials yet — your trainer hasn't published any."}
         </p>
       ) : (
-        <div className="bg-white border border-[#E2E8F0] rounded-lg overflow-hidden mt-4">
+        <div className="bg-white border border-[#DADADA] rounded-lg overflow-hidden mt-4">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-[#E2E8F0] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
+              <tr className="bg-white border-b border-[#DADADA] text-[12px] font-medium text-[#6F6F6F]">
                 <th className="px-4 py-3">File</th>
                 <th className="px-4 py-3 hidden sm:table-cell">Type</th>
                 <th className="px-4 py-3 hidden md:table-cell">Size</th>
@@ -95,28 +95,28 @@ export default function StudentClassSyllabusPage() {
                 <th className="px-4 py-3 w-28"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8F0]">
+            <tbody className="divide-y divide-[#DADADA]">
               {filtered.map((d) => (
-                <tr key={d.id} className="hover:bg-[#F8FAFC] transition-colors">
+                <tr key={d.id} className="hover:bg-[#FAFAFA] transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <FileText className="w-4 h-4 text-rose-600 shrink-0" />
-                      <span className="text-[13.5px] font-medium text-[#172033] truncate">{d.file_name}</span>
+                      <FileText className="w-4 h-4 text-[#C4644C] shrink-0" />
+                      <span className="text-[13.5px] font-medium text-[#111111] truncate">{d.file_name}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <span className="uppercase text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{d.file_type}</span>
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell text-[12.5px] text-[#64748B]">{formatSize(d.size_bytes)}</td>
-                  <td className="px-4 py-3 hidden md:table-cell text-[12.5px] text-[#64748B]">{formatDate(d.created_at)}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-[12.5px] text-[#5A5A5A]">{formatSize(d.size_bytes)}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-[12.5px] text-[#5A5A5A]">{formatDate(d.created_at)}</td>
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/student/class/${id}/agent`}
-                      title={`Hỏi AI về ${d.file_name}`}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-[#BFDBFE] bg-[#EFF6FF] px-2.5 py-1.5 text-[11.5px] font-semibold text-[#2563EB] hover:bg-[#DBEAFE] transition-colors"
+                      title={`Ask AI about ${d.file_name}`}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-[#CFCFCF] bg-[#F7F7F7] px-2.5 py-1.5 text-[11.5px] font-semibold text-[#111111] hover:bg-[#F0F0F0] transition-colors"
                     >
                       <BotMessageSquare className="w-3.5 h-3.5" />
-                      Hỏi AI
+                      Ask AI
                     </Link>
                   </td>
                 </tr>

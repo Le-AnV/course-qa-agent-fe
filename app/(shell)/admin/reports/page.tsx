@@ -21,13 +21,13 @@ export default function AdminReportsPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#64748B]" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#5A5A5A]" />
           <input
             type="text"
             placeholder="Search reports"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white border border-[#E2E8F0] rounded-lg pl-9 pr-4 py-2 text-[13.5px] outline-none focus:border-[#2563EB] shadow-sm transition-shadow"
+            className="w-full bg-white border border-[#DADADA] rounded-lg pl-9 pr-4 py-2 text-[13.5px] outline-none focus:border-[#111111] shadow-sm transition-shadow"
           />
         </div>
         <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
@@ -37,8 +37,8 @@ export default function AdminReportsPage() {
               onClick={() => setTab(t)}
               className={`px-3.5 py-1.5 text-[13px] rounded-md transition-all ${
                 tab === t
-                  ? "font-semibold bg-white text-[#2563EB] shadow-sm"
-                  : "font-medium text-[#64748B] hover:text-[#172033]"
+                  ? "font-semibold bg-white text-[#111111] shadow-sm"
+                  : "font-medium text-[#5A5A5A] hover:text-[#111111]"
               }`}
             >
               {t}
@@ -47,12 +47,12 @@ export default function AdminReportsPage() {
         </div>
       </div>
 
-      <div className="bg-white border border-[#E2E8F0] rounded-lg shadow-sm p-10 flex flex-col items-center justify-center text-center">
+      <div className="bg-white border border-[#DADADA] rounded-lg shadow-sm p-10 flex flex-col items-center justify-center text-center">
         <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4">
           <Inbox className="w-6 h-6" />
         </div>
-        <h2 className="text-[15px] font-bold text-[#172033]">No {tab.toLowerCase()} reports</h2>
-        <p className="text-[13px] text-[#64748B] mt-1 max-w-md">
+        <h2 className="text-[15px] font-bold text-[#111111]">No {tab.toLowerCase()} reports</h2>
+        <p className="text-[13px] text-[#5A5A5A] mt-1 max-w-md">
           {search
             ? `Nothing matches "${search}" — moderation reports will appear here once the ticket system lands.`
             : "Moderation reports will appear here once the ticket system lands."}

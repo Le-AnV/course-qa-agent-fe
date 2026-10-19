@@ -1,0 +1,26 @@
+/* Education identity accent — the product's one brand colour.
+   #77AAFF is light, so it owns fills that sit under ink text, never text
+   itself: text, links and wayfinding use the darkened members of the ramp
+   (#1E56C8 = 6.5:1 on white). Layered on top of globals.css, which is not
+   edited (encoding). */
+:root {
+  --brand: #77aaff;
+  --brand-hover: #5c93f0;
+  --brand-pressed: #4a84e4;
+  --brand-ink: #1e56c8;
+  --brand-ink-hover: #1746a8;
+  --brand-soft: #edf4ff;
+  --brand-soft-strong: #e2edff;
+  --brand-line: #c9deff;
+}
+
+::selection {
+  background: var(--brand-soft-strong);
+  color: #111111;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  caret-color: var(--brand-ink);
+}

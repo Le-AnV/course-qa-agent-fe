@@ -24,20 +24,20 @@ export function CourseBanner({
   title,
   backHref,
   backLabel = "My Classes",
-  accentColor = "#EFF6FF",
+  accentColor = "#FFFFFF",
   teacherName,
   meta,
 }: CourseBannerProps) {
   return (
     <div
-      className="relative w-full border-b border-[#E2E8F0] overflow-hidden select-none shrink-0"
+      className="relative w-full border-b border-[#DADADA] overflow-hidden select-none shrink-0"
       style={{ backgroundColor: accentColor }}
     >
       <div className="relative z-10 grid grid-cols-[112px_minmax(0,1fr)_112px] items-center gap-2 px-4 py-2.5 md:px-6">
         {/* Trái: back — rộng cố định để title luôn giữa */}
         <Link
           href={backHref}
-          className="inline-flex items-center gap-1 text-[12.5px] font-medium text-[#2563EB] hover:underline min-w-0"
+          className="inline-flex items-center gap-1 text-[12.5px] font-medium text-[#111111] hover:underline min-w-0"
           title={backLabel}
         >
           <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
@@ -46,11 +46,11 @@ export function CourseBanner({
 
         {/* Giữa: tên lớp to, căn giữa; mã lớp nhỏ bên dưới */}
         <div className="min-w-0 text-center">
-          <h1 className="text-[18px] md:text-[20px] font-bold tracking-tight text-[#172033] truncate leading-snug">
+          <h1 className="text-[18px] md:text-[20px] font-bold tracking-tight text-[#111111] truncate leading-snug">
             {title}
           </h1>
           {meta && (
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#64748B] truncate mt-0.5">
+            <p className="text-[11px] font-medium text-[#5A5A5A] truncate mt-0.5">
               {meta}
             </p>
           )}
@@ -58,10 +58,10 @@ export function CourseBanner({
 
         {/* Phải: giáo viên góc phải, rộng cố định; mobile giữ chỗ để không lệch giữa */}
         <div className="min-w-0 text-right">
-          <p className="hidden sm:block text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] leading-none mb-1">
+          <p className="hidden sm:block text-[10px] font-medium text-[#94a3b8] leading-none mb-1">
             Teacher
           </p>
-          <p className="hidden sm:block truncate text-[12.5px] font-semibold text-[#334155] leading-none">
+          <p className="hidden sm:block truncate text-[12.5px] font-semibold text-[#111111] leading-none">
             {teacherName ?? "—"}
           </p>
         </div>

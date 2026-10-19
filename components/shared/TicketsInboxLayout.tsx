@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils";
 interface TicketsInboxLayoutProps {
   title: string;
   subtitle: string;
+  titleBadge?: React.ReactNode;
   searchValue: string;
+  searchPlaceholder?: string;
   onSearchChange: (val: string) => void;
   filters: { id: string; label: string }[];
   activeFilter: string;
@@ -19,7 +21,9 @@ interface TicketsInboxLayoutProps {
 export function TicketsInboxLayout({
   title,
   subtitle,
+  titleBadge,
   searchValue,
+  searchPlaceholder = "Search tickets",
   onSearchChange,
   filters,
   activeFilter,
@@ -30,25 +34,28 @@ export function TicketsInboxLayout({
   return (
     <div className="flex flex-col h-full space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-[#172033]">{title}</h2>
-        <p className="text-[13px] text-[#64748B] mt-0.5">{subtitle}</p>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold text-[#111111]">{title}</h2>
+          {titleBadge}
+        </div>
+        <p className="text-[13px] text-[#5A5A5A] mt-0.5">{subtitle}</p>
       </div>
       
-      <div className="flex-1 bg-white border border-[#E2E8F0] rounded-lg overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+      <div className="flex-1 bg-white border border-[#DADADA] rounded-lg overflow-hidden flex flex-col md:flex-row min-h-[600px]">
         {/* Left Column */}
-        <div className="w-full md:w-[340px] lg:w-[380px] shrink-0 border-r border-[#E2E8F0] flex flex-col bg-white">
-          <div className="p-3 border-b border-[#E2E8F0] space-y-2 bg-[#F8FAFC]/50">
+        <div className="w-full md:w-[340px] lg:w-[380px] shrink-0 border-r border-[#F0F0F0] flex flex-col bg-white">
+          <div className="p-3 border-b border-[#F0F0F0] space-y-2">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#64748B]" />
+              <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#6F6F6F]" />
               <input
                 type="text"
-                placeholder="Search tickets"
+                placeholder={searchPlaceholder}
                 value={searchValue}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full bg-white border border-[#E2E8F0] rounded pl-8 pr-3 py-1.5 text-[12.5px] outline-none focus:border-[#2563EB]"
+                className="w-full bg-white border border-[#DADADA] rounded pl-8 pr-3 py-1.5 text-[12.5px] outline-none focus:border-[#111111]"
               />
             </div>
-            <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded">
+            <div className="flex items-center gap-1 bg-[#F7F7F7] p-0.5 rounded">
               {filters.map((f) => (
                 <button
                   key={f.id}
@@ -56,8 +63,8 @@ export function TicketsInboxLayout({
                   className={cn(
                     "flex-1 text-center py-1 rounded text-[12px] font-medium transition-all",
                     activeFilter === f.id
-                      ? "bg-white text-[#2563EB] shadow-sm"
-                      : "text-[#64748B] hover:text-[#172033]"
+                      ? "bg-white text-[#111111] shadow-sm"
+                      : "text-[#5A5A5A] hover:text-[#111111]"
                   )}
                 >
                   {f.label}
@@ -66,7 +73,7 @@ export function TicketsInboxLayout({
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto divide-y divide-[#E2E8F0]">
+          <div className="flex-1 overflow-y-auto">
             {leftListContent}
           </div>
         </div>

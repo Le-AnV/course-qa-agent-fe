@@ -103,118 +103,118 @@ export default function AdminSettingsPage() {
   return (
     <AdminPageShell title="Settings" subtitle="Platform rules, AI connection and email sender. Secrets are write-only.">
       {error && (
-        <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 text-rose-700 text-[13px]">
+        <div className="bg-white border border-[#DFB2A6] rounded-xl p-4 text-[#9D4C38] text-[13px]">
           {error}
           <button onClick={() => void load()} className="ml-2 underline">Retry</button>
         </div>
       )}
-      {notice && <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-emerald-700 text-[13px]">{notice}</div>}
+      {notice && <div className="bg-[#F7F7F7] border border-[#CFCFCF] rounded-xl p-4 text-[#111111] text-[13px]">{notice}</div>}
 
       {loading ? (
-        <div className={`${ADMIN_CARD} p-8 text-center text-[#64748B] text-[13px]`}>Loading settings…</div>
+        <div className={`${ADMIN_CARD} p-8 text-center text-[#5A5A5A] text-[13px]`}>Loading settings…</div>
       ) : (
         <div className="space-y-6">
           {/* AI / LLM */}
           <div className={`${ADMIN_CARD} p-6`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[16px] font-bold text-[#172033]">AI connection</h2>
-              <span className={`px-2.5 py-1 rounded-full text-[12px] font-semibold border ${settings?.llm.api_key_configured ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
+              <h2 className="text-[16px] font-bold text-[#111111]">AI connection</h2>
+              <span className={`px-2.5 py-1 rounded-full text-[12px] font-semibold border ${settings?.llm.api_key_configured ? "bg-white text-[#111111] border-[#CFCFCF]" : "bg-white text-[#5A5A5A] border-[#CFCFCF]"}`}>
                 {settings?.llm.api_key_configured ? "API key configured" : "No API key"}
               </span>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">Model (read-only, from server env)</label>
+                <label className="block text-[13px] font-semibold text-[#111111] mb-1.5">Model (read-only, from server env)</label>
                 <input value={settings?.llm.model ?? ""} readOnly
-                  className="w-full bg-slate-50 border border-[#E2E8F0] rounded-md px-3 py-2 text-[13.5px] text-[#172033] outline-none" />
+                  className="w-full bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] text-[#111111] outline-none" />
               </div>
               <div className="flex items-end">
                 <button onClick={() => void testLlm()} disabled={testingLlm}
-                  className="px-4 py-2 border border-[#E2E8F0] bg-white text-[13px] font-semibold rounded-md hover:bg-slate-50 shadow-sm disabled:opacity-50">
+                  className="px-4 py-2 border border-[#DADADA] bg-white text-[13px] font-semibold rounded-md hover:bg-slate-50 shadow-sm disabled:opacity-50">
                   {testingLlm ? "Checking…" : "Test LLM connection"}
                 </button>
               </div>
             </div>
-            <p className="text-[12.5px] text-[#64748B] mt-3">Key rotation happens on the server (.env). UI never displays stored secrets.</p>
+            <p className="text-[12.5px] text-[#5A5A5A] mt-3">Key rotation happens on the server (.env). UI never displays stored secrets.</p>
           </div>
 
           {/* Email sender */}
           <div className={`${ADMIN_CARD} p-6`}>
             <div className="flex items-center justify-between mb-1">
-              <h2 className="text-[16px] font-bold text-[#172033]">Email sender</h2>
-              <Link href="/admin/email" className="text-[13px] font-semibold text-[#2563EB] hover:underline">Open queue →</Link>
+              <h2 className="text-[16px] font-bold text-[#111111]">Email sender</h2>
+              <Link href="/admin/email" className="text-[13px] font-semibold text-[#111111] hover:underline">Open queue →</Link>
             </div>
-            <p className="text-[13px] text-[#64748B] mb-4">
+            <p className="text-[13px] text-[#5A5A5A] mb-4">
               {config?.has_app_password ? "App password stored (masked). Leave blank to keep it." : "No app password yet — dry-run only."}
               {settings && <span className="ml-1">Limit: {settings.email.rate_limit_per_minute}/min · {settings.email.smtp_security} · {settings.email.smtp_host}:{settings.email.smtp_port}</span>}
             </p>
             <form onSubmit={(e) => void saveEmail(e)} className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
-                <label className="col-span-2 block text-[13px] font-semibold text-[#334155]">
+                <label className="col-span-2 block text-[13px] font-semibold text-[#111111]">
                   SMTP host
                   <input value={host} onChange={(e) => setHost(e.target.value)}
-                    className="mt-1.5 w-full bg-slate-50 border border-[#E2E8F0] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#2563EB]" />
+                    className="mt-1.5 w-full bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#111111]" />
                 </label>
-                <label className="block text-[13px] font-semibold text-[#334155]">
+                <label className="block text-[13px] font-semibold text-[#111111]">
                   Port
                   <input value={port} onChange={(e) => setPort(e.target.value)} inputMode="numeric"
-                    className="mt-1.5 w-full bg-slate-50 border border-[#E2E8F0] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#2563EB]" />
+                    className="mt-1.5 w-full bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#111111]" />
                 </label>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
-                <label className="block text-[13px] font-semibold text-[#334155]">
+                <label className="block text-[13px] font-semibold text-[#111111]">
                   Sender address
                   <input type="email" value={sender} onChange={(e) => setSender(e.target.value)}
-                    className="mt-1.5 w-full bg-slate-50 border border-[#E2E8F0] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#2563EB]" />
+                    className="mt-1.5 w-full bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#111111]" />
                 </label>
-                <label className="block text-[13px] font-semibold text-[#334155]">
-                  App password <span className="font-normal text-[#64748B]">(blank = keep)</span>
+                <label className="block text-[13px] font-semibold text-[#111111]">
+                  App password <span className="font-normal text-[#5A5A5A]">(blank = keep)</span>
                   <input type="password" autoComplete="new-password" value={appPassword} onChange={(e) => setAppPassword(e.target.value)}
                     placeholder="xxxx xxxx xxxx xxxx"
-                    className="mt-1.5 w-full bg-slate-50 border border-[#E2E8F0] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#2563EB]" />
+                    className="mt-1.5 w-full bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#111111]" />
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <label className="block text-[13px] font-semibold text-[#334155]">
+                <label className="block text-[13px] font-semibold text-[#111111]">
                   Max emails / minute
                   <input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="numeric"
-                    className="mt-1.5 w-full bg-slate-50 border border-[#E2E8F0] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#2563EB]" />
+                    className="mt-1.5 w-full bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#111111]" />
                 </label>
-                <label className="flex items-end gap-2 pb-2 text-[13px] text-[#334155]">
+                <label className="flex items-end gap-2 pb-2 text-[13px] text-[#111111]">
                   <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} className="w-4 h-4 rounded" />
                   Dry-run (no real sending)
                 </label>
               </div>
               <div className="flex flex-wrap gap-3">
                 <button type="submit" disabled={saving}
-                  className="px-4 py-2 bg-[#2563EB] text-white text-[13px] font-semibold rounded-md hover:bg-blue-700 disabled:opacity-50 shadow-sm">
+                  className="px-4 py-2 border border-[#CFCFCF] bg-white text-[#111111] shadow-xs text-[13px] font-semibold rounded-md hover:bg-[#F7F7F7] disabled:opacity-50 shadow-sm">
                   {saving ? "Saving…" : "Save sender"}</button>
               </div>
             </form>
             <form onSubmit={(e) => void testEmail(e)} className="flex gap-2 mt-4">
               <input type="email" required value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="you@gmail.com"
-                className="flex-1 bg-slate-50 border border-[#E2E8F0] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#2563EB]" aria-label="Test recipient" />
+                className="flex-1 bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#111111]" aria-label="Test recipient" />
               <button type="submit" disabled={testingEmail}
-                className="px-4 py-2 border border-[#E2E8F0] bg-white text-[13px] font-semibold rounded-md hover:bg-slate-50 disabled:opacity-50 shadow-sm">
+                className="px-4 py-2 border border-[#DADADA] bg-white text-[13px] font-semibold rounded-md hover:bg-slate-50 disabled:opacity-50 shadow-sm">
                 {testingEmail ? "Sending…" : "Send test mail"}</button>
             </form>
           </div>
 
           {/* Role overview (static info) */}
           <div className={`${ADMIN_CARD} p-6`}>
-            <h2 className="text-[16px] font-bold text-[#172033] mb-4">Role overview</h2>
+            <h2 className="text-[16px] font-bold text-[#111111] mb-4">Role overview</h2>
             <div className="space-y-3">
               <div className="flex gap-4 p-3 bg-slate-50 border border-slate-100 rounded-md">
-                <span className="text-[12px] font-bold text-[#2563EB] uppercase tracking-wider w-24 shrink-0">Student</span>
-                <span className="text-[13px] text-[#64748B]">access class materials, use Q&A Agent, manage own proposals</span>
+                <span className="text-[12px] font-bold text-[#111111]  w-24 shrink-0">Student</span>
+                <span className="text-[13px] text-[#5A5A5A]">access class materials, use Q&A Agent, manage own proposals</span>
               </div>
               <div className="flex gap-4 p-3 bg-slate-50 border border-slate-100 rounded-md">
-                <span className="text-[12px] font-bold text-[#16A34A] uppercase tracking-wider w-24 shrink-0">Trainer</span>
-                <span className="text-[13px] text-[#64748B]">create and manage classes, syllabus, resources, tickets, and members</span>
+                <span className="text-[12px] font-bold text-[#111111] w-24 shrink-0">Trainer</span>
+                <span className="text-[13px] text-[#5A5A5A]">create and manage classes, syllabus, resources, tickets, and members</span>
               </div>
               <div className="flex gap-4 p-3 bg-slate-50 border border-slate-100 rounded-md">
-                <span className="text-[12px] font-bold text-[#9333EA] uppercase tracking-wider w-24 shrink-0">Admin</span>
-                <span className="text-[13px] text-[#64748B]">manage users, view basic class information, review reports, configure platform settings</span>
+                <span className="text-[12px] font-bold text-[#6F6F6F]  w-24 shrink-0">Admin</span>
+                <span className="text-[13px] text-[#5A5A5A]">manage users, view basic class information, review reports, configure platform settings</span>
               </div>
             </div>
           </div>

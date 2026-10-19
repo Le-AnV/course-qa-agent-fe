@@ -88,22 +88,22 @@ export function ProductPreview() {
 
   return (
     <figure className="relative mx-auto w-full max-w-6xl">
-      <div className="pointer-events-none absolute -inset-4 -z-10 rounded-[2rem] bg-blue-100/60 blur-2xl" />
-      <div className="overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-xl shadow-blue-950/[0.08]">
-        <div className="flex h-12 items-center justify-between border-b border-blue-100 bg-white/90 px-4 sm:px-5">
+      <div className="pointer-events-none absolute -inset-4 -z-10 rounded-[2rem] bg-[var(--brand-line)]/60 blur-2xl" />
+      <div className="overflow-hidden rounded-2xl border border-[var(--brand-line)] bg-white shadow-xl shadow-[#1e56c8]/[0.10]">
+        <div className="flex h-12 items-center justify-between border-b border-[var(--brand-line)] bg-white/90 px-4 sm:px-5">
           <div className="flex items-center gap-2" aria-hidden="true">
             <span className="size-2.5 rounded-full bg-slate-200" />
             <span className="size-2.5 rounded-full bg-slate-200" />
             <span className="size-2.5 rounded-full bg-slate-200" />
           </div>
           <span className="text-xs font-medium text-slate-500">Student workspace</span>
-          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+          <span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-ink)]">
             Interactive preview
           </span>
         </div>
 
         <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:px-5">
-          <div className="flex shrink-0 items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+          <div className="flex shrink-0 items-center gap-2 text-[11px] font-medium text-slate-500">
             <BookOpen className="size-3.5" aria-hidden="true" />
             Courses
           </div>
@@ -118,7 +118,7 @@ export function ProductPreview() {
                   aria-pressed={isActive}
                   className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
                     isActive
-                      ? "border-blue-200 bg-blue-50 text-blue-800"
+                      ? "border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-ink)]"
                       : "border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
                 >
@@ -139,7 +139,7 @@ export function ProductPreview() {
           >
             <div className="p-3">
               <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
                   <MessageSquare className="size-3.5" aria-hidden="true" />
                   Chat history
                 </div>
@@ -195,12 +195,12 @@ export function ProductPreview() {
                 content={activeChat.answer}
               />
               <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-                <Check className="size-3.5 text-emerald-600" aria-hidden="true" />
+                    <Check className="size-3.5 text-[#4B9E76]" aria-hidden="true" />
                 Answer scoped to {activeCourse.code} course materials
               </div>
             </div>
 
-            <div className="border-t border-blue-100 bg-blue-50/70 px-4 py-2 text-center text-[11px] font-medium text-blue-700">
+            <div className="border-t border-[var(--brand-line)] bg-[var(--brand-soft)]/70 px-4 py-2 text-center text-[11px] font-medium text-[var(--brand-ink)]">
               <Sparkles className="mr-1 inline size-3.5" aria-hidden="true" />
               Type a question below. Sending it will take you to login.
             </div>
@@ -211,7 +211,7 @@ export function ProductPreview() {
             aria-label="Syllabus focus preview"
             className="hidden border-l border-slate-200 bg-white p-3 xl:block"
           >
-            <div className="flex items-center gap-2 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+            <div className="flex items-center gap-2 px-1 text-[11px] font-medium text-slate-500">
               <FileText className="size-3.5" aria-hidden="true" />
               Syllabus focus
             </div>
@@ -221,7 +221,7 @@ export function ProductPreview() {
             <div className="mt-3 grid gap-2">
               {previewSyllabus[courseId].map((topic, index) => (
                 <div key={topic} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                  <span className="block text-[10px] font-semibold text-blue-700">Module {index + 1}</span>
+                  <span className="block text-[10px] font-semibold text-[var(--brand-ink)]">Module {index + 1}</span>
                   <span className="mt-1 block text-[11px] font-medium leading-4 text-slate-700">{topic}</span>
                 </div>
               ))}
