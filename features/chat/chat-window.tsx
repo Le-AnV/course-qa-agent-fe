@@ -4,7 +4,6 @@ import * as React from 'react';
 import { MessageBubble } from './message-bubble';
 import { ChatInput } from './chat-input';
 import { useChatStream } from '@/hooks/use-chat-stream';
-import { getClassById } from '@/lib/classes';
 import { getSessionDetail } from '@/features/history/api';
 import type { ChatMessageItem } from '@/features/history/types';
 import { Loader2 } from 'lucide-react';
@@ -15,6 +14,9 @@ type Message = {
   id: string;
   role: 'user' | 'ai';
   content: string;
+  /** Reasoning steps shown while the answer is produced (and kept collapsed after). */
+  trace?: string[];
+  thinkingMs?: number;
 };
 
 // Initialize chat state
@@ -35,14 +37,24 @@ const SUGGESTED_QUESTIONS = [
   'What reading materials are required for unit 1?',
 ];
 
+// Retrieval steps surfaced while the agent works. A real backend can stream its
+// own trace into the same component.
+const THINKING_STEPS = [
+  'Searching this class\u2019s materials',
+  'Reading the syllabus sections that match',
+  'Drafting an answer with citations',
+];
+
 export function ChatWindow({
   classId,
   activeSessionId,
+  classLabel,
 }: {
   classId: string;
   activeSessionId?: string | null;
+  /** Real class code/name from the backend; the local mock list is only a fallback. */
+  classLabel?: string | null;
 }) {
-  const cls = getClassById(classId);
   const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
   const [isTyping, setIsTyping] = React.useState(false); // Waiting state for the first chunk (to show typing indicator)
   const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
@@ -87,7 +99,7 @@ export function ChatWindow({
       })
       .catch((err) => {
         console.error('Failed to load session history:', err);
-        toast.error('Không thể tải lịch sử cuộc trò chuyện.');
+        toast.error('Could not load the conversation history.');
       })
       .finally(() => {
         if (isMounted) {
@@ -111,16 +123,22 @@ export function ChatWindow({
   // Step 4.2: Initialize Stream Hook
   const { sendMessage, isStreaming } = useChatStream({
     classId,
-    onChunk: (chunkText) => {
+    classLabel,
+    onChunk: (chunkText, elapsedMs) => {
       // Turn off typing indicator when first chunk arrives
       setIsTyping(false);
       
-      // Append new text to the last AI message
+      // Append new text to the last AI message, and freeze how long the
+      // retrieval/thinking phase actually took (measured by the stream hook).
       setMessages(prev => {
         const lastMsg = prev[prev.length - 1];
         if (!lastMsg || lastMsg.role !== 'ai') return prev;
         
-        const updatedMsg = { ...lastMsg, content: lastMsg.content + chunkText };
+        const updatedMsg: Message = {
+          ...lastMsg,
+          content: lastMsg.content + chunkText,
+          thinkingMs: lastMsg.thinkingMs ?? elapsedMs,
+        };
         return [...prev.slice(0, -1), updatedMsg];
       });
     },
@@ -131,10 +149,16 @@ export function ChatWindow({
 
   // Handler for user sending a message
   const handleSend = (text: string) => {
-    // 1. Append User message AND an empty AI message to the list
+    // 1. Append the user message and a pending AI message carrying the trace,
+    //    so the reasoning steps are visible while the answer is produced.
     const newUserMsg: Message = { id: nextMsgId(), role: 'user', content: text };
-    const emptyAiMsg: Message = { id: nextMsgId(), role: 'ai', content: '' };
-    setMessages(prev => [...prev, newUserMsg, emptyAiMsg]);
+    const pendingAiMsg: Message = {
+      id: nextMsgId(),
+      role: 'ai',
+      content: '',
+      trace: THINKING_STEPS,
+    };
+    setMessages(prev => [...prev, newUserMsg, pendingAiMsg]);
     
     // 2. Enable AI typing indicator
     setIsTyping(true);
@@ -145,34 +169,19 @@ export function ChatWindow({
 
   return (
     <div className="flex flex-col h-full relative">
-      {/* Class scope badge: lets user know AI is answering based on this class's context */}
-      <div className="shrink-0 px-4 md:px-6 pt-3">
-        <div className="max-w-4xl mx-auto flex items-center gap-2">
-          <span
-            className="w-2 h-2 rounded-full shrink-0"
-            style={{ backgroundColor: cls?.accentColor ?? '#2563EB' }}
-          />
-          <span className="text-[12px] font-semibold text-slate-600 dark:text-slate-300 truncate">
-            {cls ? `${cls.code} · ${cls.title}` : `Class ${classId}`}
-          </span>
-          <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
-            · AI uses only this class&apos;s materials
-          </span>
-        </div>
-      </div>
-
       {/* Top area: Message list container (auto-scrolls if long) */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-8">
         <div className="max-w-4xl mx-auto">
           {isLoadingHistory ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400 dark:text-slate-500">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="text-xs">Đang tải cuộc trò chuyện...</span>
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#6F6F6F]">
+              <Loader2 className="h-6 w-6 animate-spin text-[#6F6F6F]" />
+              <span className="text-xs">Loading conversation...</span>
             </div>
           ) : (
             messages.map((msg, idx) => {
               const isLastMessage = idx === messages.length - 1;
               const isMessageStreaming = isStreaming && isLastMessage && msg.role === 'ai';
+              const isMessagePending = isTyping && isLastMessage && msg.role === 'ai';
 
               return (
                 <MessageBubble
@@ -180,6 +189,9 @@ export function ChatWindow({
                   role={msg.role}
                   content={msg.content}
                   isStreaming={isMessageStreaming}
+                  isLoading={isMessagePending}
+                  trace={msg.trace}
+                  thinkingMs={msg.thinkingMs}
                 />
               );
             })
@@ -192,21 +204,12 @@ export function ChatWindow({
                 <button
                   key={q}
                   onClick={() => handleSend(q)}
-                  className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-[12.5px] font-medium text-slate-600 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+                  className="rounded-full border border-[#DADADA] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#5A5A5A] hover:border-[#CFCFCF] hover:text-[#111111] transition-colors"
                 >
                   {q}
                 </button>
               ))}
             </div>
-          )}
-          
-          {/* Show empty AI bubble with loading effect while waiting for API */}
-          {isTyping && (
-            <MessageBubble 
-              role="ai" 
-              content="" 
-              isLoading={true} 
-            />
           )}
 
           {/* Empty div serving as an anchor for scrollIntoView */}

@@ -4,16 +4,20 @@ import { AUTH_TOKEN_KEY } from '@/components/ui/nav-config';
 interface UseChatStreamProps {
   /** Class scope — BE dùng để lọc syllabus/tài liệu của đúng lớp, tránh lẫn dữ liệu giữa các lớp. */
   classId: string;
-  onChunk: (chunk: string) => void;
+  /** Nhãn lớp (code · tên) để mock local hiển thị đúng tên lớp thay vì UUID. */
+  classLabel?: string | null;
+  /** elapsedMs: thời gian từ lúc gửi tới chunk này (đo trong hook, không đo ở render). */
+  onChunk: (chunk: string, elapsedMs: number) => void;
   onFinish?: () => void;
   onError?: (error: Error) => void;
 }
 
-export function useChatStream({ classId, onChunk, onFinish, onError }: UseChatStreamProps) {
+export function useChatStream({ classId, classLabel, onChunk, onFinish, onError }: UseChatStreamProps) {
   const [isStreaming, setIsStreaming] = useState(false);
 
   const sendMessage = useCallback(async (message: string) => {
     setIsStreaming(true);
+    const startedAt = Date.now();
 
     try {
       // 1. Khởi tạo hàm fetch gọi đến endpoint API (giả định là /api/chat)
@@ -24,7 +28,7 @@ export function useChatStream({ classId, onChunk, onFinish, onError }: UseChatSt
           // Đính kèm token ảo của Developer từ localStorage
           'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY) || ''}`
         },
-        body: JSON.stringify({ message, class_id: classId }),
+        body: JSON.stringify({ message, class_id: classId, class_label: classLabel ?? null }),
       });
 
       if (!response.ok) {
@@ -54,7 +58,7 @@ export function useChatStream({ classId, onChunk, onFinish, onError }: UseChatSt
         
         // Bắn chữ vừa nhận được ra ngoài Component Cha thông qua hàm onChunk
         if (chunkText) {
-          onChunk(chunkText);
+          onChunk(chunkText, Date.now() - startedAt);
         }
       }
 
@@ -67,7 +71,7 @@ export function useChatStream({ classId, onChunk, onFinish, onError }: UseChatSt
     } finally {
       setIsStreaming(false);
     }
-  }, [classId, onChunk, onFinish, onError]);
+  }, [classId, classLabel, onChunk, onFinish, onError]);
 
   return {
     sendMessage,
