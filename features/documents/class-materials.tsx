@@ -84,6 +84,7 @@ export function ClassMaterials({
     status: "all",
   });
   const [loading, setLoading] = React.useState(true);
+  const [processingExists, setProcessingExists] = React.useState(false);
   const [listError, setListError] = React.useState<string | null>(null);
   const [approvingId, setApprovingId] = React.useState<string | null>(null);
   const [rejectingId, setRejectingId] = React.useState<string | null>(null);
@@ -91,6 +92,7 @@ export function ClassMaterials({
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [replacingId, setReplacingId] = React.useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = React.useState<DocumentItem | null>(null);
+  const [pendingReject, setPendingReject] = React.useState<DocumentItem | null>(null);
   const [replaceTarget, setReplaceTarget] = React.useState<DocumentItem | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const replaceInputRef = React.useRef<HTMLInputElement>(null);
@@ -150,15 +152,34 @@ export function ClassMaterials({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only initial sync
   }, [classId]);
 
-  const hasProcessingDocuments = documents.some((document) => document.status === "processing");
+  const refreshProcessingStatus = React.useCallback(async () => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) return;
+    try {
+      const result = await fetchDocuments(
+        { token },
+        { classId, status: "processing", page: 1, pageSize: 1 },
+      );
+      const processing = result.total > 0;
+      setProcessingExists(processing);
+      if (processing || processingExists) await load(filters, page, true);
+    } catch {
+      // The normal list request reports backend failures; status polling can retry.
+    }
+  }, [classId, filters, load, page, processingExists]);
 
   React.useEffect(() => {
-    if (!hasProcessingDocuments) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- starts async status polling; updates happen after fetch resolves.
+    void refreshProcessingStatus();
+  }, [refreshProcessingStatus]);
+
+  React.useEffect(() => {
+    if (!processingExists) return;
     const interval = window.setInterval(() => {
-      void load(filters, page, true);
+      void refreshProcessingStatus();
     }, 3000);
     return () => window.clearInterval(interval);
-  }, [filters, hasProcessingDocuments, load, page]);
+  }, [processingExists, refreshProcessingStatus]);
 
   function handleFiltersChange(next: DocumentFilters) {
     setFilters(next);
@@ -230,6 +251,7 @@ export function ClassMaterials({
     setApprovingId(documentId);
     try {
       await approveDocument({ token }, documentId);
+      setProcessingExists(true);
       await load(filters, page);
     } catch (err) {
       setListError(
@@ -250,6 +272,7 @@ export function ClassMaterials({
     setActionError(null);
     try {
       await retryDocument({ token }, documentId);
+      setProcessingExists(true);
       await load(filters, page);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -614,6 +637,7 @@ export function ClassMaterials({
                           ? `Failed: ${d.failureReason ?? "Document processing failed."}`
                           : undefined
                       }
+                      role={d.status === "failed" ? "status" : undefined}
                       tabIndex={d.status === "failed" ? 0 : undefined}
                     >
                       {d.status === "processing" ? (
@@ -650,7 +674,7 @@ export function ClassMaterials({
                           </button>
                           <button
                             type="button"
-                            onClick={() => void handleReject(d.id)}
+                            onClick={() => setPendingReject(d)}
                             disabled={
                               approvingId === d.id ||
                               rejectingId === d.id ||
@@ -784,6 +808,42 @@ export function ClassMaterials({
               className="rounded border border-[#DFB2A6] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#9D4C38] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
             >
               {deletingId !== null ? "Deleting…" : "Delete"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={pendingReject !== null}
+        onOpenChange={(open) => !open && setPendingReject(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject {pendingReject?.fileName}?</DialogTitle>
+            <DialogDescription>
+              This document will not be indexed and cannot be approved later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setPendingReject(null)}
+              disabled={rejectingId !== null}
+              className="rounded border border-[#CFCFCF] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!pendingReject) return;
+                await handleReject(pendingReject.id);
+                setPendingReject(null);
+              }}
+              disabled={rejectingId !== null}
+              className="rounded border border-[#DFB2A6] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#9D4C38] shadow-xs transition-colors hover:bg-[#FFF7F5] disabled:opacity-50"
+            >
+              {rejectingId !== null ? "Rejecting…" : "Reject document"}
             </button>
           </DialogFooter>
         </DialogContent>
