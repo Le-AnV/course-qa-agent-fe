@@ -16,6 +16,7 @@ import {
   acceptedExtensions,
   formatFileSize,
   resolveDefaultClassId,
+  uploadDocuments,
   validationError,
   type ClassOption,
 } from "@/lib/documents";
@@ -77,29 +78,22 @@ export function UploadDropzone({
     }
     setState({ status: "uploading" });
     try {
-      const form = new FormData();
-      form.set("class_id", classId);
-      for (const f of files) form.append("files", f);
-      const res = await fetch(`${API_URL}/api/documents/`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      });
-      if (!res.ok) throw new Error(`Backend responded with ${res.status}`);
-      const body = (await res.json()) as {
-        uploaded: { file_name: string; error: string | null }[];
-      };
-      const failed = body.uploaded.filter((u) => u.error !== null);
+      const outcomes = await uploadDocuments({ token }, classId, files);
+      const failed = outcomes.filter((o) => o.error !== null);
       if (failed.length > 0) {
-        setErrors(failed.map((f) => `${f.file_name}: ${f.error ?? "rejected"}`));
+        setErrors(failed.map((f) => `${f.fileName}: ${f.error ?? "rejected"}`));
         setState({ status: "error", message: "Some files were rejected." });
       } else {
         setFiles([]);
         setErrors([]);
         if (inputRef.current) inputRef.current.value = "";
+        const replaced = outcomes.filter((o) => (o.item?.version ?? 1) > 1).length;
         setState({
           status: "done",
-          message: "Upload successful. Files are pending approval.",
+          message:
+            replaced > 0
+              ? "Upload successful. Replaced file(s) got a new version; the previous version stopped being used."
+              : "Upload successful. Files are pending approval.",
         });
         onUploaded?.();
       }
@@ -216,7 +210,8 @@ export function UploadDropzone({
 
         <p className="text-sm text-muted-foreground">
           Accepted: {ACCEPTED_TYPES.map((t) => `${t.extension} (${t.label})`).join(", ")}.
-          Max 100MB per file. Account import from Excel is a separate admin flow.
+          Max 100MB per file. Uploading a file name that already exists in the class
+          replaces it with a new version. Account import from Excel is a separate admin flow.
         </p>
 
         {errors.length > 0 && (

@@ -34,6 +34,7 @@ const STATUS_VARIANT: Record<DocumentItem["status"], "default" | "secondary" | "
   pending: "secondary",
   rejected: "destructive",
   failed: "destructive",
+  replaced: "secondary",
 };
 
 export type { DocumentFilters };
@@ -48,9 +49,13 @@ export function DocumentList({
   loading = false,
   error = null,
   approvingId = null,
+  deletingId = null,
+  replacingId = null,
   onFiltersChange,
   onPageChange,
   onApprove,
+  onDelete,
+  onReplace,
 }: {
   documents: DocumentItem[];
   classes: ClassOption[];
@@ -61,9 +66,13 @@ export function DocumentList({
   loading?: boolean;
   error?: string | null;
   approvingId?: string | null;
+  deletingId?: string | null;
+  replacingId?: string | null;
   onFiltersChange: (next: DocumentFilters) => void;
   onPageChange: (page: number) => void;
   onApprove?: (documentId: string) => void;
+  onDelete?: (document: DocumentItem) => void;
+  onReplace?: (document: DocumentItem) => void;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -128,6 +137,7 @@ export function DocumentList({
               <SelectItem value="indexed">Indexed</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="replaced">Replaced</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -144,6 +154,7 @@ export function DocumentList({
             <TableHeader>
               <TableRow>
                 <TableHead>File name</TableHead>
+                <TableHead>Version</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Size</TableHead>
                 <TableHead>Uploader</TableHead>
@@ -157,6 +168,7 @@ export function DocumentList({
               {documents.map((d) => (
                 <TableRow key={d.id}>
                   <TableCell className="font-medium">{d.fileName}</TableCell>
+                  <TableCell>v{d.version}</TableCell>
                   <TableCell>{d.fileType}</TableCell>
                   <TableCell>{formatFileSize(d.sizeBytes)}</TableCell>
                   <TableCell>{d.uploaderId}</TableCell>
@@ -168,17 +180,45 @@ export function DocumentList({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {d.status === "pending" && onApprove && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={approvingId === d.id || loading}
-                        onClick={() => onApprove(d.id)}
-                      >
-                        {approvingId === d.id ? "Approving…" : "Approve"}
-                      </Button>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {d.status === "pending" && onApprove && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={approvingId === d.id || deletingId === d.id || loading}
+                          onClick={() => onApprove(d.id)}
+                        >
+                          {approvingId === d.id ? "Approving…" : "Approve"}
+                        </Button>
+                      )}
+                      {onReplace && d.status !== "replaced" && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={
+                            replacingId === d.id || deletingId === d.id || loading
+                          }
+                          onClick={() => onReplace(d)}
+                        >
+                          {replacingId === d.id ? "Replacing…" : "Replace"}
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          disabled={
+                            deletingId === d.id || approvingId === d.id || loading
+                          }
+                          onClick={() => onDelete(d)}
+                        >
+                          {deletingId === d.id ? "Deleting…" : "Delete"}
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
