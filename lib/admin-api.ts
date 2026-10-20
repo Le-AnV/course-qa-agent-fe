@@ -97,6 +97,14 @@ export type AdminSettings = {
   };
 };
 export type ConnectionTest = { success: boolean; message: string };
+export type RetrievalConfig = {
+  // AI-65: best similarity score needed to answer from class materials.
+  // Below it, the question is handed to the Internet source agent.
+  threshold: number;
+  default_threshold: number;
+  is_default: boolean;
+  updated_at: string | null;
+};
 export type HealthComponent = {
   name: string;
   status: "up" | "down" | "configured" | "unconfigured";
@@ -250,6 +258,13 @@ export const adminApi = {
   // AI-105 runtime settings (read-only from UI, secrets never returned)
   adminSettings: () => apiFetch<AdminSettings>("/api/admin/settings"),
   testLlm: () => apiFetch<ConnectionTest>("/api/admin/llm/test-connection", { method: "POST" }),
+  // AI-65: KB-vs-Internet routing threshold (T35, admin-configurable).
+  retrievalConfig: () => apiFetch<RetrievalConfig>("/api/admin/retrieval-config"),
+  updateRetrievalConfig: (threshold: number) =>
+    apiFetch<RetrievalConfig>("/api/admin/retrieval-config", {
+      method: "PATCH",
+      body: JSON.stringify({ threshold }),
+    }),
   // AI-109 system monitoring: live DB/Qdrant/LLM component health.
   systemHealth: () => apiFetch<SystemHealth>("/api/admin/system/health"),
   downloadTemplate: async (): Promise<Blob> => {

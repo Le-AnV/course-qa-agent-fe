@@ -54,3 +54,56 @@ describe("setClassCapacity (admin-owned roster capacity)", () => {
     }
   });
 });
+
+describe("retrievalConfig (AI-65 KB vs Internet threshold)", () => {
+  it("reads the active threshold and the documented default", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, {
+      threshold: 0.8,
+      default_threshold: 0.8,
+      is_default: true,
+      updated_at: null,
+    });
+    try {
+      const result = await adminApi.retrievalConfig();
+      expect(result.threshold).toBe(0.8);
+      expect(result.default_threshold).toBe(0.8);
+      expect(calls[0].url).toContain("/api/admin/retrieval-config");
+      expect(calls[0].init?.method).toBeUndefined();
+    } finally {
+      restore();
+    }
+  });
+
+  it("PATCHes a new threshold that applies to the next question", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, {
+      threshold: 0.65,
+      default_threshold: 0.8,
+      is_default: false,
+      updated_at: "2026-10-20T10:00:00Z",
+    });
+    try {
+      const result = await adminApi.updateRetrievalConfig(0.65);
+      expect(result.threshold).toBe(0.65);
+      expect(result.is_default).toBe(false);
+      expect(calls[0].url).toContain("/api/admin/retrieval-config");
+      expect(calls[0].init?.method).toBe("PATCH");
+      expect(JSON.parse(String(calls[0].init?.body))).toEqual({ threshold: 0.65 });
+    } finally {
+      restore();
+    }
+  });
+
+  it("surfaces backend validation errors", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, { detail: "Threshold must be a number between 0 and 1." }, 400);
+    try {
+      await expect(adminApi.updateRetrievalConfig(1.5)).rejects.toThrow(
+        "Threshold must be a number between 0 and 1.",
+      );
+    } finally {
+      restore();
+    }
+  });
+});
