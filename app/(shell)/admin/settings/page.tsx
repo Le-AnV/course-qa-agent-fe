@@ -2,16 +2,18 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { adminApi, type AdminSettings, type EmailConfig } from "@/lib/admin-api";
+import { adminApi, type AdminSettings, type EmailConfig, type RetrievalConfig } from "@/lib/admin-api";
 import { AdminPageShell, ADMIN_CARD } from "@/components/shared/AdminPageShell";
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = React.useState<AdminSettings | null>(null);
   const [config, setConfig] = React.useState<EmailConfig | null>(null);
+  const [retrieval, setRetrieval] = React.useState<RetrievalConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [savingRetrieval, setSavingRetrieval] = React.useState(false);
   const [testingLlm, setTestingLlm] = React.useState(false);
   const [testingEmail, setTestingEmail] = React.useState(false);
 
@@ -22,14 +24,21 @@ export default function AdminSettingsPage() {
   const [rate, setRate] = React.useState("");
   const [dryRun, setDryRun] = React.useState(true);
   const [testTo, setTestTo] = React.useState("");
+  const [threshold, setThreshold] = React.useState("");
 
   const load = React.useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const [s, c] = await Promise.all([adminApi.adminSettings(), adminApi.emailConfig()]);
+      const [s, c, r] = await Promise.all([
+        adminApi.adminSettings(),
+        adminApi.emailConfig(),
+        adminApi.retrievalConfig(),
+      ]);
       setSettings(s);
       setConfig(c);
+      setRetrieval(r);
+      setThreshold(String(r.threshold));
       setHost(c.smtp_host);
       setPort(String(c.smtp_port));
       setSender(c.smtp_sender);
@@ -67,6 +76,30 @@ export default function AdminSettingsPage() {
       setError(err instanceof Error ? err.message : "Save failed.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveRetrieval(e: React.FormEvent) {
+    e.preventDefault();
+    const value = Number(threshold);
+    if (!Number.isFinite(value) || value < 0 || value > 1) {
+      setError("Threshold must be a number between 0 and 1.");
+      return;
+    }
+    setSavingRetrieval(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const updated = await adminApi.updateRetrievalConfig(value);
+      setRetrieval(updated);
+      setThreshold(String(updated.threshold));
+      setNotice(
+        `Answer routing threshold saved at ${updated.threshold}. It applies to the next question.`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Threshold save failed.");
+    } finally {
+      setSavingRetrieval(false);
     }
   }
 
@@ -136,6 +169,47 @@ export default function AdminSettingsPage() {
               </div>
             </div>
             <p className="text-[12.5px] text-[#5A5A5A] mt-3">Key rotation happens on the server (.env). UI never displays stored secrets.</p>
+          </div>
+
+          {/* AI-65: KB vs Internet routing threshold */}
+          <div className={`${ADMIN_CARD} p-6`}>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-[16px] font-bold text-[#111111]">Answer routing (materials vs Internet)</h2>
+              <span className="px-2.5 py-1 rounded-full text-[12px] font-semibold border bg-white text-[#111111] border-[#CFCFCF]">
+                {retrieval?.is_default ? "Default 0.80" : "Custom"}
+              </span>
+            </div>
+            <p className="text-[13px] text-[#5A5A5A] mb-4">
+              Retrieval always runs first. When the best class-material score is at least this threshold,
+              the assistant answers from the materials with citations. Below it, the question goes to the
+              Internet source agent — the student is never refused.
+            </p>
+            <form onSubmit={(e) => void saveRetrieval(e)} className="flex flex-wrap items-end gap-3">
+              <label className="block text-[13px] font-semibold text-[#111111]">
+                Similarity threshold
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  required
+                  value={threshold}
+                  onChange={(e) => setThreshold(e.target.value)}
+                  className="mt-1.5 w-40 bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#111111]"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={savingRetrieval}
+                className="px-4 py-2 border border-[#CFCFCF] bg-white text-[#111111] text-[13px] font-semibold rounded-md hover:bg-[#F7F7F7] disabled:opacity-50 shadow-sm"
+              >
+                {savingRetrieval ? "Saving…" : "Save threshold"}
+              </button>
+            </form>
+            <p className="text-[12.5px] text-[#5A5A5A] mt-3">
+              Default {retrieval?.default_threshold?.toFixed(2) ?? "0.80"} · 0 = always prefer materials ·
+              1 = only an exact match counts. Changes apply to the next question.
+            </p>
           </div>
 
           {/* Email sender */}
