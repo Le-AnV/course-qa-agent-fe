@@ -22,6 +22,7 @@ export type DocumentItem = {
   classId: string;
   className: string;
   status: DocumentStatus;
+  failureReason: string | null;
   /** AI-39 AC-03: uploads of an existing file name create the next version. */
   version: number;
   createdAt: string;
@@ -102,6 +103,7 @@ type DocumentRow = {
   class_id: string;
   class_name: string;
   status: DocumentStatus;
+  failure_reason: string | null;
   version: number;
   created_at: string;
 };
@@ -117,6 +119,7 @@ function toItem(i: DocumentRow): DocumentItem {
     classId: i.class_id,
     className: i.class_name,
     status: i.status,
+    failureReason: i.failure_reason ?? null,
     version: i.version ?? 1,
     createdAt: i.created_at,
   };
@@ -162,6 +165,32 @@ export async function approveDocument(
 ): Promise<DocumentItem> {
   const res = await fetch(
     `${API_URL}/api/documents/${encodeURIComponent(documentId)}/approve`,
+    { method: "POST", headers: headers(auth) },
+  );
+  if (!res.ok) await throwForStatus(res);
+  return toItem((await res.json()) as DocumentRow);
+}
+
+/** AI-55: reject a pending document so it is never indexed. */
+export async function rejectDocument(
+  auth: AuthHeaders,
+  documentId: string,
+): Promise<DocumentItem> {
+  const res = await fetch(
+    `${API_URL}/api/documents/${encodeURIComponent(documentId)}/reject`,
+    { method: "POST", headers: headers(auth) },
+  );
+  if (!res.ok) await throwForStatus(res);
+  return toItem((await res.json()) as DocumentRow);
+}
+
+/** AI-55: move a failed document back to processing and schedule ingestion. */
+export async function retryDocument(
+  auth: AuthHeaders,
+  documentId: string,
+): Promise<DocumentItem> {
+  const res = await fetch(
+    `${API_URL}/api/documents/${encodeURIComponent(documentId)}/retry`,
     { method: "POST", headers: headers(auth) },
   );
   if (!res.ok) await throwForStatus(res);
