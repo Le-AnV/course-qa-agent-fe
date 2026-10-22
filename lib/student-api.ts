@@ -49,6 +49,8 @@ export type ClassMember = {
   username: string;
   email: string;
   role: string;
+  // Trainer-marked term result: null | PASSED | FAILED.
+  result?: string | null;
 };
 
 export type ClassDocument = {
@@ -62,6 +64,9 @@ export type ClassDocument = {
 
 export type CatalogClass = StudentClass & {
   my_status: "active" | "pending" | "none";
+  // Prerequisites the caller has not passed yet; empty means unlocked.
+  blocked_prerequisites?: { id: string; code: string; name: string }[];
+  can_request?: boolean;
 };
 
 export type JoinRequest = {
@@ -86,7 +91,7 @@ async function studentFetch<T>(path: string, init?: RequestInit): Promise<T> {
     res = await fetch(`${API_URL}${path}`, { ...init, headers: { ...authHeaders(), ...(init?.headers ?? {}) } });
   } catch {
     throw new Error(
-      `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), then Retry; or open this app via http://localhost:3000 (BE CORS only allows local dev origins).`,
+      `Cannot reach backend at ${API_URL} — check "docker compose up -d --build" and the backend logs (migrations run on start), then Retry.`,
     );
   }
   if (res.status === 401) throw new Error("Session expired — please log in again.");
@@ -103,6 +108,13 @@ export const studentApi = {
   classes: () => studentFetch<StudentClass[]>("/api/student/classes"),
   classDetail: (id: string) => studentFetch<StudentClass>(`/api/student/classes/${id}`),
   members: (id: string) => studentFetch<ClassMember[]>(`/api/student/classes/${id}/members`),
+  // Trainer only: mark a member's term result (null | PASSED | FAILED).
+  setResult: (classId: string, studentId: string, result: "PASSED" | "FAILED" | null) =>
+    studentFetch<ClassMember>(`/api/student/classes/${classId}/members/${studentId}/result`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ result }),
+    }),
   documents: (id: string) => studentFetch<ClassDocument[]>(`/api/student/classes/${id}/documents`),
   // Enrollment requests: browse the catalog, request to join, TA approves.
   catalog: () => studentFetch<CatalogClass[]>("/api/student/catalog"),
