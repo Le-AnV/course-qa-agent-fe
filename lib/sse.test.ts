@@ -1,0 +1,124 @@
+import { describe, expect, it } from "vitest";
+
+import { createSseParser, type ChatStreamEvent } from "./sse";
+
+describe("createSseParser", () => {
+  it("parses multiple typed events", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push(
+      'event: token\ndata: {"text":"Hello "}\n\n' +
+        'event: citation\ndata: {"index":1,"kind":"curriculum","title":"lesson.pdf","url":null,"snippet":"Evidence","document_id":"doc-1","page":2}\n\n' +
+        'event: done\ndata: {"source":"curriculum","used_web_search":false,"threshold":0.8,"top_score":0.91}\n\n',
+    );
+
+    expect(events).toEqual([
+      { type: "token", text: "Hello " },
+      {
+        type: "citation",
+        citation: {
+          index: 1,
+          kind: "curriculum",
+          title: "lesson.pdf",
+          url: null,
+          snippet: "Evidence",
+          documentId: "doc-1",
+          page: 2,
+        },
+      },
+      {
+        type: "done",
+        source: "curriculum",
+        usedWebSearch: false,
+        threshold: 0.8,
+        topScore: 0.91,
+      },
+    ]);
+  });
+
+  it("keeps an incomplete event until the next network chunk", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push('event: token\ndata: {"text":"Neu');
+    expect(events).toEqual([]);
+
+    parser.push('ral network"}\n\n');
+    expect(events).toEqual([{ type: "token", text: "Neural network" }]);
+  });
+
+  it("supports CRLF event separators", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push('event: error\r\ndata: {"message":"Try again."}\r\n\r\n');
+
+    expect(events).toEqual([{ type: "error", message: "Try again." }]);
+  });
+
+  it("rejects malformed JSON instead of silently hanging", () => {
+    const parser = createSseParser(() => undefined);
+
+    expect(() => parser.push("event: token\ndata: not-json\n\n")).toThrow(
+      "Invalid SSE data",
+    );
+  });
+
+  it("keeps CRLF separators intact when a network chunk splits them", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push("event: token\r");
+    parser.push('\ndata: {"text":"Split"}\r\n\r');
+    parser.push("\n");
+
+    expect(events).toEqual([{ type: "token", text: "Split" }]);
+  });
+
+  it("ignores unknown event types instead of failing the stream", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push(
+      'event: heartbeat\ndata: {"at":123}\n\n' +
+        'event: token\ndata: {"text":"Still here"}\n\n',
+    );
+
+    expect(events).toEqual([{ type: "token", text: "Still here" }]);
+  });
+
+  it("flushes a final event that arrived without a blank line", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push('event: token\ndata: {"text":"Last"}');
+    parser.finish();
+
+    expect(events).toEqual([{ type: "token", text: "Last" }]);
+  });
+
+  it("fills optional citation fields with null defaults", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push(
+      'event: citation\ndata: {"index":2,"kind":"internet","title":"Docs","snippet":"Text"}\n\n',
+    );
+
+    expect(events).toEqual([
+      {
+        type: "citation",
+        citation: {
+          index: 2,
+          kind: "internet",
+          title: "Docs",
+          url: null,
+          snippet: "Text",
+          documentId: null,
+          page: null,
+        },
+      },
+    ]);
+  });
+});

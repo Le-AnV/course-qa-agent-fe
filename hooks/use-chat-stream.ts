@@ -1,77 +1,100 @@
 import { useState, useCallback } from 'react';
 import { AUTH_TOKEN_KEY } from '@/components/ui/nav-config';
+import { createSseParser, type ChatCitation, type ChatProgressStage } from '@/lib/sse';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const CLIENT_TIMEOUT_MS = 305_000;
 
 interface UseChatStreamProps {
   /** Class scope — BE dùng để lọc syllabus/tài liệu của đúng lớp, tránh lẫn dữ liệu giữa các lớp. */
   classId: string;
-  /** Nhãn lớp (code · tên) để mock local hiển thị đúng tên lớp thay vì UUID. */
-  classLabel?: string | null;
   /** elapsedMs: thời gian từ lúc gửi tới chunk này (đo trong hook, không đo ở render). */
   onChunk: (chunk: string, elapsedMs: number) => void;
+  onProgress?: (stage: ChatProgressStage) => void;
+  onCitation?: (citation: ChatCitation) => void;
+  onDone?: () => void;
   onFinish?: () => void;
   onError?: (error: Error) => void;
 }
 
-export function useChatStream({ classId, classLabel, onChunk, onFinish, onError }: UseChatStreamProps) {
+export function useChatStream({
+  classId,
+  onChunk,
+  onProgress,
+  onCitation,
+  onDone,
+  onFinish,
+  onError,
+}: UseChatStreamProps) {
   const [isStreaming, setIsStreaming] = useState(false);
 
   const sendMessage = useCallback(async (message: string) => {
     setIsStreaming(true);
     const startedAt = Date.now();
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
 
     try {
-      // 1. Khởi tạo hàm fetch gọi đến endpoint API (giả định là /api/chat)
-      const response = await fetch('/api/chat', {
+      const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Đính kèm token ảo của Developer từ localStorage
           'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY) || ''}`
         },
-        body: JSON.stringify({ message, class_id: classId, class_label: classLabel ?? null }),
+        body: JSON.stringify({ message, class_id: classId }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
-        throw new Error(`Lỗi API: ${response.statusText}`);
+        const body = await response.json().catch(() => null) as { detail?: string } | null;
+        throw new Error(body?.detail || `Chat request failed (${response.status}).`);
       }
 
-      // Đảm bảo body là luồng (stream)
       if (!response.body) {
-        throw new Error('API không trả về stream data');
+        throw new Error('The chat API did not return a response stream.');
       }
 
-      // 2. Khởi tạo bộ đọc stream và bộ giải mã byte sang chữ (UTF-8)
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
+      let completed = false;
+      const parser = createSseParser((event) => {
+        if (event.type === 'progress') {
+          onProgress?.(event.stage);
+        } else if (event.type === 'token') {
+          onChunk(event.text, Date.now() - startedAt);
+        } else if (event.type === 'citation') {
+          onCitation?.(event.citation);
+        } else if (event.type === 'done') {
+          completed = true;
+          onDone?.();
+        } else {
+          throw new Error(event.message);
+        }
+      });
 
-      // 3. Dùng vòng lặp while (true) để liên tục "hứng" các mảng byte rớt xuống
       while (true) {
         const { done, value } = await reader.read();
-        
-        // Nếu Server báo đã gửi hết, thoát khỏi vòng lặp
-        if (done) {
-          break; 
-        }
-
-        // 4. Giải mã mảng byte (Uint8Array) thành chuỗi chữ cái con người đọc được
-        const chunkText = decoder.decode(value, { stream: true });
-        
-        // Bắn chữ vừa nhận được ra ngoài Component Cha thông qua hàm onChunk
-        if (chunkText) {
-          onChunk(chunkText, Date.now() - startedAt);
-        }
+        if (done) break;
+        parser.push(decoder.decode(value, { stream: true }));
       }
+      parser.push(decoder.decode());
+      parser.finish();
 
-      // Gọi hàm onFinish khi luồng stream kết thúc thành công
-      if (onFinish) onFinish();
-
+      if (!completed) throw new Error('The chat stream ended unexpectedly.');
+      onFinish?.();
     } catch (err) {
-      console.error('Lỗi khi đọc luồng SSE:', err);
-      if (onError) onError(err as Error);
+      const error =
+        err instanceof DOMException && err.name === 'AbortError'
+          ? new Error('The answer timed out. Please try again.')
+          : err instanceof Error
+            ? err
+            : new Error('The answer could not be generated. Please try again.');
+      onError?.(error);
     } finally {
+      window.clearTimeout(timeout);
       setIsStreaming(false);
     }
-  }, [classId, classLabel, onChunk, onFinish, onError]);
+  }, [classId, onChunk, onProgress, onCitation, onDone, onFinish, onError]);
 
   return {
     sendMessage,
