@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button'; // Assuming the project uses sh
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled?: boolean;
+  chatLayout?: boolean;
 }
 
-export function ChatInput({ onSend, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, chatLayout = false }: ChatInputProps) {
   const [content, setContent] = React.useState('');
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -47,8 +48,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <div className="p-4 bg-white border-t border-[#F0F0F0]">
-      <div className="max-w-4xl mx-auto relative flex items-end gap-2 bg-[#F7F7F7] rounded-2xl border border-[#DADADA] p-2 focus-within:ring-2 focus-within:ring-[#CFCFCF] focus-within:ring-offset-2 transition-all">
+    <div className={`p-4 ${chatLayout ? 'bg-[#F7F7F7]' : 'border-t border-[#F0F0F0] bg-white'}`}>
+      <div className={`${chatLayout ? 'w-full bg-[#F0F0F0]' : 'max-w-4xl mx-auto bg-[#F7F7F7]'} relative flex items-end gap-2 rounded-2xl border border-[#DADADA] p-2 focus-within:ring-2 focus-within:ring-[#CFCFCF] focus-within:ring-offset-2 transition-all`}>
         <textarea
           ref={textareaRef}
           value={content}
