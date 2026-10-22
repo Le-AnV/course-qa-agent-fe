@@ -175,6 +175,12 @@ export default function StudentClassesPage() {
                       <div>
                         <p className="text-[13.5px] font-semibold text-[#111111]">{c.code} — {c.name}</p>
                         <p className="text-[12px] text-[#94a3b8]">{termFor(c)}</p>
+                        {(c.blocked_prerequisites?.length ?? 0) > 0 && (
+                          <p className="mt-1 text-[11.5px] font-medium text-[#8F6B16]">
+                            Requires:{" "}
+                            {c.blocked_prerequisites!.map((p) => p.code).join(", ")}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -201,11 +207,20 @@ export default function StudentClassesPage() {
                       </span>
                     ) : (
                       <button
-                        disabled={actingId === c.id}
+                        disabled={actingId === c.id || c.can_request === false}
                         onClick={() => void handleRequest(c.id)}
+                        title={
+                          c.can_request === false
+                            ? "Pass the prerequisite subjects first."
+                            : undefined
+                        }
                         className="px-3.5 py-1.5 border border-[#CFCFCF] bg-white text-[#111111] shadow-xs hover:bg-[#F7F7F7] rounded-md text-[12px] font-semibold transition-colors disabled:opacity-50"
                       >
-                        {actingId === c.id ? "Sending…" : "Request to join"}
+                        {actingId === c.id
+                          ? "Sending…"
+                          : c.can_request === false
+                            ? "Prerequisite required"
+                            : "Request to join"}
                       </button>
                     )}
                   </td>

@@ -6,6 +6,7 @@ import { MembersTable } from "@/components/shared/MembersTable";
 import { Search, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { studentApi, type ClassMember, type JoinRequest } from "@/lib/student-api";
+import { AUTH_ROLE_KEY } from "@/components/ui/nav-config";
 
 export default function ClassMembersPage() {
   const params = useParams();
@@ -18,6 +19,13 @@ export default function ClassMembersPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [actingId, setActingId] = React.useState<string | null>(null);
+  // Only a trainer may mark results; TAs and admins see the roster read-only.
+  const role = React.useSyncExternalStore(
+    () => () => {},
+    () => (typeof window === "undefined" ? "" : (localStorage.getItem(AUTH_ROLE_KEY) ?? "")),
+    () => "",
+  );
+  const isTrainer = role === "trainer";
 
   const load = React.useCallback(async () => {
     try {
@@ -60,6 +68,24 @@ export default function ClassMembersPage() {
       await load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Reject failed");
+    } finally {
+      setActingId(null);
+    }
+  }
+
+  async function handleSetResult(studentId: string, value: string) {
+    setActingId(studentId);
+    try {
+      await studentApi.setResult(
+        id,
+        studentId,
+        value === "" ? null : (value as "PASSED" | "FAILED"),
+      );
+      setMembers((prev) =>
+        prev.map((m) => (m.id === studentId ? { ...m, result: value || null } : m)),
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save the result");
     } finally {
       setActingId(null);
     }
@@ -212,7 +238,31 @@ export default function ClassMembersPage() {
                     {m.role.replace("_", " ")}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-right text-[12px] text-[#94a3b8]">—</td>
+                <td className="py-3 px-4 text-right text-[12px]">
+                  {isTrainer && m.role !== "trainer" ? (
+                    <select
+                      value={m.result ?? ""}
+                      onChange={(e) => void handleSetResult(m.id, e.target.value)}
+                      disabled={actingId === m.id}
+                      aria-label={`Result for ${m.username}`}
+                      className={`rounded-md border px-2 py-1 text-[12px] outline-none focus:border-[#111111] disabled:opacity-50 ${
+                        m.result === "PASSED"
+                          ? "border-green-300 bg-green-50 text-green-800"
+                          : m.result === "FAILED"
+                            ? "border-red-300 bg-red-50 text-red-800"
+                            : "border-[#DADADA] bg-white text-[#5A5A5A]"
+                      }`}
+                    >
+                      <option value="">Not graded</option>
+                      <option value="PASSED">Passed</option>
+                      <option value="FAILED">Failed</option>
+                    </select>
+                  ) : m.result ? (
+                    <span className="text-[#5A5A5A] capitalize">{m.result.toLowerCase()}</span>
+                  ) : (
+                    <span className="text-[#94a3b8]">—</span>
+                  )}
+                </td>
               </tr>
             ))
           )}

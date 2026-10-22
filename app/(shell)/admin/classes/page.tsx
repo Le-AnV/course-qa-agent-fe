@@ -24,6 +24,7 @@ export default function AdminClassesPage() {
     academic_year: "2026",
     trainer_id: "",
     credits: "3",
+    prerequisite_class_ids: [] as string[],
   });
   const [creating, setCreating] = React.useState(false);
   const [pendingDelete, setPendingDelete] = React.useState<ClassSection | null>(null);
@@ -34,6 +35,8 @@ export default function AdminClassesPage() {
   const [manageClass, setManageClass] = React.useState<ClassSection | null>(null);
   const [newCoTrainer, setNewCoTrainer] = React.useState("");
   const [manageBusy, setManageBusy] = React.useState(false);
+  // Prerequisite subjects edited inside the manage modal (replaces the whole list).
+  const [managePrereqs, setManagePrereqs] = React.useState<string[]>([]);
   // Admin-owned roster capacity (P5): set or clear the per-class limit.
   const [capacityClass, setCapacityClass] = React.useState<ClassSection | null>(null);
   const [capacityText, setCapacityText] = React.useState("");
@@ -80,6 +83,7 @@ export default function AdminClassesPage() {
         semester: createForm.semester || undefined,
         academic_year: createForm.academic_year || undefined,
         credits: Number(createForm.credits) || undefined,
+        prerequisite_class_ids: createForm.prerequisite_class_ids,
       });
       let extraFailed = 0;
       for (const trainerId of extraTrainers) {
@@ -95,7 +99,7 @@ export default function AdminClassesPage() {
           : `Class ${createForm.code} created, but ${extraFailed} co-trainer(s) could not be added — open Manage trainers.`,
       );
       setIsCreateOpen(false);
-      setCreateForm({ code: "", name: "", semester: "Fall", academic_year: "2026", trainer_id: "", credits: "3" });
+      setCreateForm({ code: "", name: "", semester: "Fall", academic_year: "2026", trainer_id: "", credits: "3", prerequisite_class_ids: [] });
       setExtraTrainers([]);
       await loadData();
     } catch (err) {
@@ -148,6 +152,22 @@ export default function AdminClassesPage() {
       await loadData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to remove co-trainer");
+    } finally {
+      setManageBusy(false);
+    }
+  };
+
+  const handleSavePrereqs = async () => {
+    if (!manageClass) return;
+    setManageBusy(true);
+    try {
+      const updated = await adminApi.setPrerequisites(String(manageClass.id), managePrereqs);
+      setManageClass(updated);
+      setManagePrereqs((updated.prerequisites ?? []).map((p) => p.id));
+      setNotice(`Prerequisites updated for ${updated.code}.`);
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save prerequisites");
     } finally {
       setManageBusy(false);
     }
@@ -331,7 +351,7 @@ export default function AdminClassesPage() {
                         label={`Actions for class ${cls.code}`}
                         direction={idx === filteredClasses.length - 1 ? "up" : "down"}
                         items={[
-                          { label: "Manage trainers", icon: <Users className="w-3.5 h-3.5" />, onSelect: () => { setManageClass(cls); setNewCoTrainer(""); } },
+                          { label: "Manage trainers", icon: <Users className="w-3.5 h-3.5" />, onSelect: () => { setManageClass(cls); setNewCoTrainer(""); setManagePrereqs((cls.prerequisites ?? []).map((p) => p.id)); } },
                           { label: "Set capacity", onSelect: () => { setCapacityClass(cls); setCapacityText(cls.capacity == null ? "" : String(cls.capacity)); } },
                           isArchived(cls)
                             ? { label: "Restore class", onSelect: () => setPendingArchive(cls) }
@@ -397,6 +417,35 @@ export default function AdminClassesPage() {
             </div>
             <p className="mt-1 text-[11.5px] text-[#5A5A5A]">
               Useful when one teacher starts the term and another takes over later.
+            </p>
+          </div>
+          <div>
+            <span className="block text-[13px] font-medium text-[#111111] mb-1.5">Prerequisites <span className="font-normal text-[#5A5A5A]">(optional)</span></span>
+            <div className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-[#DADADA] p-2">
+              {classes.map((c) => (
+                <label key={c.id} className="flex items-center gap-2 text-[12.5px] text-[#111111]">
+                  <input
+                    type="checkbox"
+                    checked={createForm.prerequisite_class_ids.includes(String(c.id))}
+                    onChange={() =>
+                      setCreateForm((prev) => ({
+                        ...prev,
+                        prerequisite_class_ids: prev.prerequisite_class_ids.includes(String(c.id))
+                          ? prev.prerequisite_class_ids.filter((id) => id !== String(c.id))
+                          : [...prev.prerequisite_class_ids, String(c.id)],
+                      }))
+                    }
+                        className="h-3.5 w-3.5 accent-[#111111]"
+                      />
+                      {c.code}
+                    </label>
+                  ))}
+              {classes.length === 0 && (
+                <p className="text-[12.5px] text-[#5A5A5A]">No other classes yet.</p>
+              )}
+            </div>
+            <p className="mt-1 text-[11.5px] text-[#5A5A5A]">
+              Students must pass these subjects before they can request this class.
             </p>
           </div>
           <div>
@@ -491,6 +540,47 @@ export default function AdminClassesPage() {
                   className="rounded-md border border-[#CFCFCF] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
                 >
                   Add
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <span className="block text-[13px] font-medium text-[#111111] mb-1.5">Prerequisites</span>
+              <div className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-[#DADADA] p-2">
+                {classes
+                  .filter((c) => String(c.id) !== String(manageClass.id))
+                  .map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-[12.5px] text-[#111111]">
+                      <input
+                        type="checkbox"
+                        checked={managePrereqs.includes(String(c.id))}
+                        onChange={() =>
+                          setManagePrereqs((prev) =>
+                            prev.includes(String(c.id))
+                              ? prev.filter((id) => id !== String(c.id))
+                              : [...prev, String(c.id)],
+                          )
+                        }
+                        className="h-3.5 w-3.5 accent-[#111111]"
+                      />
+                  {c.code}
+                    </label>
+                  ))}
+                {classes.filter((c) => String(c.id) !== String(manageClass.id)).length === 0 && (
+                  <p className="text-[12.5px] text-[#5A5A5A]">No other classes yet.</p>
+                )}
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-[11.5px] text-[#5A5A5A]">
+                  Students must pass these subjects before joining this class.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void handleSavePrereqs()}
+                  disabled={manageBusy}
+                  className="rounded-md border border-[#CFCFCF] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+                >
+                  Save prerequisites
                 </button>
               </div>
             </div>

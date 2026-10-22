@@ -23,6 +23,8 @@ export type ClassSection = {
   status?: string;
   document_count: number;
   ticket_count: number;
+  // Subjects a student must pass before joining this class.
+  prerequisites?: { id: string; code: string; name: string }[];
 };
 export type AdminUser = {
   id: string;
@@ -131,7 +133,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     });
   } catch {
     throw new Error(
-      `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), then Retry; or open this app via http://localhost:3000 (BE CORS only allows local dev origins).`,
+      `Cannot reach backend at ${API_URL} — check "docker compose up -d --build" and the backend logs (migrations run on start), then Retry.`,
     );
   }
   if (!res.ok) {
@@ -152,6 +154,7 @@ export const adminApi = {
     semester?: string;
     academic_year?: string;
     credits?: number;
+    prerequisite_class_ids?: string[];
   }) =>
     apiFetch<ClassSection>("/api/admin/classes", {
       method: "POST",
@@ -161,6 +164,11 @@ export const adminApi = {
     apiFetch<ClassSection>(`/api/admin/classes/${classId}/assign`, {
       method: "PATCH",
       body: JSON.stringify({ trainer_id }),
+    }),
+  setPrerequisites: (classId: string, prerequisite_class_ids: string[]) =>
+    apiFetch<ClassSection>(`/api/admin/classes/${classId}/prerequisites`, {
+      method: "PATCH",
+      body: JSON.stringify({ prerequisite_class_ids }),
     }),
   // Co-teaching / mid-semester handover: teacher A starts, teacher B joins.
   addTrainer: (classId: string, trainer_id: string) =>
@@ -226,7 +234,7 @@ export const adminApi = {
       });
     } catch {
       throw new Error(
-        `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), or open this app via http://localhost:3000 (BE CORS only allows local dev origins).`,
+        `Cannot reach backend at ${API_URL} — check "docker compose up -d --build" and the backend logs (migrations run on start), then Retry.`,
       );
     }
     if (!res.ok) {
@@ -277,7 +285,7 @@ export const adminApi = {
       });
     } catch {
       throw new Error(
-        `Cannot reach backend at ${API_URL} — check the BE is running (docker compose up), or open this app via http://localhost:3000 (BE CORS only allows local dev origins).`,
+        `Cannot reach backend at ${API_URL} — check "docker compose up -d --build" and the backend logs (migrations run on start), then Retry.`,
       );
     }
     if (res.status === 401) throw new Error("Session expired — please log in again as admin.");
