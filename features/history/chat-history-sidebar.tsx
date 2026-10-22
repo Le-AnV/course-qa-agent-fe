@@ -1,7 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { MessageSquare, Trash2, Plus, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  MessageSquare,
+  Trash2,
+  Plus,
+  RefreshCw,
+  AlertCircle,
+  Loader2,
+  ChevronLeft,
+  Pin,
+  Search,
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
@@ -60,6 +70,7 @@ export function ChatHistorySidebar({
   const [sessions, setSessions] = React.useState<ChatSessionItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
 
   // State for delete confirmation modal
   const [sessionToDelete, setSessionToDelete] = React.useState<ChatSessionItem | null>(null);
@@ -126,31 +137,89 @@ export function ChatHistorySidebar({
       <aside
         aria-label="Lịch sử trò chuyện"
         className={cn(
-          'w-64 flex-shrink-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col overflow-hidden shadow-sm',
+          'flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-900',
+          isCollapsed ? 'w-16' : 'w-64',
           className
         )}
       >
-        {/* Header with Title and "New Chat" button */}
-        <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <span className="font-semibold text-sm text-slate-800 dark:text-slate-200">
-            Chat History
-          </span>
-          {onNewChat && (
+        {/* Expanded title bar or the compact icon rail. */}
+        {isCollapsed ? (
+          <nav
+            aria-label="Điều hướng lịch sử trò chuyện"
+            className="flex shrink-0 flex-col items-center gap-2 border-b border-[#BFDBFE] bg-[#EFF6FF] px-1 py-3"
+          >
+            {onNewChat && (
+              <button
+                type="button"
+                onClick={onNewChat}
+                title="Cuộc trò chuyện mới"
+                aria-label="Cuộc trò chuyện mới"
+                className="rounded-lg p-2 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            )}
             <button
               type="button"
-              onClick={onNewChat}
-              title="Bắt đầu cuộc trò chuyện mới"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+              onClick={() => setIsCollapsed(false)}
+              title="Recent chats"
+              aria-label="Mở danh sách chat gần đây"
+              className="rounded-lg p-2 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
             >
-              <Plus className="h-4 w-4" />
+              <MessageSquare className="h-4 w-4" />
             </button>
-          )}
-        </div>
+            <button
+              type="button"
+              disabled
+              title="Pinned chats chưa được hỗ trợ"
+              aria-label="Pinned chats chưa được hỗ trợ"
+              className="cursor-not-allowed rounded-lg p-2 text-slate-300"
+            >
+              <Pin className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              disabled
+              title="Tìm kiếm chat chưa được hỗ trợ"
+              aria-label="Tìm kiếm chat chưa được hỗ trợ"
+              className="cursor-not-allowed rounded-lg p-2 text-slate-300"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </nav>
+        ) : (
+          <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#BFDBFE] bg-[#EFF6FF] px-3">
+            <span className="font-semibold text-sm text-[#1D4ED8]">Chat History</span>
+            <div className="flex items-center">
+              {onNewChat && (
+                <button
+                  type="button"
+                  onClick={onNewChat}
+                  title="Bắt đầu cuộc trò chuyện mới"
+                  aria-label="Bắt đầu cuộc trò chuyện mới"
+                  className="rounded-lg p-1.5 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsCollapsed(true)}
+                title="Thu gọn lịch sử chat"
+                aria-label="Thu gọn lịch sử chat"
+                aria-expanded="true"
+                className="rounded-lg p-1.5 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Main Content Area: 4 States */}
-        <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+        <div className={cn('flex flex-1 flex-col gap-1 overflow-y-auto p-2', isCollapsed && 'items-center')}>
           {/* 1. Loading State */}
-          {isLoading && (
+          {isLoading && !isCollapsed && (
             <div className="space-y-2 p-1">
               <Skeleton className="h-12 w-full rounded-lg" />
               <Skeleton className="h-12 w-full rounded-lg" />
@@ -159,7 +228,7 @@ export function ChatHistorySidebar({
           )}
 
           {/* 2. Error State */}
-          {!isLoading && error && (
+          {!isLoading && error && !isCollapsed && (
             <div className="flex flex-col items-center justify-center p-4 text-center text-red-500 dark:text-red-400 gap-2 my-auto">
               <AlertCircle className="h-6 w-6 stroke-1.5" />
               <p className="text-xs">{error}</p>
@@ -174,7 +243,7 @@ export function ChatHistorySidebar({
           )}
 
           {/* 3. Empty State */}
-          {!isLoading && !error && sessions.length === 0 && (
+          {!isLoading && !error && sessions.length === 0 && !isCollapsed && (
             <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400 dark:text-slate-500 gap-2 my-auto">
               <MessageSquare className="h-8 w-8 stroke-1 opacity-40" />
               <p className="text-xs">Chưa có cuộc trò chuyện nào</p>
@@ -182,7 +251,7 @@ export function ChatHistorySidebar({
           )}
 
           {/* 4. Success State — Sessions list ordered newest first (AC-06) */}
-          {!isLoading &&
+          {!isCollapsed && !isLoading &&
             !error &&
             sessions.map((session) => {
               const isActive = activeSessionId === session.id;
