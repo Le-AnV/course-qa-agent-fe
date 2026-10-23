@@ -126,7 +126,7 @@ export default function ImportPage() {
       <div>
         <h1 className="text-xl font-semibold">Bulk import</h1>
         <p className="text-sm text-muted-foreground">
-          Columns are exactly: fullname, email, type, mssv, msnv — leave mssv blank to auto-generate (e.g. TVA_4821). Accounts are created class-less (students request classes, TA approves).
+          Columns are exactly: fullname, email, type — MSSV/MSNV are generated from the full name (e.g. TVA_4821). Accounts are created class-less (students request classes, TA approves).
         </p>
       </div>
       {error && (

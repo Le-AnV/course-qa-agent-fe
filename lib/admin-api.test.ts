@@ -55,6 +55,25 @@ describe("setClassCapacity (admin-owned roster capacity)", () => {
   });
 });
 
+describe("generateUserCode", () => {
+  it("POSTs the full name and role, then returns the generated code", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, { code: "TVA_4821" });
+    try {
+      const result = await adminApi.generateUserCode("Tran Van A", "student");
+      expect(result.code).toBe("TVA_4821");
+      expect(calls[0].url).toContain("/api/admin/users/generate-code");
+      expect(calls[0].init?.method).toBe("POST");
+      expect(JSON.parse(String(calls[0].init?.body))).toEqual({
+        full_name: "Tran Van A",
+        role: "student",
+      });
+    } finally {
+      restore();
+    }
+  });
+});
+
 describe("retrievalConfig (AI-65 KB vs Internet threshold)", () => {
   it("reads the active threshold and the documented default", async () => {
     const calls: { url: string; init?: RequestInit }[] = [];
