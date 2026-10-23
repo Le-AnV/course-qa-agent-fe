@@ -3,6 +3,8 @@
 import * as React from "react";
 import { ExternalLink } from "lucide-react";
 import type { ClassInfo } from "@/lib/student-api";
+import { normalizeLegacySchedule } from "@/lib/markdown";
+import { MarkdownContent } from "@/components/shared/MarkdownContent";
 
 /** True when the teacher has filled in at least one part of the class page. */
 export function hasClassInfo(info: ClassInfo | null): boolean {
@@ -30,7 +32,10 @@ function ExternalLinkValue({ href, label }: { href: string; label?: string }) {
 export function ClassInfoRows({ info }: { info: ClassInfo }) {
   const rows: { label: string; value: React.ReactNode }[] = [];
   if (info.schedule_note) {
-    rows.push({ label: "Schedule", value: <span>{info.schedule_note}</span> });
+    rows.push({
+      label: "Schedule",
+      value: <MarkdownContent content={normalizeLegacySchedule(info.schedule_note)} />,
+    });
   }
   if (info.meeting_url) {
     rows.push({ label: "Online class", value: <ExternalLinkValue href={info.meeting_url} /> });
@@ -41,21 +46,24 @@ export function ClassInfoRows({ info }: { info: ClassInfo }) {
   if (info.description) {
     rows.push({
       label: "Description",
-      value: <p className="whitespace-pre-line">{info.description}</p>,
+      value: <MarkdownContent content={info.description} />,
     });
   }
   if (info.note) {
     rows.push({
       label: "More information",
-      value: <p className="whitespace-pre-line">{info.note}</p>,
+      value: <MarkdownContent content={info.note} />,
     });
   }
   return (
-    <dl className="space-y-4">
+    <dl className="divide-y divide-[#F0F0F0]">
       {rows.map((row) => (
-        <div key={row.label} className="grid gap-1 sm:grid-cols-[150px_1fr] sm:gap-4">
+        <div
+          key={row.label}
+          className="grid gap-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-[150px_1fr] sm:gap-4"
+        >
           <dt className="text-[12.5px] font-semibold text-[#5A5A5A]">{row.label}</dt>
-          <dd className="text-[13.5px] leading-relaxed text-[#111111]">{row.value}</dd>
+          <dd className="min-w-0 text-[13.5px] leading-relaxed text-[#111111]">{row.value}</dd>
         </div>
       ))}
     </dl>

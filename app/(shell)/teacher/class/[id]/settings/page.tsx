@@ -9,8 +9,11 @@ import {
   type ClassConfig,
   type ClassConfigSource,
   type ClassInfo,
+  type ClassInfoField,
   type StudentClass,
+  type TemplateDocument,
 } from "@/lib/student-api";
+import { formatFileSize } from "@/lib/documents";
 import { Modal } from "@/components/shared/Modal";
 
 function ReadOnlyField({
@@ -40,6 +43,35 @@ const SELECT_CLASS =
   "w-full rounded-lg border border-[#DADADA] bg-white px-3 py-2 text-[13px] text-[#111111] outline-none focus:border-[#111111]";
 const INPUT_CLASS = SELECT_CLASS;
 
+function AutoGrowTextarea({
+  value,
+  maxHeight = 320,
+  className,
+  ...props
+}: Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "value"> & {
+  value: string;
+  maxHeight?: number;
+}) {
+  const ref = React.useRef<HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
+  }, [value, maxHeight]);
+
+  return (
+    <textarea
+      ref={ref}
+      rows={2}
+      value={value}
+      {...props}
+      className={`${INPUT_CLASS} min-h-[76px] resize-none overflow-y-auto ${className ?? ""}`}
+    />
+  );
+}
+
 // Capacity is admin-owned and shown read-only, so it is not part of the draft.
 type Draft = Omit<ClassConfig, "class_id" | "capacity">;
 type InfoDraft = {
@@ -66,6 +98,18 @@ function toInfoDraft(info: ClassInfo): InfoDraft {
     schedule_note: info.schedule_note ?? "",
     note: info.note ?? "",
   };
+}
+
+const INFO_FIELD_OPTIONS: { key: ClassInfoField; label: string }[] = [
+  { key: "description", label: "Description" },
+  { key: "meeting_url", label: "Online class link" },
+  { key: "group_url", label: "Class group link" },
+  { key: "schedule_note", label: "Schedule" },
+  { key: "note", label: "More information" },
+];
+
+function hasText(value: string | null | undefined): boolean {
+  return Boolean(value?.trim());
 }
 
 const DELIVERY_LABELS: Record<Draft["delivery_mode"], string> = {
@@ -98,6 +142,12 @@ export default function ClassSettingsPage() {
   const [sources, setSources] = React.useState<ClassConfigSource[]>([]);
   const [isCopyOpen, setIsCopyOpen] = React.useState(false);
   const [copySource, setCopySource] = React.useState("");
+  const [sourceInfo, setSourceInfo] = React.useState<ClassInfo | null>(null);
+  const [copyConfig, setCopyConfig] = React.useState(true);
+  const [selectedInfoFields, setSelectedInfoFields] = React.useState<ClassInfoField[]>([]);
+  const [templateDocs, setTemplateDocs] = React.useState<TemplateDocument[]>([]);
+  const [selectedDocs, setSelectedDocs] = React.useState<string[]>([]);
+  const [loadingDocs, setLoadingDocs] = React.useState(false);
   const [copying, setCopying] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -192,8 +242,18 @@ export default function ClassSettingsPage() {
     }
   }
 
+  function resetCopyPicker() {
+    setCopySource("");
+    setSourceInfo(null);
+    setCopyConfig(true);
+    setSelectedInfoFields([]);
+    setTemplateDocs([]);
+    setSelectedDocs([]);
+  }
+
   async function openCopyPicker() {
     setIsCopyOpen(true);
+    resetCopyPicker();
     if (sources.length > 0) return;
     try {
       const list = await studentApi.configSources();
@@ -203,19 +263,98 @@ export default function ClassSettingsPage() {
     }
   }
 
+  async function selectCopySource(sourceId: string) {
+    setCopySource(sourceId);
+    setSourceInfo(null);
+    setSelectedInfoFields([]);
+    setTemplateDocs([]);
+    setSelectedDocs([]);
+    if (!sourceId) return;
+    setLoadingDocs(true);
+    try {
+      const [docs, page] = await Promise.all([
+        studentApi.templateDocuments(id, sourceId),
+        studentApi.info(sourceId),
+      ]);
+      setTemplateDocs(docs);
+      setSelectedDocs(docs.map((d) => d.id));
+      setSourceInfo(page);
+      setSelectedInfoFields(
+        INFO_FIELD_OPTIONS.filter(
+          ({ key }) => hasText(page[key]) && !hasText(info?.[key]),
+        ).map(({ key }) => key),
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load template");
+    } finally {
+      setLoadingDocs(false);
+    }
+  }
+
+  function toggleDocument(documentId: string) {
+    setSelectedDocs((current) =>
+      current.includes(documentId)
+        ? current.filter((value) => value !== documentId)
+        : [...current, documentId],
+    );
+  }
+
+  function toggleAllDocuments() {
+    setSelectedDocs((current) =>
+      current.length === templateDocs.length ? [] : templateDocs.map((d) => d.id),
+    );
+  }
+
+  function toggleInfoField(field: ClassInfoField) {
+    setSelectedInfoFields((current) =>
+      current.includes(field)
+        ? current.filter((value) => value !== field)
+        : [...current, field],
+    );
+  }
+
+  const canCopy = copyConfig || selectedInfoFields.length > 0 || selectedDocs.length > 0;
+
   async function handleCopy() {
-    if (!copySource) return;
+    if (!copySource || !canCopy) return;
     setCopying(true);
     try {
-      const updated = await studentApi.copyConfig(id, copySource);
-      setConfig(updated);
-      setDraft(toDraft(updated));
+      const infoCount = selectedInfoFields.length;
+      const result = await studentApi.copyTemplate(id, copySource, selectedDocs, {
+        copyConfig,
+        infoFields: selectedInfoFields,
+      });
+      setConfig(result.config);
+      setDraft(toDraft(result.config));
+      setInfo(result.info);
+      setInfoDraft(toInfoDraft(result.info));
+      if (copyConfig) setSaved(true);
+      if (infoCount > 0) setInfoSaved(true);
       setIsCopyOpen(false);
-      setCopySource("");
-      setSaved(true);
-      toast.success("Configuration copied.");
+      resetCopyPicker();
+
+      const copiedCount = result.copied_documents.length;
+      const parts: string[] = [];
+      if (copyConfig) parts.push("teaching configuration");
+      if (infoCount > 0) {
+        parts.push(`${infoCount} information field${infoCount === 1 ? "" : "s"}`);
+      }
+      if (copiedCount > 0) {
+        parts.push(`${copiedCount} document${copiedCount === 1 ? "" : "s"}`);
+      }
+      const copiedLabel = parts.length > 0 ? ` (${parts.join(", ")})` : "";
+      if (result.skipped_documents.length > 0) {
+        const names = result.skipped_documents
+          .slice(0, 3)
+          .map((d) => d.file_name)
+          .join(", ");
+        const more = result.skipped_documents.length > 3 ? "..." : "";
+        toast.warning(`Template copied${copiedLabel}. Skipped: ${names}${more}`);
+      } else {
+        toast.success(`Template copied${copiedLabel}.`);
+      }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to copy configuration");
+      toast.error(err instanceof Error ? err.message : "Failed to copy the template");
     } finally {
       setCopying(false);
     }
@@ -269,6 +408,11 @@ export default function ClassSettingsPage() {
               the online session, the class group, and anything else they should know. Empty fields
               are hidden.
             </p>
+            <p className="mt-1 max-w-lg text-[12px] text-[#6F6F6F]">
+              Markdown is supported: <strong>bold</strong>, <em>italic</em>, - bullet lists, 1.
+              numbered lists, [links](https://example.com), and blank lines. Line breaks are kept
+              when the page is displayed.
+            </p>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
@@ -276,17 +420,16 @@ export default function ClassSettingsPage() {
               <label htmlFor="info-description" className="mb-1.5 block text-[13px] font-medium text-[#111111]">
                 Description
               </label>
-              <textarea
+              <AutoGrowTextarea
                 id="info-description"
-                rows={3}
                 maxLength={2000}
+                maxHeight={360}
                 placeholder="What this course covers, prerequisites, how each session runs…"
                 value={infoDraft.description}
                 onChange={(e) => {
                   setInfoDraft({ ...infoDraft, description: e.target.value });
                   setInfoSaved(false);
                 }}
-                className={`${INPUT_CLASS} resize-y`}
               />
             </div>
 
@@ -330,16 +473,16 @@ export default function ClassSettingsPage() {
               <label htmlFor="info-schedule" className="mb-1.5 block text-[13px] font-medium text-[#111111]">
                 Schedule
               </label>
-              <input
+              <AutoGrowTextarea
                 id="info-schedule"
-                maxLength={200}
-                placeholder="Mon &amp; Wed 19:00–21:00, online"
+                maxLength={500}
+                maxHeight={260}
+                placeholder={"**Lecture:** Tue & Thu 19:00-21:00\n**Lab:** Fri 13:30-16:00\n**Location:** Online via Google Meet"}
                 value={infoDraft.schedule_note}
                 onChange={(e) => {
                   setInfoDraft({ ...infoDraft, schedule_note: e.target.value });
                   setInfoSaved(false);
                 }}
-                className={INPUT_CLASS}
               />
             </div>
 
@@ -347,17 +490,16 @@ export default function ClassSettingsPage() {
               <label htmlFor="info-note" className="mb-1.5 block text-[13px] font-medium text-[#111111]">
                 More information
               </label>
-              <textarea
+              <AutoGrowTextarea
                 id="info-note"
-                rows={3}
                 maxLength={2000}
+                maxHeight={360}
                 placeholder="Group registration, report schedule, class rules…"
                 value={infoDraft.note}
                 onChange={(e) => {
                   setInfoDraft({ ...infoDraft, note: e.target.value });
                   setInfoSaved(false);
                 }}
-                className={`${INPUT_CLASS} resize-y`}
               />
             </div>
           </div>
@@ -508,10 +650,13 @@ export default function ClassSettingsPage() {
 
       <Modal
         isOpen={isCopyOpen}
-        onClose={() => setIsCopyOpen(false)}
-        title="Copy configuration"
-        subtitle="Copies delivery mode and session length from a class you teach. Capacity is not copied — it depends on this class' own roster."
-        widthClass="max-w-md"
+        onClose={() => {
+          setIsCopyOpen(false);
+          resetCopyPicker();
+        }}
+        title="Copy class template"
+        subtitle="Choose what to copy. Existing class information stays unless you tick its field. Capacity is never copied."
+        widthClass="max-w-lg"
       >
         <div className="space-y-4">
           <div>
@@ -521,13 +666,14 @@ export default function ClassSettingsPage() {
             <select
               id="cfg-source"
               value={copySource}
-              onChange={(e) => setCopySource(e.target.value)}
+              onChange={(e) => void selectCopySource(e.target.value)}
               className={SELECT_CLASS}
             >
               <option value="">Select a class</option>
               {sources.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.code} — {s.name}
+                  {s.code} - {s.name}
+                  {s.status === "ARCHIVED" ? " (archived)" : ""}
                 </option>
               ))}
             </select>
@@ -537,22 +683,146 @@ export default function ClassSettingsPage() {
               </p>
             )}
           </div>
-          <div className="flex justify-end gap-3 border-t border-[#F0F0F0] pt-4">
-            <button
-              type="button"
-              onClick={() => setIsCopyOpen(false)}
-              className="rounded-md border border-[#DADADA] bg-white px-4 py-2 text-[13px] font-semibold text-[#111111] transition-colors hover:bg-[#F7F7F7]"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleCopy()}
-              disabled={!copySource || copying}
-              className="rounded-md border border-[#CFCFCF] bg-white px-4 py-2 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
-            >
-              {copying ? "Copying…" : "Copy configuration"}
-            </button>
+
+          {loadingDocs && (
+            <p className="text-[12px] text-[#5A5A5A]">Loading template...</p>
+          )}
+
+          {!loadingDocs && copySource && (
+            <div className="divide-y divide-[#F0F0F0] rounded-md border border-[#E5E5E5]">
+              <label className="flex cursor-pointer items-start gap-2.5 p-3 hover:bg-[#FAFAFA]">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={copyConfig}
+                  onChange={(e) => setCopyConfig(e.target.checked)}
+                />
+                <span>
+                  <span className="block text-[13px] font-semibold text-[#111111]">
+                    Teaching configuration
+                  </span>
+                  <span className="mt-0.5 block text-[11.5px] leading-relaxed text-[#6F6F6F]">
+                    Delivery mode, language, answer rules and session length.
+                  </span>
+                </span>
+              </label>
+
+              <div className="p-3">
+                <p className="text-[13px] font-semibold text-[#111111]">Class information</p>
+                <p className="mt-0.5 text-[11.5px] leading-relaxed text-[#6F6F6F]">
+                  Only ticked fields are copied. Existing content is kept unless you tick it.
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {INFO_FIELD_OPTIONS.map(({ key, label }) => {
+                    const sourceHasValue = hasText(sourceInfo?.[key]);
+                    const targetHasValue = hasText(info?.[key]);
+                    return (
+                      <li key={key}>
+                        <label
+                          className={`flex items-start justify-between gap-3 rounded px-1 py-1 ${
+                            sourceHasValue ? "cursor-pointer hover:bg-[#FAFAFA]" : "opacity-50"
+                          }`}
+                        >
+                          <span className="flex items-start gap-2">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5"
+                              checked={selectedInfoFields.includes(key)}
+                              disabled={!sourceHasValue}
+                              onChange={() => toggleInfoField(key)}
+                            />
+                            <span className="text-[12.5px] text-[#111111]">{label}</span>
+                          </span>
+                          <span
+                            className={`text-right text-[11px] ${
+                              targetHasValue && sourceHasValue ? "text-[#9D4C38]" : "text-[#6F6F6F]"
+                            }`}
+                          >
+                            {!sourceHasValue
+                              ? "Source empty"
+                              : targetHasValue
+                                ? "Overwrites current"
+                                : "Fills empty field"}
+                          </span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              <div className="p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[13px] font-semibold text-[#111111]">Approved documents</p>
+                  {templateDocs.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={toggleAllDocuments}
+                      className="text-[12px] font-semibold text-[#111111] hover:underline"
+                    >
+                      {selectedDocs.length === templateDocs.length ? "Clear all" : "Select all"}
+                    </button>
+                  )}
+                </div>
+                {templateDocs.length === 0 ? (
+                  <p className="mt-1.5 text-[12px] text-[#5A5A5A]">
+                    This class has no approved documents to copy.
+                  </p>
+                ) : (
+                  <ul className="mt-2 max-h-56 space-y-1.5 overflow-y-auto">
+                    {templateDocs.map((doc) => (
+                      <li key={doc.id}>
+                        <label className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 hover:bg-[#FAFAFA]">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5"
+                            checked={selectedDocs.includes(doc.id)}
+                            onChange={() => toggleDocument(doc.id)}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[13px] text-[#111111]">
+                              {doc.file_name}
+                            </span>
+                            <span className="block text-[11.5px] text-[#6F6F6F]">
+                              {doc.file_type} - {formatFileSize(doc.size_bytes)}
+                            </span>
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="mt-2 text-[11.5px] text-[#6F6F6F]">
+                  Copied once. Later changes in this class do not affect the source class.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3 border-t border-[#F0F0F0] pt-4">
+            <p className="text-[11.5px] text-[#6F6F6F]">
+              {copySource && !canCopy ? "Select at least one item to copy." : ""}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCopyOpen(false);
+                  resetCopyPicker();
+                }}
+                className="rounded-md border border-[#DADADA] bg-white px-4 py-2 text-[13px] font-semibold text-[#111111] transition-colors hover:bg-[#F7F7F7]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleCopy()}
+                disabled={!copySource || copying || loadingDocs || !canCopy}
+                className="rounded-md border border-[#CFCFCF] bg-white px-4 py-2 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+              >
+                {copying ? "Copying..." : "Copy template"}
+              </button>
+            </div>
           </div>
         </div>
       </Modal>

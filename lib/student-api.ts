@@ -32,6 +32,43 @@ export type ClassConfigSource = {
   id: string;
   code: string;
   name: string;
+  status?: string;
+};
+
+/** An approved source document offered when copying a class template. */
+export type TemplateDocument = {
+  id: string;
+  file_name: string;
+  file_type: string;
+  size_bytes: number;
+  version: number;
+};
+
+export type TemplateDocumentSkip = {
+  file_name: string;
+  reason: string;
+};
+
+export const CLASS_INFO_FIELDS = [
+  "description",
+  "meeting_url",
+  "group_url",
+  "schedule_note",
+  "note",
+] as const;
+
+export type ClassInfoField = (typeof CLASS_INFO_FIELDS)[number];
+
+export type TemplateCopyOptions = {
+  copyConfig?: boolean;
+  infoFields?: ClassInfoField[];
+};
+
+export type TemplateCopyResult = {
+  config: ClassConfig;
+  info: ClassInfo;
+  copied_documents: TemplateDocument[];
+  skipped_documents: TemplateDocumentSkip[];
 };
 
 /** The class page (Phase B): written by teachers/admins, read by members. */
@@ -147,6 +184,27 @@ export const studentApi = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ source_class_id: sourceClassId }),
+    }),
+  // One-time template copy: config + class information + approved documents.
+  templateDocuments: (id: string, sourceClassId: string) =>
+    studentFetch<TemplateDocument[]>(
+      `/api/classes/${id}/template-documents?source_class_id=${encodeURIComponent(sourceClassId)}`,
+    ),
+  copyTemplate: (
+    id: string,
+    sourceClassId: string,
+    documentIds: string[],
+    options: TemplateCopyOptions = {},
+  ) =>
+    studentFetch<TemplateCopyResult>(`/api/classes/${id}/template-copy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source_class_id: sourceClassId,
+        document_ids: documentIds,
+        copy_config: options.copyConfig ?? true,
+        info_fields: options.infoFields ?? [],
+      }),
     }),
   // Class page: description, links, schedule and notes for this class.
   info: (id: string) => studentFetch<ClassInfo>(`/api/classes/${id}/info`),
