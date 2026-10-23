@@ -126,7 +126,7 @@ export default function ImportPage() {
       <div>
         <h1 className="text-xl font-semibold">Bulk import</h1>
         <p className="text-sm text-muted-foreground">
-          Columns are exactly: fullname, email, type, mssv — leave mssv blank to auto-generate (e.g. TVA_4821). Accounts are created class-less (students request classes, TA approves).
+          Columns are exactly: fullname, email, type, mssv, msnv — leave mssv blank to auto-generate (e.g. TVA_4821). Accounts are created class-less (students request classes, TA approves).
         </p>
       </div>
       {error && (
@@ -211,7 +211,7 @@ export default function ImportPage() {
                       <TableHead>Full name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>MSSV</TableHead>
+                      <TableHead>MSSV / MSNV</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Message</TableHead>
                       <TableHead />
@@ -224,7 +224,7 @@ export default function ImportPage() {
                         <TableCell>{r.username}</TableCell>
                         <TableCell>{r.email}</TableCell>
                         <TableCell>{r.role_raw}</TableCell>
-                        <TableCell>{r.student_code ?? "—"}</TableCell>
+                        <TableCell>{(r.student_code || r.staff_code) || "-"}</TableCell>
                         <TableCell>
                           <Badge variant={ROW_VARIANT[r.status] ?? "secondary"}>{r.status}</Badge>
                         </TableCell>

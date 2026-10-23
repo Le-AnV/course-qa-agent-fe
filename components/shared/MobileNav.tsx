@@ -18,7 +18,7 @@ const FOCUSABLE =
  * without this the authenticated app has no navigation at all under 1024px.
  * Reuses SidebarNavBody so both containers stay in sync.
  */
-export function MobileNav({ role, unreadHome = false }: { role: Role; unreadHome?: boolean }) {
+export function MobileNav({ role }: { role: Role }) {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
   // `leaving` keeps the panel mounted for one transition so the drawer slides
@@ -163,7 +163,6 @@ export function MobileNav({ role, unreadHome = false }: { role: Role; unreadHome
 
             <SidebarNavBody
               role={role}
-              unreadHome={unreadHome}
               onNavigate={close}
             />
 
