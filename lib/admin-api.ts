@@ -223,6 +223,11 @@ export const adminApi = {
         staff_code: staff_code || null,
       }),
     }),
+  generateUserCode: (fullName: string, role: string) =>
+    apiFetch<{ code: string }>("/api/admin/users/generate-code", {
+      method: "POST",
+      body: JSON.stringify({ full_name: fullName, role }),
+    }),
   setActive: (userId: string | number, is_active: boolean) =>
     apiFetch<AdminUser>(`/api/admin/users/${userId}/active`, {
       method: "PATCH",

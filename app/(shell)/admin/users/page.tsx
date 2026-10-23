@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Search, X, UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle, RefreshCw, Plus, Eye, Trash2, UserCheck, UserX } from "lucide-react";
+import { Search, X, UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle, RefreshCw, Plus, Eye, Trash2, UserCheck, UserX, Dices } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi, type AdminUser, type ImportRow, type ImportBatch } from "@/lib/admin-api";
 import { ActionMenu } from "@/components/shared/ActionMenu";
@@ -29,6 +29,7 @@ export default function AdminUsersPage() {
   // Create user modal
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
+  const [generatingCode, setGeneratingCode] = React.useState(false);
   const [form, setForm] = React.useState({ username: "", email: "", role: "student", code: "" });
   const [confirmAction, setConfirmAction] = React.useState<{ kind: "reset" | "delete"; userId: string; username: string } | null>(null);
   // Row selection + bulk actions + details drawer
@@ -108,6 +109,23 @@ export default function AdminUsersPage() {
       toast.error(err instanceof Error ? err.message : "Failed to create user");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleGenerateCode = async () => {
+    const fullName = form.username.trim();
+    if (!fullName) {
+      toast.error("Enter the full name first.");
+      return;
+    }
+    setGeneratingCode(true);
+    try {
+      const result = await adminApi.generateUserCode(fullName, form.role);
+      setForm((prev) => ({ ...prev, code: result.code }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to generate code");
+    } finally {
+      setGeneratingCode(false);
     }
   };
 
@@ -463,13 +481,19 @@ export default function AdminUsersPage() {
             <label htmlFor="new-user-code" className="block text-[13px] font-medium text-[#111111] mb-1.5">
               {form.role === "student" ? "MSSV" : "MSNV"} <span className="font-normal text-[#5A5A5A]">(optional)</span>
             </label>
-            <input id="new-user-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })}
-              placeholder={form.role === "student" ? "TVA_4821" : "FPT01234"}
-              className="w-full bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]" />
+            <div className="flex gap-2">
+              <input id="new-user-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })}
+                placeholder="TVA_4821"
+                className="min-w-0 flex-1 bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]" />
+              <button type="button" onClick={() => void handleGenerateCode()}
+                disabled={!form.username.trim() || generatingCode}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-[12.5px] font-semibold border border-[#DADADA] bg-white text-[#111111] rounded-lg hover:bg-[#F7F7F7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                <Dices className="w-3.5 h-3.5" />
+                {generatingCode ? "Generating…" : "Generate"}
+              </button>
+            </div>
             <p className="mt-1 text-[11.5px] text-[#5A5A5A]">
-              {form.role === "student"
-                ? "Blank auto-generates INITIALS_NNNN."
-                : "Employee ID shown in the users table and searchable."}
+              Blank auto-generates from the full name. Generate previews it now.
             </p>
           </div>
           <p className="text-[12px] text-[#5A5A5A]">
@@ -504,8 +528,8 @@ export default function AdminUsersPage() {
                 <div className="space-y-6">
                   <p className="text-[13.5px] text-[#5A5A5A]">
                     Upload an Excel file containing user information. Columns exactly:{" "}
-                    <code className="px-1.5 py-0.5 bg-slate-100 rounded text-[12px] font-mono">fullname, email, type, mssv</code>.
-                    Leave mssv blank to auto-generate (initials + 4 random digits, e.g. TVA_4821).
+                    <code className="px-1.5 py-0.5 bg-slate-100 rounded text-[12px] font-mono">fullname, email, type</code>.
+                    MSSV/MSNV are generated automatically from the full name (e.g. TVA_4821).
                     Accounts are created class-less — students request classes afterwards.
                     Full history + retry live at <Link href="/admin/history" className="text-[#111111] font-semibold hover:underline">History page</Link>.
                   </p>
