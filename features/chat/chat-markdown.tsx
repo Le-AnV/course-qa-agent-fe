@@ -44,8 +44,24 @@ export function ChatMarkdown({ content }: { content: string }) {
       const items: React.ReactNode[] = [];
       while (index < lines.length && /^\s*[-*+]\s+/.test(lines[index])) {
         const item = lines[index].trim().replace(/^[-*+]\s+/, '');
-        items.push(<li key={`item-${index}`}>{renderInline(item, `item-${index}`)}</li>);
+        const itemIdx = index;
         index += 1;
+
+        const subItems: React.ReactNode[] = [];
+        while (index < lines.length && /^\s{2,}[-*+]\s+/.test(lines[index])) {
+          const subItem = lines[index].trim().replace(/^[-*+]\s+/, '');
+          subItems.push(<li key={`subitem-${index}`}>{renderInline(subItem, `subitem-${index}`)}</li>);
+          index += 1;
+        }
+
+        items.push(
+          <li key={`item-${itemIdx}`}>
+            {renderInline(item, `item-${itemIdx}`)}
+            {subItems.length > 0 && (
+              <ul className="mt-1 list-[circle] space-y-1 pl-5">{subItems}</ul>
+            )}
+          </li>,
+        );
       }
       blocks.push(
         <ul key={`list-${index}`} className="list-disc space-y-1 pl-5">

@@ -59,7 +59,7 @@ export default function StudentClassWorkspaceLayout({
   const isAgentPage = pathname?.endsWith("/agent");
 
   return (
-    <div className="flex flex-col h-full bg-[#F5F5F5]">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#F5F5F5]">
       <CourseBanner
         title={title}
         backHref="/student/classes"

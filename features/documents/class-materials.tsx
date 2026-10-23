@@ -68,9 +68,11 @@ type UploadState =
 export function ClassMaterials({
   classId,
   className,
+  onIndexedChange,
 }: {
   classId: string;
   className?: string;
+  onIndexedChange?: () => void;
 }) {
   const router = useRouter();
   const [uploadOpen, setUploadOpen] = React.useState(false);
@@ -163,10 +165,11 @@ export function ClassMaterials({
       const processing = result.total > 0;
       setProcessingExists(processing);
       if (processing || processingExists) await load(filters, page, true);
+      if (!processing && processingExists) onIndexedChange?.();
     } catch {
       // The normal list request reports backend failures; status polling can retry.
     }
-  }, [classId, filters, load, page, processingExists]);
+  }, [classId, filters, load, onIndexedChange, page, processingExists]);
 
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- starts async status polling; updates happen after fetch resolves.
@@ -328,6 +331,7 @@ export function ClassMaterials({
       const nextPage = documents.length === 1 && page > 1 ? page - 1 : page;
       if (nextPage !== page) setPage(nextPage);
       await load(filters, nextPage);
+      onIndexedChange?.();
     } catch (err) {
       setPendingDelete(null);
       if (err instanceof ApiError && err.status === 401) {
@@ -460,7 +464,7 @@ export function ClassMaterials({
             multiple
             accept={acceptedExtensions().join(",")}
             onChange={(e) => takeFiles(Array.from(e.target.files ?? []))}
-            className="sr-only"
+            className="hidden"
             aria-label="Choose files to upload"
             tabIndex={-1}
           />
@@ -560,7 +564,7 @@ export function ClassMaterials({
         type="file"
         accept={acceptedExtensions().join(",")}
         onChange={(e) => void onReplacementChosen(e.target.files)}
-        className="sr-only"
+        className="hidden"
         aria-label="Choose a replacement file"
         tabIndex={-1}
       />
