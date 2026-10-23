@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, X, UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle, RefreshCw, Plus, Eye, Trash2, UserCheck, UserX, Dices } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi, type AdminUser, type ImportRow, type ImportBatch } from "@/lib/admin-api";
+import { isGeneratedCodeCurrent, updateAdminUserForm, type AdminUserFormState } from "@/lib/admin-user-form";
 import { ActionMenu } from "@/components/shared/ActionMenu";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Modal } from "@/components/shared/Modal";
@@ -30,7 +31,7 @@ export default function AdminUsersPage() {
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
   const [generatingCode, setGeneratingCode] = React.useState(false);
-  const [form, setForm] = React.useState({ username: "", email: "", role: "student", code: "" });
+  const [form, setForm] = React.useState<AdminUserFormState>({ username: "", email: "", role: "student", code: "" });
   const [confirmAction, setConfirmAction] = React.useState<{ kind: "reset" | "delete"; userId: string; username: string } | null>(null);
   // Row selection + bulk actions + details drawer
   const [selected, setSelected] = React.useState<string[]>([]);
@@ -118,10 +119,13 @@ export default function AdminUsersPage() {
       toast.error("Enter the full name first.");
       return;
     }
+    const requested = { username: fullName, role: form.role };
     setGeneratingCode(true);
     try {
-      const result = await adminApi.generateUserCode(fullName, form.role);
-      setForm((prev) => ({ ...prev, code: result.code }));
+      const result = await adminApi.generateUserCode(requested.username, requested.role);
+      setForm((prev) =>
+        isGeneratedCodeCurrent(prev, requested) ? { ...prev, code: result.code } : prev,
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to generate code");
     } finally {
@@ -454,7 +458,7 @@ export default function AdminUsersPage() {
         <form onSubmit={(e) => void handleCreate(e)} className="space-y-4">
           <div>
             <label htmlFor="new-user-name" className="block text-[13px] font-medium text-[#111111] mb-1.5">Full name *</label>
-            <input id="new-user-name" required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })}
+            <input id="new-user-name" required value={form.username} onChange={(e) => setForm((prev) => updateAdminUserForm(prev, { username: e.target.value }))}
               placeholder="Nguyen Van A"
               className="w-full bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]" />
           </div>
@@ -469,7 +473,7 @@ export default function AdminUsersPage() {
             <AppSelect
               id="new-user-role"
               value={form.role}
-              onValueChange={(value) => setForm({ ...form, role: value, code: "" })}
+              onValueChange={(value) => setForm((prev) => updateAdminUserForm(prev, { role: value }))}
               options={[
                 { value: "student", label: "Student" },
                 { value: "trainer", label: "Trainer" },
