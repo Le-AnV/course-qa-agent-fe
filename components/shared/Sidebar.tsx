@@ -58,13 +58,11 @@ function useSidebarClasses(role: Role) {
  */
 export function SidebarNavBody({
   role,
-  unreadHome = false,
   collapsed = false,
   onNavigate,
   onExpand,
 }: {
   role: Role;
-  unreadHome?: boolean;
   collapsed?: boolean;
   onNavigate?: () => void;
   onExpand?: () => void;
@@ -117,9 +115,6 @@ export function SidebarNavBody({
           >
             <Home className="h-4 w-4 shrink-0" />
             {!collapsed && <span>Home</span>}
-            {!collapsed && role === "admin" && unreadHome && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#111111] ml-auto shrink-0" />
-            )}
           </Link>
 
           {role === "admin" && (
@@ -270,7 +265,7 @@ export function SidebarNavBody({
   );
 }
 
-export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHome?: boolean }) {
+export function AppSidebar({ role }: { role: Role }) {
   const [showMenu, setShowMenu] = React.useState(false);
   const [collapsed, setCollapsed] = React.useState(false);
   const auth = useAuth();
@@ -286,7 +281,6 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
   const { profile, loading: profileLoading } = useProfile();
   const displayName = profile?.username ?? (profileLoading ? "Loading…" : "Account");
   const roleLabel = roleBadgeLabel(profile?.role ?? role);
-  const settingsHref = settingsHrefForRole(role);
 
   return (
     <aside
@@ -332,7 +326,6 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
 
       <SidebarNavBody
         role={role}
-        unreadHome={unreadHome}
         collapsed={collapsed}
         onExpand={() => setCollapsed(false)}
       />
@@ -348,17 +341,8 @@ export function AppSidebar({ role, unreadHome = false }: { role: Role; unreadHom
                 className="block px-4 py-2 text-[12.5px] text-[#111111] hover:bg-[#F7F7F7]"
                 onClick={() => setShowMenu(false)}
               >
-                View profile
+                Account settings
               </Link>
-              {settingsHref && (
-                <Link
-                  href={settingsHref}
-                  className="block px-4 py-2 text-[12.5px] text-[#111111] hover:bg-[#F7F7F7]"
-                  onClick={() => setShowMenu(false)}
-                >
-                  Account settings
-                </Link>
-              )}
               <div className="my-1 border-t border-[#DADADA]" />
               <button
                 onClick={handleLogout}

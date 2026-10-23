@@ -10,6 +10,21 @@ export interface CourseTabItem {
   id: string;
   label: string;
   href: string;
+  badge?: number;
+}
+
+function TabBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  const label = `${count} pending join request${count === 1 ? "" : "s"}`;
+  return (
+    <span
+      aria-label={label}
+      title={label}
+      className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#9D4C38] px-1 text-[10px] font-semibold leading-none text-white"
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
 }
 
 /**
@@ -50,6 +65,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
             <span className="truncate text-[14px] font-semibold text-[#111111]">
               {active.label}
             </span>
+            <TabBadge count={active.badge ?? 0} />
           </span>
           <ChevronDown
             className={cn(
@@ -84,7 +100,10 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
                         : "text-[#5A5A5A] hover:bg-[#F7F7F7] hover:text-[#111111]",
                     )}
                   >
-                    {tab.label}
+                    <span className="flex items-center gap-2">
+                      {tab.label}
+                      <TabBadge count={tab.badge ?? 0} />
+                    </span>
                     {isActive && <Check className="h-4 w-4 shrink-0 text-[var(--brand-ink)]" />}
                   </Link>
                 );
@@ -112,7 +131,10 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
                       : "border-transparent text-[#5A5A5A] hover:text-[#111111] font-medium",
                   )}
                 >
-                  {tab.label}
+                  <span className="inline-flex items-center gap-1.5">
+                    {tab.label}
+                    <TabBadge count={tab.badge ?? 0} />
+                  </span>
                 </Link>
               );
             })}

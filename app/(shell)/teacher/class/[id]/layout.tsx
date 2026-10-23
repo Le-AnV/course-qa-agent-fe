@@ -15,6 +15,25 @@ export default function ClassWorkspaceLayout({
   const pathname = usePathname();
   const id = params.id as string;
   const [cls, setCls] = React.useState<StudentClass | null>(null);
+  const [pendingCount, setPendingCount] = React.useState(0);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      studentApi
+        .pendingRequests(id)
+        .catch(() => null)
+        .then((pending) => {
+          if (!cancelled) setPendingCount(pending?.length ?? 0);
+        });
+    };
+    refresh();
+    window.addEventListener("class-pending-changed", refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("class-pending-changed", refresh);
+    };
+  }, [id]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -36,7 +55,12 @@ export default function ClassWorkspaceLayout({
     { id: "syllabus", label: "Syllabus", href: `/teacher/class/${id}/syllabus` },
     { id: "agent", label: "Q&A Chat", href: `/teacher/class/${id}/agent` },
     { id: "tickets", label: "Tickets", href: `/teacher/class/${id}/tickets` },
-    { id: "members", label: "Members", href: `/teacher/class/${id}/members` },
+    {
+      id: "members",
+      label: "Members",
+      href: `/teacher/class/${id}/members`,
+      badge: pendingCount,
+    },
     { id: "settings", label: "Course Settings", href: `/teacher/class/${id}/settings` },
   ];
 

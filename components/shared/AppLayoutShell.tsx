@@ -16,10 +16,10 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
               row from lg up, where the rail takes a fixed width. */}
           <div className="flex h-screen flex-col bg-[#F5F5F5] overflow-hidden lg:flex-row">
             {/* Below lg the rail is hidden, so MobileNav owns the header. */}
-            <MobileNav role={role} unreadHome={true} />
+            <MobileNav role={role} />
 
             {/* Left Sidebar takes up space in flow */}
-            <AppSidebar role={role} unreadHome={true} />
+            <AppSidebar role={role} />
 
             {/* Main Content Area fills remaining space. Off-white canvas so white
                 cards read as raised surfaces instead of melting into the page. */}

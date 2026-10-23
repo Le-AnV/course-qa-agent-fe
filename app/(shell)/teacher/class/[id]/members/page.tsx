@@ -38,6 +38,7 @@ export default function ClassMembersPage() {
       setMembers(m);
       setPending(p ?? []);
       setCanReview(p !== null);
+      window.dispatchEvent(new Event("class-pending-changed"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load members");
     } finally {
