@@ -6,6 +6,7 @@ import { MembersTable } from "@/components/shared/MembersTable";
 import { Search, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { studentApi, type ClassMember, type JoinRequest } from "@/lib/student-api";
+import { AppSelect } from "@/components/ui/app-select";
 import { AUTH_ROLE_KEY } from "@/components/ui/nav-config";
 
 export default function ClassMembersPage() {
@@ -241,23 +242,25 @@ export default function ClassMembersPage() {
                 </td>
                 <td className="py-3 px-4 text-right text-[12px]">
                   {isTrainer && m.role !== "trainer" ? (
-                    <select
+                    <AppSelect
                       value={m.result ?? ""}
-                      onChange={(e) => void handleSetResult(m.id, e.target.value)}
+                      onValueChange={(value) => void handleSetResult(m.id, value)}
                       disabled={actingId === m.id}
                       aria-label={`Result for ${m.username}`}
-                      className={`rounded-md border px-2 py-1 text-[12px] outline-none focus:border-[#111111] disabled:opacity-50 ${
+                      options={[
+                        { value: "", label: "Not graded" },
+                        { value: "PASSED", label: "Passed" },
+                        { value: "FAILED", label: "Failed" },
+                      ]}
+                      size="xs"
+                      triggerClassName={
                         m.result === "PASSED"
                           ? "border-green-300 bg-green-50 text-green-800"
                           : m.result === "FAILED"
                             ? "border-red-300 bg-red-50 text-red-800"
-                            : "border-[#DADADA] bg-white text-[#5A5A5A]"
-                      }`}
-                    >
-                      <option value="">Not graded</option>
-                      <option value="PASSED">Passed</option>
-                      <option value="FAILED">Failed</option>
-                    </select>
+                            : "text-[#5A5A5A]"
+                      }
+                    />
                   ) : m.result ? (
                     <span className="text-[#5A5A5A] capitalize">{m.result.toLowerCase()}</span>
                   ) : (

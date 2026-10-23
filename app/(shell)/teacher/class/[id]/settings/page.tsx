@@ -15,6 +15,7 @@ import {
 } from "@/lib/student-api";
 import { formatFileSize } from "@/lib/documents";
 import { Modal } from "@/components/shared/Modal";
+import { AppSelect } from "@/components/ui/app-select";
 
 function ReadOnlyField({
   label,
@@ -566,21 +567,18 @@ export default function ClassSettingsPage() {
               <label htmlFor="cfg-delivery" className="mb-1.5 block text-[13px] font-medium text-[#111111]">
                 Delivery mode
               </label>
-              <select
+              <AppSelect
                 id="cfg-delivery"
                 value={draft.delivery_mode}
-                onChange={(e) => {
-                  setDraft({ ...draft, delivery_mode: e.target.value as Draft["delivery_mode"] });
+                onValueChange={(value) => {
+                  setDraft({ ...draft, delivery_mode: value as Draft["delivery_mode"] });
                   setSaved(false);
                 }}
-                className={SELECT_CLASS}
-              >
-                {(Object.keys(DELIVERY_LABELS) as Draft["delivery_mode"][]).map((mode) => (
-                  <option key={mode} value={mode}>
-                    {DELIVERY_LABELS[mode]}
-                  </option>
-                ))}
-              </select>
+                options={(Object.keys(DELIVERY_LABELS) as Draft["delivery_mode"][]).map((mode) => ({
+                  value: mode,
+                  label: DELIVERY_LABELS[mode],
+                }))}
+              />
             </div>
 
             <div>
@@ -663,20 +661,19 @@ export default function ClassSettingsPage() {
             <label htmlFor="cfg-source" className="mb-1.5 block text-[13px] font-medium text-[#111111]">
               Copy from
             </label>
-            <select
+            <AppSelect
               id="cfg-source"
               value={copySource}
-              onChange={(e) => void selectCopySource(e.target.value)}
-              className={SELECT_CLASS}
-            >
-              <option value="">Select a class</option>
-              {sources.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.code} - {s.name}
-                  {s.status === "ARCHIVED" ? " (archived)" : ""}
-                </option>
-              ))}
-            </select>
+              onValueChange={(value) => void selectCopySource(value)}
+              options={[
+                { value: "", label: "Select a class" },
+                ...sources.map((s) => ({
+                  value: s.id,
+                  label: `${s.code} - ${s.name}${s.status === "ARCHIVED" ? " (archived)" : ""}`,
+                })),
+              ]}
+              contentClassName="min-w-[320px]"
+            />
             {sources.length === 0 && (
               <p className="mt-1.5 text-[12px] text-[#5A5A5A]">
                 No other class is available to copy from.

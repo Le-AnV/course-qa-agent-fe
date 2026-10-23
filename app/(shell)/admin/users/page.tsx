@@ -9,6 +9,7 @@ import { ActionMenu } from "@/components/shared/ActionMenu";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Modal } from "@/components/shared/Modal";
 import { AdminPageShell, ADMIN_CARD } from "@/components/shared/AdminPageShell";
+import { AppSelect } from "@/components/ui/app-select";
 
 export default function AdminUsersPage() {
   const [search, setSearch] = React.useState("");
@@ -267,26 +268,32 @@ export default function AdminUsersPage() {
           />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <select
+          <AppSelect
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="bg-white border border-[#DADADA] rounded-md px-3 py-1.5 text-[12.5px] text-[#111111] outline-none focus:border-[#111111] shadow-sm"
-          >
-            <option value="all">All roles</option>
-            <option value="student">Students</option>
-            <option value="trainer">Trainers</option>
-            <option value="teaching_assistant">Teaching Assistants</option>
-            <option value="admin">Admins</option>
-          </select>
-          <select
+            onValueChange={setRoleFilter}
+            aria-label="Filter users by role"
+            options={[
+              { value: "all", label: "All roles" },
+              { value: "student", label: "Students" },
+              { value: "trainer", label: "Trainers" },
+              { value: "teaching_assistant", label: "Teaching Assistants" },
+              { value: "admin", label: "Admins" },
+            ]}
+            size="sm"
+            triggerClassName="w-auto"
+          />
+          <AppSelect
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-white border border-[#DADADA] rounded-md px-3 py-1.5 text-[12.5px] text-[#111111] outline-none focus:border-[#111111] shadow-sm"
-          >
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+            onValueChange={setStatusFilter}
+            aria-label="Filter users by status"
+            options={[
+              { value: "all", label: "All statuses" },
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
+            ]}
+            size="sm"
+            triggerClassName="w-auto"
+          />
         </div>
       </div>
 
@@ -441,12 +448,16 @@ export default function AdminUsersPage() {
           </div>
           <div>
             <label htmlFor="new-user-role" className="block text-[13px] font-medium text-[#111111] mb-1.5">Role *</label>
-            <select id="new-user-role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value, code: "" })}
-              className="w-full bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]">
-              <option value="student">Student</option>
-              <option value="trainer">Trainer</option>
-              <option value="teaching_assistant">Teaching assistant</option>
-            </select>
+            <AppSelect
+              id="new-user-role"
+              value={form.role}
+              onValueChange={(value) => setForm({ ...form, role: value, code: "" })}
+              options={[
+                { value: "student", label: "Student" },
+                { value: "trainer", label: "Trainer" },
+                { value: "teaching_assistant", label: "Teaching assistant" },
+              ]}
+            />
           </div>
           <div>
             <label htmlFor="new-user-code" className="block text-[13px] font-medium text-[#111111] mb-1.5">

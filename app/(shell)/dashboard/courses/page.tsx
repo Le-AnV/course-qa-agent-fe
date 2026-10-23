@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { AppSelect } from "@/components/ui/app-select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { adminApi, type AdminUser, type ClassSection } from "@/lib/admin-api";
@@ -133,19 +134,21 @@ export default function CoursesPage() {
             </label>
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               Trainer
-              <select
-                className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              <AppSelect
                 value={classTrainerId}
-                onChange={(e) => setClassTrainerId(e.target.value)}
-                required
-              >
-                <option value="">Select a trainer…</option>
-                {trainers.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.username} ({t.email})
-                  </option>
-                ))}
-              </select>
+                onValueChange={setClassTrainerId}
+                aria-label="Trainer"
+                options={[
+                  { value: "", label: "Select a trainer." },
+                  ...trainers.map((t) => ({
+                    value: t.id,
+                    label: t.username,
+                    description: t.email,
+                    initials: t.username.trim().slice(0, 2).toUpperCase(),
+                  })),
+                ]}
+                contentClassName="min-w-[280px]"
+              />
             </label>
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               Credits (1-6)
@@ -200,19 +203,23 @@ export default function CoursesPage() {
                   <TableRow key={k.id}>
                     <TableCell className="font-medium">{k.code}</TableCell>
                     <TableCell>
-                      <select
-                        className="h-7 rounded-md border border-input bg-transparent px-1.5 text-xs"
+                      <AppSelect
                         value={k.trainer_id ?? ""}
-                        onChange={(e) => void setTrainer(k, e.target.value)}
+                        onValueChange={(value) => void setTrainer(k, value)}
                         aria-label={`Trainer for ${k.code}`}
-                      >
-                        <option value="">Unassigned</option>
-                        {trainers.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.username} ({t.email})
-                          </option>
-                        ))}
-                      </select>
+                        options={[
+                          { value: "", label: "Unassigned" },
+                          ...trainers.map((t) => ({
+                            value: t.id,
+                            label: t.username,
+                            description: t.email,
+                            initials: t.username.trim().slice(0, 2).toUpperCase(),
+                          })),
+                        ]}
+                        size="xs"
+                        triggerClassName="max-w-[190px]"
+                        contentClassName="min-w-[260px]"
+                      />
                     </TableCell>
                     <TableCell>{k.credits}</TableCell>
                     <TableCell>{k.student_count}</TableCell>
