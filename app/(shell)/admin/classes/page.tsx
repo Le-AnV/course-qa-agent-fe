@@ -1,14 +1,92 @@
 "use client";
 
 import * as React from "react";
-import { Search, Plus, X, Users } from "lucide-react";
+import { Search, Plus, X, Users, UserMinus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { adminApi, type ClassSection, type AdminUser } from "@/lib/admin-api";
+import { adminApi, type ClassSection, type AdminUser, type ClassTrainer } from "@/lib/admin-api";
 import { ActionMenu } from "@/components/shared/ActionMenu";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Modal } from "@/components/shared/Modal";
 import { AdminPageShell, ADMIN_CARD } from "@/components/shared/AdminPageShell";
+import { PrerequisiteHint } from "@/components/shared/PrerequisiteHint";
+import { AppSelect, type AppSelectOption } from "@/components/ui/app-select";
 import { semesterDateRange } from "@/lib/semester";
+
+const SEMESTER_OPTIONS: AppSelectOption[] = ["Fall", "Spring", "Summer"].map((semester) => ({
+  value: semester,
+  label: semester,
+}));
+
+function trainerInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "?";
+}
+
+function TrainerSelectValue({ option }: { option: AppSelectOption | undefined }) {
+  const assigned = Boolean(option?.value);
+
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2.5">
+      <span
+        className={
+          assigned
+            ? "grid size-7 shrink-0 place-items-center rounded-[10px] border border-[#D8D2C6] bg-[#EDE8DE] text-[9px] font-semibold tracking-[0.06em] text-[#4F4739] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+            : "grid size-7 shrink-0 place-items-center rounded-[10px] border border-dashed border-[#CFCFCF] bg-white text-[#8A8A8A]"
+        }
+      >
+        {assigned ? option?.initials ?? "?" : <UserPlus className="size-3.5" strokeWidth={1.8} />}
+      </span>
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span
+          className={
+            assigned
+              ? "truncate text-[12.5px] font-semibold text-[#111111]"
+              : "truncate text-[12.5px] font-semibold text-[#5A5A5A]"
+          }
+        >
+          {assigned ? option?.label : "Assign trainer"}
+        </span>
+        {!assigned && (
+          <span className="shrink-0 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-[#8F6B16]">
+            Needed
+          </span>
+        )}
+      </span>
+    </span>
+  );
+}
+
+function CoTeacherLine({ trainers }: { trainers: ClassTrainer[] }) {
+  if (trainers.length === 0) return null;
+
+  const names = trainers.map((trainer) => trainer.name ?? "Trainer");
+  const shown = names.slice(0, 2).join(", ");
+  const extra = names.length > 2 ? ` +${names.length - 2}` : "";
+  const title = trainers
+    .map((trainer) => [trainer.name, trainer.email].filter(Boolean).join(" · "))
+    .join("\n");
+
+  return (
+    <div className="mt-1 flex min-w-0 items-center gap-1.5 pl-[44px]" title={title}>
+      <span className="flex shrink-0 -space-x-1">
+        {trainers.slice(0, 3).map((trainer) => (
+          <span
+            key={trainer.trainer_id}
+            className="grid size-[18px] place-items-center rounded-[6px] border border-[#DADADA] bg-[#F1ECE3] text-[8.5px] font-semibold text-[#5E5548]"
+          >
+            {trainerInitials(trainer.name ?? trainer.email ?? "?")}
+          </span>
+        ))}
+      </span>
+      <span className="truncate text-[10.5px] text-[#5A5A5A]">
+        with <span className="font-semibold text-[#333333]">{shown}{extra}</span>
+      </span>
+    </div>
+  );
+}
 
 export default function AdminClassesPage() {
   const [search, setSearch] = React.useState("");
@@ -210,6 +288,42 @@ export default function AdminClassesPage() {
     (cls.trainer_name ?? "").toLowerCase().includes(search.toLowerCase()),
   );
 
+  const trainerOptions: AppSelectOption[] = [
+    {
+      value: "",
+      label: "Unassigned",
+      icon: <UserMinus className="size-3.5" />,
+    },
+    ...trainers.map((trainer) => ({
+      value: String(trainer.id),
+      label: trainer.username,
+      description: trainer.email,
+      initials: trainerInitials(trainer.username),
+    })),
+  ];
+
+  const formTrainerOptions: AppSelectOption[] = [
+    { value: "", label: "Select trainer", icon: <UserPlus className="size-3.5" /> },
+    ...trainerOptions.slice(1),
+  ];
+
+  const availableCoTrainers = manageClass
+    ? trainers.filter(
+        (trainer) =>
+          !classTrainers(manageClass).some((assigned) => assigned.trainer_id === trainer.id),
+      )
+    : [];
+
+  const coTrainerOptions: AppSelectOption[] = [
+    { value: "", label: "Select a trainer" },
+    ...availableCoTrainers.map((trainer) => ({
+      value: String(trainer.id),
+      label: trainer.username,
+      description: trainer.email,
+      initials: trainerInitials(trainer.username),
+    })),
+  ];
+
   return (
     <AdminPageShell
       title="Classes"
@@ -284,22 +398,7 @@ export default function AdminClassesPage() {
                       <span className="inline-flex items-center gap-1">
                         <span className="text-[13.5px] font-semibold text-[#111111]">{cls.code}</span>
                         {(cls.prerequisites?.length ?? 0) > 0 && (
-                          <span
-                            className="group relative inline-flex cursor-help items-center"
-                            tabIndex={0}
-                            aria-label={`Prerequisites: ${cls.prerequisites!.map((p) => `${p.code} ${p.name}`).join(", ")}`}
-                          >
-                            <span className="text-[15px] font-bold leading-none text-red-600">*</span>
-                            <span
-                              role="tooltip"
-                              className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-max max-w-[280px] whitespace-normal rounded-md border border-[#DADADA] bg-white p-2 text-left text-[11.5px] font-normal text-[#111111] shadow-lg group-hover:block group-focus-within:block"
-                            >
-                              <span className="mb-1 block font-semibold">Must pass before joining</span>
-                              {cls.prerequisites!.map((p) => (
-                                <span key={p.id} className="block">{p.code} — {p.name}</span>
-                              ))}
-                            </span>
-                          </span>
+                          <PrerequisiteHint items={cls.prerequisites!} />
                         )}
                       </span>
                       {isArchived(cls) && (
@@ -310,26 +409,18 @@ export default function AdminClassesPage() {
                     </td>
                     <td className="px-5 py-3.5"><span className="text-[13px] text-[#111111]">{cls.credits}</span></td>
                     <td className="px-5 py-3.5">
-                      <select
+                      <AppSelect
                         value={cls.trainer_id ?? ""}
-                        onChange={(e) => void handleAssign(String(cls.id), e.target.value)}
+                        onValueChange={(value) => void handleAssign(String(cls.id), value)}
                         aria-label={`Primary trainer for ${cls.code}`}
-                        className="max-w-[180px] bg-white border border-[#DADADA] rounded-md px-2 py-1 text-[12.5px] outline-none focus:border-[#111111]">
-                        <option value="">Unassigned</option>
-                        {trainers.map((t) => (
-                          <option key={t.id} value={t.id}>{t.username}</option>
-                        ))}
-                      </select>
-                      {(() => {
-                        const coTrainers = classTrainers(cls).filter((t) => !t.is_primary);
-                        if (coTrainers.length === 0) return null;
-                        return (
-                          <p className="mt-1 text-[11.5px] text-[#5A5A5A]">
-                            + {coTrainers.map((t) => t.name ?? "Trainer").join(", ")}
-                          </p>
-                        );
-                      })()}
-                      {!cls.trainer_id && <p className="text-[11px] text-[#8F6B16] mt-1">Needs trainer</p>}
+                        options={trainerOptions}
+                        placeholder="Unassigned"
+                        size="default"
+                        triggerClassName="h-9 w-[200px] justify-start gap-0 rounded-xl border-[#DADADA] bg-white px-1.5 shadow-[0_1px_2px_rgba(17,17,17,0.035)] hover:border-[#C9C4BA] data-[state=open]:border-[#B9B3A8] data-[state=open]:ring-4 data-[state=open]:ring-[rgba(95,87,75,0.08)] [&>svg]:size-3.5 [&>svg]:text-[#6F6F6F] [&>svg]:transition-transform [&[data-state=open]>svg]:rotate-180"
+                        contentClassName="min-w-[280px]"
+                        renderValue={(selected) => <TrainerSelectValue option={selected} />}
+                      />
+                      <CoTeacherLine trainers={classTrainers(cls).filter((t) => !t.is_primary)} />
                     </td>
                     <td className="px-5 py-3.5"><span className="text-[13px]">{cls.student_count}{cls.capacity ? ` / ${cls.capacity}` : ""}</span></td>
                     <td className="px-5 py-3.5"><span className="text-[13px]">{cls.document_count}</span></td>
@@ -374,11 +465,14 @@ export default function AdminClassesPage() {
           </div>
           <div>
             <label htmlFor="class-primary-trainer" className="block text-[13px] font-medium text-[#111111] mb-1.5">Primary trainer * <span className="font-normal text-[#5A5A5A]">(required)</span></label>
-            <select id="class-primary-trainer" value={createForm.trainer_id} onChange={(e) => setCreateForm({ ...createForm, trainer_id: e.target.value, })} 
-              className="w-full bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]" required>
-              <option value="">Select trainer</option>
-              {trainers.map((t) => (<option key={t.id} value={t.id}>{t.username} ({t.email})</option>))}
-            </select>
+            <AppSelect
+              id="class-primary-trainer"
+              value={createForm.trainer_id}
+              onValueChange={(value) => setCreateForm({ ...createForm, trainer_id: value })}
+              options={formTrainerOptions}
+              placeholder="Select trainer"
+              contentClassName="min-w-[280px]"
+            />
           </div>
           <div>
             <span className="block text-[13px] font-medium text-[#111111] mb-1.5">Co-trainers <span className="font-normal text-[#5A5A5A]">(optional)</span></span>
@@ -449,12 +543,12 @@ export default function AdminClassesPage() {
             </div>
             <div>
               <label htmlFor="class-semester" className="block text-[13px] font-medium text-[#111111] mb-1.5">Semester</label>
-              <select id="class-semester" value={createForm.semester} onChange={(e) => setCreateForm({ ...createForm, semester: e.target.value })}
-                className="w-full bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]">
-                <option value="Fall">Fall</option>
-                <option value="Spring">Spring</option>
-                <option value="Summer">Summer</option>
-              </select>
+              <AppSelect
+                id="class-semester"
+                value={createForm.semester}
+                onValueChange={(value) => setCreateForm({ ...createForm, semester: value })}
+                options={SEMESTER_OPTIONS}
+              />
               <p className="mt-1 text-[11.5px] text-[#5A5A5A]">
                 Dates: {semesterDateRange(createForm.semester, createForm.academic_year)}
               </p>
@@ -520,19 +614,15 @@ export default function AdminClassesPage() {
             <div>
               <label htmlFor="add-co-trainer" className="block text-[13px] font-medium text-[#111111] mb-1.5">Add a co-trainer</label>
               <div className="flex gap-2">
-                <select
+                <AppSelect
                   id="add-co-trainer"
                   value={newCoTrainer}
-                  onChange={(e) => setNewCoTrainer(e.target.value)}
-                  className="flex-1 bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]"
-                >
-                  <option value="">Select a trainer</option>
-                  {trainers
-                    .filter((t) => !classTrainers(manageClass).some((c) => c.trainer_id === t.id))
-                    .map((t) => (
-                      <option key={t.id} value={t.id}>{t.username} ({t.email})</option>
-                    ))}
-                </select>
+                  onValueChange={setNewCoTrainer}
+                  options={coTrainerOptions}
+                  placeholder="Select a trainer"
+                  triggerClassName="flex-1 min-w-0"
+                  contentClassName="min-w-[280px]"
+                />
                 <button
                   type="button"
                   onClick={() => void handleAddCoTrainer()}
