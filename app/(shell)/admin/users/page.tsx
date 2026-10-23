@@ -28,7 +28,7 @@ export default function AdminUsersPage() {
   // Create user modal
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [creating, setCreating] = React.useState(false);
-  const [form, setForm] = React.useState({ username: "", email: "", role: "student" });
+  const [form, setForm] = React.useState({ username: "", email: "", role: "student", code: "" });
   const [confirmAction, setConfirmAction] = React.useState<{ kind: "reset" | "delete"; userId: string; username: string } | null>(null);
   // Row selection + bulk actions + details drawer
   const [selected, setSelected] = React.useState<string[]>([]);
@@ -95,10 +95,13 @@ export default function AdminUsersPage() {
         form.username.trim(),
         form.email.trim(),
         form.role,
+        undefined,
+        form.role === "student" ? form.code.trim() || undefined : undefined,
+        form.role !== "student" ? form.code.trim() || undefined : undefined,
       );
-      setNotice(`Account ${created.email} created — credentials emailed via queue.`);
+      setNotice(`Account ${created.email} created - credentials emailed via queue.`);
       setIsCreateOpen(false);
-      setForm({ username: "", email: "", role: "student" });
+      setForm({ username: "", email: "", role: "student", code: "" });
       await loadUsers();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create user");
@@ -202,7 +205,8 @@ export default function AdminUsersPage() {
     const matchesSearch =
       user.username.toLowerCase().includes(search.toLowerCase()) ||
       user.email.toLowerCase().includes(search.toLowerCase()) ||
-      (user.student_code ?? "").toLowerCase().includes(search.toLowerCase());
+      (user.student_code ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (user.staff_code ?? "").toLowerCase().includes(search.toLowerCase());
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? user.is_active : !user.is_active);
     return matchesSearch && matchesRole && matchesStatus;
@@ -343,7 +347,7 @@ export default function AdminUsersPage() {
                 </th>
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Email</th>
-                <th className="px-5 py-3">MSSV</th>
+                <th className="px-5 py-3">MSSV / MSNV</th>
                 <th className="px-5 py-3">Role</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 w-12 text-center"></th>
@@ -380,7 +384,7 @@ export default function AdminUsersPage() {
                       <span className="text-[13px] text-[#5A5A5A]">{user.email}</span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="text-[12.5px] font-mono text-[#111111]">{user.student_code || "—"}</span>
+                      <span className="text-[12.5px] font-mono text-[#111111]">{(user.role === "student" ? user.student_code : user.staff_code) || "-"}</span>
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="text-[12.5px] text-[#111111] capitalize">{user.role.replace("_", " ")}</span>
@@ -437,12 +441,25 @@ export default function AdminUsersPage() {
           </div>
           <div>
             <label htmlFor="new-user-role" className="block text-[13px] font-medium text-[#111111] mb-1.5">Role *</label>
-            <select id="new-user-role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
+            <select id="new-user-role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value, code: "" })}
               className="w-full bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]">
               <option value="student">Student</option>
               <option value="trainer">Trainer</option>
               <option value="teaching_assistant">Teaching assistant</option>
             </select>
+          </div>
+          <div>
+            <label htmlFor="new-user-code" className="block text-[13px] font-medium text-[#111111] mb-1.5">
+              {form.role === "student" ? "MSSV" : "MSNV"} <span className="font-normal text-[#5A5A5A]">(optional)</span>
+            </label>
+            <input id="new-user-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })}
+              placeholder={form.role === "student" ? "TVA_4821" : "FPT01234"}
+              className="w-full bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]" />
+            <p className="mt-1 text-[11.5px] text-[#5A5A5A]">
+              {form.role === "student"
+                ? "Blank auto-generates INITIALS_NNNN."
+                : "Employee ID shown in the users table and searchable."}
+            </p>
           </div>
           <p className="text-[12px] text-[#5A5A5A]">
             Accounts are created class-less. Students join a class by request; trainers get classes when an
@@ -612,7 +629,7 @@ export default function AdminUsersPage() {
               [
                 ["Full name", detailsUser.username, ""],
                 ["Email", detailsUser.email, ""],
-                ["MSSV", detailsUser.student_code || "—", "font-mono"],
+                ["MSSV / MSNV", (detailsUser.role === "student" ? detailsUser.student_code : detailsUser.staff_code) || "-", "font-mono"],
                 ["Role", detailsUser.role.replace("_", " "), "capitalize"],
                 ["Status", detailsUser.is_active ? "Active" : "Inactive", ""],
                 ["Class", detailsUser.class_code || "No class", "font-mono"],

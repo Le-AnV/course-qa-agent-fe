@@ -8,6 +8,7 @@ import { ActionMenu } from "@/components/shared/ActionMenu";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Modal } from "@/components/shared/Modal";
 import { AdminPageShell, ADMIN_CARD } from "@/components/shared/AdminPageShell";
+import { semesterDateRange } from "@/lib/semester";
 
 export default function AdminClassesPage() {
   const [search, setSearch] = React.useState("");
@@ -24,6 +25,7 @@ export default function AdminClassesPage() {
     academic_year: "2026",
     trainer_id: "",
     credits: "3",
+    capacity: "",
     prerequisite_class_ids: [] as string[],
   });
   const [creating, setCreating] = React.useState(false);
@@ -37,11 +39,6 @@ export default function AdminClassesPage() {
   const [manageBusy, setManageBusy] = React.useState(false);
   // Prerequisite subjects edited inside the manage modal (replaces the whole list).
   const [managePrereqs, setManagePrereqs] = React.useState<string[]>([]);
-  // Admin-owned roster capacity (P5): set or clear the per-class limit.
-  const [capacityClass, setCapacityClass] = React.useState<ClassSection | null>(null);
-  const [capacityText, setCapacityText] = React.useState("");
-  const [capacitySaving, setCapacitySaving] = React.useState(false);
-
   const loadData = React.useCallback(async () => {
     try {
       setLoading(true);
@@ -71,7 +68,12 @@ export default function AdminClassesPage() {
       return;
     }
     if (!createForm.trainer_id) {
-      toast.error("A trainer is required — create the trainer account first.");
+      toast.error("A trainer is required - create the trainer account first.");
+      return;
+    }
+    const capacity = createForm.capacity.trim() ? Number(createForm.capacity) : undefined;
+    if (capacity !== undefined && (!Number.isInteger(capacity) || capacity < 1 || capacity > 500)) {
+      toast.error("Capacity must be a whole number between 1 and 500");
       return;
     }
     setCreating(true);
@@ -83,6 +85,7 @@ export default function AdminClassesPage() {
         semester: createForm.semester || undefined,
         academic_year: createForm.academic_year || undefined,
         credits: Number(createForm.credits) || undefined,
+        capacity,
         prerequisite_class_ids: createForm.prerequisite_class_ids,
       });
       let extraFailed = 0;
@@ -99,7 +102,7 @@ export default function AdminClassesPage() {
           : `Class ${createForm.code} created, but ${extraFailed} co-trainer(s) could not be added — open Manage trainers.`,
       );
       setIsCreateOpen(false);
-      setCreateForm({ code: "", name: "", semester: "Fall", academic_year: "2026", trainer_id: "", credits: "3", prerequisite_class_ids: [] });
+      setCreateForm({ code: "", name: "", semester: "Fall", academic_year: "2026", trainer_id: "", credits: "3", capacity: "", prerequisite_class_ids: [] });
       setExtraTrainers([]);
       await loadData();
     } catch (err) {
@@ -170,41 +173,6 @@ export default function AdminClassesPage() {
       toast.error(err instanceof Error ? err.message : "Failed to save prerequisites");
     } finally {
       setManageBusy(false);
-    }
-  };
-
-  // Capacity is edited as text so the field can be emptied (= no limit).
-  const capacityValue = (() => {
-    const raw = capacityText.trim();
-    if (raw === "") return null;
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) ? Math.trunc(parsed) : Number.NaN;
-  })();
-
-  const capacityError =
-    Number.isNaN(capacityValue as number)
-      ? "Enter a whole number, or leave empty for no limit."
-      : capacityValue !== null && (capacityValue < 1 || capacityValue > 500)
-        ? "Capacity must be between 1 and 500."
-        : null;
-
-  const handleSaveCapacity = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!capacityClass || capacityError) return;
-    setCapacitySaving(true);
-    try {
-      await adminApi.setClassCapacity(String(capacityClass.id), capacityValue);
-      setNotice(
-        capacityValue === null
-          ? `Capacity cleared for ${capacityClass.code} — no limit.`
-          : `Capacity set to ${capacityValue} for ${capacityClass.code}.`,
-      );
-      setCapacityClass(null);
-      await loadData();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to set capacity");
-    } finally {
-      setCapacitySaving(false);
     }
   };
 
@@ -291,7 +259,7 @@ export default function AdminClassesPage() {
       {loading ? (
         <div className={`${ADMIN_CARD} p-8 text-center text-[#5A5A5A] text-[13px]`}>Loading classes...</div>
       ) : (
-        <div className={`${ADMIN_CARD} overflow-hidden`}>
+        <div className={ADMIN_CARD}>
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white border-b border-[#DADADA] text-[12px] font-medium text-[#6F6F6F]">
@@ -313,7 +281,27 @@ export default function AdminClassesPage() {
                 filteredClasses.map((cls, idx) => (
                   <tr key={cls.id} className={`transition-colors hover:bg-[#FAFAFA] ${isArchived(cls) ? "opacity-60" : ""}`}>
                     <td className="px-5 py-3.5">
-                      <span className="text-[13.5px] font-semibold text-[#111111]">{cls.code}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <span className="text-[13.5px] font-semibold text-[#111111]">{cls.code}</span>
+                        {(cls.prerequisites?.length ?? 0) > 0 && (
+                          <span
+                            className="group relative inline-flex cursor-help items-center"
+                            tabIndex={0}
+                            aria-label={`Prerequisites: ${cls.prerequisites!.map((p) => `${p.code} ${p.name}`).join(", ")}`}
+                          >
+                            <span className="text-[15px] font-bold leading-none text-red-600">*</span>
+                            <span
+                              role="tooltip"
+                              className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-max max-w-[280px] whitespace-normal rounded-md border border-[#DADADA] bg-white p-2 text-left text-[11.5px] font-normal text-[#111111] shadow-lg group-hover:block group-focus-within:block"
+                            >
+                              <span className="mb-1 block font-semibold">Must pass before joining</span>
+                              {cls.prerequisites!.map((p) => (
+                                <span key={p.id} className="block">{p.code} — {p.name}</span>
+                              ))}
+                            </span>
+                          </span>
+                        )}
+                      </span>
                       {isArchived(cls) && (
                         <span className="ml-2 rounded-full border border-[#DADADA] bg-[#F7F7F7] px-2 py-0.5 text-[11px] font-semibold text-[#5A5A5A]">
                           Archived
@@ -352,7 +340,6 @@ export default function AdminClassesPage() {
                         direction={idx === filteredClasses.length - 1 ? "up" : "down"}
                         items={[
                           { label: "Manage trainers", icon: <Users className="w-3.5 h-3.5" />, onSelect: () => { setManageClass(cls); setNewCoTrainer(""); setManagePrereqs((cls.prerequisites ?? []).map((p) => p.id)); } },
-                          { label: "Set capacity", onSelect: () => { setCapacityClass(cls); setCapacityText(cls.capacity == null ? "" : String(cls.capacity)); } },
                           isArchived(cls)
                             ? { label: "Restore class", onSelect: () => setPendingArchive(cls) }
                             : { label: "Archive class", onSelect: () => setPendingArchive(cls) },
@@ -468,11 +455,24 @@ export default function AdminClassesPage() {
                 <option value="Spring">Spring</option>
                 <option value="Summer">Summer</option>
               </select>
+              <p className="mt-1 text-[11.5px] text-[#5A5A5A]">
+                Dates: {semesterDateRange(createForm.semester, createForm.academic_year)}
+              </p>
             </div>
             <div>
               <label htmlFor="class-year" className="block text-[13px] font-medium text-[#111111] mb-1.5">Academic Year</label>
               <input id="class-year" type="text" value={createForm.academic_year} onChange={(e) => setCreateForm({ ...createForm, academic_year: e.target.value })}
                 className="w-full bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]" />
+            </div>
+            <div>
+              <label htmlFor="class-capacity" className="block text-[13px] font-medium text-[#111111] mb-1.5">
+                Capacity <span className="font-normal text-[#5A5A5A]">(optional)</span>
+              </label>
+              <input id="class-capacity" type="number" min={1} max={500} value={createForm.capacity}
+                onChange={(e) => setCreateForm({ ...createForm, capacity: e.target.value })}
+                placeholder="Unlimited"
+                className="w-full bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]" />
+              <p className="mt-1 text-[11.5px] text-[#5A5A5A]">Leave empty for no limit (1–500).</p>
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-[#DADADA]">
@@ -586,57 +586,6 @@ export default function AdminClassesPage() {
             </div>
           </div>
         )}
-      </Modal>
-      <Modal
-        isOpen={capacityClass !== null}
-        onClose={() => setCapacityClass(null)}
-        title={`Student capacity — ${capacityClass?.code ?? ""}`}
-        subtitle="Admin-owned: how many students this class accepts. Empty means no limit; the capacity can never go below the current roster."
-        widthClass="max-w-[440px]"
-      >
-        <form onSubmit={(e) => void handleSaveCapacity(e)} className="space-y-4">
-          <div>
-            <label htmlFor="class-capacity" className="block text-[13px] font-medium text-[#111111] mb-1.5">Student capacity</label>
-            <input
-              id="class-capacity"
-              type="number"
-              min={1}
-              max={500}
-              inputMode="numeric"
-              placeholder="No limit"
-              value={capacityText}
-              onChange={(e) => setCapacityText(e.target.value)}
-              aria-describedby="class-capacity-help"
-              aria-invalid={capacityError !== null}
-              className="w-full max-w-[200px] bg-white border border-[#DADADA] rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#111111]"
-            />
-            <p
-              id="class-capacity-help"
-              className={`mt-1.5 text-[11.5px] ${capacityError ? "text-[#9D4C38]" : "text-[#5A5A5A]"}`}
-            >
-              {capacityError ??
-                (capacityClass
-                  ? `Currently ${capacityClass.student_count} student${capacityClass.student_count === 1 ? "" : "s"} — the capacity can't go below that.`
-                  : "")}
-            </p>
-          </div>
-          <div className="flex justify-end gap-3 border-t border-[#F0F0F0] pt-4">
-            <button
-              type="button"
-              onClick={() => setCapacityClass(null)}
-              className="rounded-md border border-[#DADADA] bg-white px-4 py-2 text-[13px] font-semibold text-[#111111] transition-colors hover:bg-[#F7F7F7]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={capacitySaving || capacityError !== null}
-              className="rounded-md border border-[#CFCFCF] bg-white px-4 py-2 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
-            >
-              {capacitySaving ? "Saving…" : "Save capacity"}
-            </button>
-          </div>
-        </form>
       </Modal>
       <ConfirmDialog
         isOpen={pendingArchive !== null}

@@ -34,6 +34,7 @@ export type AdminUser = {
   class_id: string | null;
   class_code: string | null;
   student_code: string | null;
+  staff_code?: string | null;
   is_active: boolean;
 };
 export type ImportRow = {
@@ -46,6 +47,7 @@ export type ImportRow = {
   status: "imported" | "skipped" | "failed";
   message: string;
   student_code: string | null;
+  staff_code?: string | null;
 };
 export type ImportBatch = {
   id: number;
@@ -154,6 +156,7 @@ export const adminApi = {
     semester?: string;
     academic_year?: string;
     credits?: number;
+    capacity?: number;
     prerequisite_class_ids?: string[];
   }) =>
     apiFetch<ClassSection>("/api/admin/classes", {
@@ -201,10 +204,24 @@ export const adminApi = {
 
   // Accounts (AC-03, AC-11, AC-12)
   users: () => apiFetch<AdminUser[]>("/api/admin/users"),
-  createUser: (username: string, email: string, role: string, class_code?: string) =>
+  createUser: (
+    username: string,
+    email: string,
+    role: string,
+    class_code?: string,
+    student_code?: string,
+    staff_code?: string,
+  ) =>
     apiFetch<AdminUser>("/api/admin/users", {
       method: "POST",
-      body: JSON.stringify({ username, email, role, class_code: class_code || null }),
+      body: JSON.stringify({
+        username,
+        email,
+        role,
+        class_code: class_code || null,
+        student_code: student_code || null,
+        staff_code: staff_code || null,
+      }),
     }),
   setActive: (userId: string | number, is_active: boolean) =>
     apiFetch<AdminUser>(`/api/admin/users/${userId}/active`, {
