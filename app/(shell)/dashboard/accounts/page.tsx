@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { AppSelect } from "@/components/ui/app-select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { IMPORTABLE_ROLES } from "@/components/ui/nav-config";
@@ -139,32 +140,28 @@ export default function AccountsPage() {
             </label>
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               Role
-              <select
-                className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              <AppSelect
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                {IMPORTABLE_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r === "teaching_assistant" ? "teaching assistant" : r}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setRole}
+                aria-label="Role"
+                options={IMPORTABLE_ROLES.map((r) => ({
+                  value: r,
+                  label: r === "teaching_assistant" ? "teaching assistant" : r,
+                }))}
+              />
             </label>
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               Class
-              <select
-                className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              <AppSelect
                 value={classCode}
-                onChange={(e) => setClassCode(e.target.value)}
-              >
-                <option value="">Select a class…</option>
-                {classes.map((k) => (
-                  <option key={k.id} value={k.code}>
-                    {k.code}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setClassCode}
+                aria-label="Class"
+                options={[
+                  { value: "", label: "Select a class." },
+                  ...classes.map((k) => ({ value: k.code, label: k.code })),
+                ]}
+                contentClassName="min-w-[220px]"
+              />
             </label>
             <div className="sm:col-span-2">
               <Button type="submit">Create &amp; email credentials</Button>

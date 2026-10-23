@@ -10,6 +10,7 @@ import {
 } from "@/lib/admin-api";
 import { paginate } from "@/lib/pagination";
 import { AdminPageShell, ADMIN_CARD } from "@/components/shared/AdminPageShell";
+import { AppSelect } from "@/components/ui/app-select";
 
 const PAGE_SIZE = 10;
 
@@ -280,20 +281,22 @@ export default function AdminHistoryPage() {
                 <h2 className="text-[15px] font-bold text-[#111111]">Email history</h2>
                 <p className="text-[12.5px] text-[#5A5A5A]">Latest 200 delivery attempts. Sending and queue processing live on Email.</p>
               </div>
-              <select
+              <AppSelect
                 value={emailFilter}
-                onChange={(e) => {
-                  setEmailFilter(e.target.value);
+                onValueChange={(value) => {
+                  setEmailFilter(value);
                   setEmailPage(1);
                 }}
                 aria-label="Filter email history by status"
-                className="bg-white border border-[#DADADA] rounded-md px-3 py-1.5 text-[12.5px] outline-none focus:border-[#111111]"
-              >
-                <option value="">All statuses</option>
-                <option value="pending">Pending</option>
-                <option value="sent">Sent</option>
-                <option value="failed">Failed</option>
-              </select>
+                options={[
+                  { value: "", label: "All statuses" },
+                  { value: "pending", label: "Pending" },
+                  { value: "sent", label: "Sent" },
+                  { value: "failed", label: "Failed" },
+                ]}
+                size="sm"
+                triggerClassName="w-auto"
+              />
             </div>
             <table className="w-full text-left border-collapse">
               <thead>

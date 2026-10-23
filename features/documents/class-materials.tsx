@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Upload, X } from "lucide-react";
+import { AppSelect } from "@/components/ui/app-select";
 import { AUTH_TOKEN_KEY } from "@/components/ui/nav-config";
 import {
   Dialog,
@@ -416,33 +417,33 @@ export function ClassMaterials({
               className="w-52 rounded border border-[#DADADA] bg-white py-1.5 pl-2.5 pr-3 text-[12.5px] text-[#111111] outline-none focus:border-[#111111]"
             />
           </div>
-          <select
+          <AppSelect
             value={filters.fileType}
-            onChange={(e) => handleFiltersChange({ ...filters, fileType: e.target.value })}
+            onValueChange={(fileType) => handleFiltersChange({ ...filters, fileType })}
             aria-label="Filter by file type"
-            className="rounded border border-[#DADADA] bg-white px-2.5 py-1.5 text-[12.5px] text-[#111111] outline-none focus:border-[#111111]"
-          >
-            <option value="all">All types</option>
-            {ACCEPTED_TYPES.map((t) => (
-              <option key={t.extension} value={t.extension}>
-                {t.extension}
-              </option>
-            ))}
-          </select>
-          <select
+            options={[
+              { value: "all", label: "All types" },
+              ...ACCEPTED_TYPES.map((t) => ({ value: t.extension, label: t.extension })),
+            ]}
+            size="sm"
+            triggerClassName="w-auto"
+          />
+          <AppSelect
             value={filters.status}
-            onChange={(e) => handleFiltersChange({ ...filters, status: e.target.value })}
+            onValueChange={(status) => handleFiltersChange({ ...filters, status })}
             aria-label="Filter by status"
-            className="rounded border border-[#DADADA] bg-white px-2.5 py-1.5 text-[12.5px] text-[#111111] outline-none focus:border-[#111111]"
-          >
-            <option value="all">All statuses</option>
-            <option value="pending">Pending approval</option>
-            <option value="processing">Processing</option>
-            <option value="indexed">Indexed</option>
-            <option value="rejected">Rejected</option>
-            <option value="failed">Failed</option>
-            <option value="replaced">Replaced</option>
-          </select>
+            options={[
+              { value: "all", label: "All statuses" },
+              { value: "pending", label: "Pending approval" },
+              { value: "processing", label: "Processing" },
+              { value: "indexed", label: "Indexed" },
+              { value: "rejected", label: "Rejected" },
+              { value: "failed", label: "Failed" },
+              { value: "replaced", label: "Replaced" },
+            ]}
+            size="sm"
+            triggerClassName="w-auto"
+          />
           <button
             type="button"
             onClick={() => setUploadOpen((open) => !open)}

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -222,17 +223,19 @@ export default function EmailPage() {
               <Button variant="outline" onClick={() => void processNow()} disabled={processing}>
                 {processing ? "Processing…" : "Process queue now"}
               </Button>
-              <select
-                className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              <AppSelect
                 value={queueFilter}
-                onChange={(e) => setQueueFilter(e.target.value)}
+                onValueChange={setQueueFilter}
                 aria-label="Filter queue by status"
-              >
-                <option value="">All statuses</option>
-                <option value="pending">Pending</option>
-                <option value="sent">Sent</option>
-                <option value="failed">Failed</option>
-              </select>
+                options={[
+                  { value: "", label: "All statuses" },
+                  { value: "pending", label: "Pending" },
+                  { value: "sent", label: "Sent" },
+                  { value: "failed", label: "Failed" },
+                ]}
+                size="sm"
+                triggerClassName="w-auto"
+              />
             </div>
             <Table>
               <TableHeader>
