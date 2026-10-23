@@ -99,6 +99,22 @@ export type ClassDocument = {
   created_at: string;
 };
 
+export type SyllabusUnit = {
+  id: string;
+  unit_number: number;
+  unit_title: string;
+  description: string | null;
+  content: string;
+};
+
+export type ClassSyllabusRoadmap = {
+  class_id: string;
+  document_id: string | null;
+  file_name: string | null;
+  topic_outline: string | null;
+  units: SyllabusUnit[];
+};
+
 export type CatalogClass = StudentClass & {
   my_status: "active" | "pending" | "none";
   // Prerequisites the caller has not passed yet; empty means unlocked.
@@ -153,6 +169,8 @@ export const studentApi = {
       body: JSON.stringify({ result }),
     }),
   documents: (id: string) => studentFetch<ClassDocument[]>(`/api/student/classes/${id}/documents`),
+  syllabusRoadmap: (classId: string) =>
+    studentFetch<ClassSyllabusRoadmap>(`/api/student/classes/${classId}/syllabus`),
   // Enrollment requests: browse the catalog, request to join, TA approves.
   catalog: () => studentFetch<CatalogClass[]>("/api/student/catalog"),
   requestJoin: (id: string) =>
