@@ -81,6 +81,13 @@ export interface CreateSessionRequest {
 }
 
 /**
+ * Request payload to rename an owned chat session `PATCH /api/history/{id}`.
+ */
+export interface RenameSessionRequest {
+  title: string;
+}
+
+/**
  * Request payload to append a message to an existing session `POST /api/history/sessions/{id}/messages`.
  */
 export interface AppendMessageRequest {

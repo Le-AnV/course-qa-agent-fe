@@ -3,6 +3,7 @@
 import * as React from 'react';
 import {
   MessageSquare,
+  Pencil,
   Trash2,
   Plus,
   RefreshCw,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -24,11 +26,16 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { getSessions, deleteSession, getHistoryErrorMessage } from './api';
+import {
+  getSessions,
+  deleteSession,
+  renameSession,
+  getHistoryErrorMessage,
+} from './api';
 import type { ChatSessionItem } from './types';
 
 /**
- * Format ISO 8601 date string to friendly relative time in Vietnamese.
+ * Format ISO 8601 date string to friendly relative time in English.
  */
 function formatRelativeTime(isoString: string): string {
   try {
@@ -36,15 +43,15 @@ function formatRelativeTime(isoString: string): string {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-    if (diffInSeconds < 60) return 'Vừa xong';
+    if (diffInSeconds < 60) return 'Just now';
     const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} giờ trước`;
+    if (diffInHours < 24) return `${diffInHours} hr ago`;
     const diffInDays = Math.floor(diffInSeconds / 86400);
-    if (diffInDays === 1) return 'Hôm qua';
-    if (diffInDays < 7) return `${diffInDays} ngày trước`;
-    return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    if (diffInDays === 1) return 'Yesterday';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    return date.toLocaleDateString('en-US', { day: '2-digit', month: '2-digit' });
   } catch {
     return '';
   }
@@ -75,6 +82,11 @@ export function ChatHistorySidebar({
   // State for delete confirmation modal
   const [sessionToDelete, setSessionToDelete] = React.useState<ChatSessionItem | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+
+  // State for rename dialog
+  const [sessionToRename, setSessionToRename] = React.useState<ChatSessionItem | null>(null);
+  const [renameTitle, setRenameTitle] = React.useState('');
+  const [isRenaming, setIsRenaming] = React.useState(false);
 
   // Fetch past chat sessions for the current class
   const loadSessions = React.useCallback(async () => {
@@ -120,22 +132,48 @@ export function ChatHistorySidebar({
     try {
       await deleteSession(targetId);
       setSessions((prev) => prev.filter((s) => s.id !== targetId));
-      toast.success('Đã xóa cuộc trò chuyện thành công');
+      toast.success('Conversation deleted.');
       if (activeSessionId === targetId) {
         onNewChat?.();
       }
       setSessionToDelete(null);
     } catch (err) {
-      toast.error(`Xóa thất bại: ${getHistoryErrorMessage(err)}`);
+      toast.error(`Delete failed: ${getHistoryErrorMessage(err)}`);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const openRenameDialog = (session: ChatSessionItem) => {
+    setSessionToRename(session);
+    setRenameTitle(session.title ?? '');
+  };
+
+  const handleConfirmRename = async () => {
+    if (!sessionToRename || isRenaming) return;
+
+    const title = renameTitle.trim();
+    if (!title || title === sessionToRename.title) return;
+
+    setIsRenaming(true);
+    try {
+      const updated = await renameSession(sessionToRename.id, title);
+      setSessions((prev) =>
+        prev.map((session) => (session.id === updated.id ? updated : session))
+      );
+      setSessionToRename(null);
+      toast.success('Conversation renamed.');
+    } catch (err) {
+      toast.error(`Rename failed: ${getHistoryErrorMessage(err)}`);
+    } finally {
+      setIsRenaming(false);
     }
   };
 
   return (
     <>
       <aside
-        aria-label="Lịch sử trò chuyện"
+        aria-label="Chat history"
         className={cn(
           'flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-900',
           isCollapsed ? 'w-16' : 'w-64',
@@ -145,15 +183,15 @@ export function ChatHistorySidebar({
         {/* Expanded title bar or the compact icon rail. */}
         {isCollapsed ? (
           <nav
-            aria-label="Điều hướng lịch sử trò chuyện"
+            aria-label="Chat history navigation"
             className="flex shrink-0 flex-col items-center gap-2 border-b border-[#BFDBFE] bg-[#EFF6FF] px-1 py-3"
           >
             {onNewChat && (
               <button
                 type="button"
                 onClick={onNewChat}
-                title="Cuộc trò chuyện mới"
-                aria-label="Cuộc trò chuyện mới"
+                title="New chat"
+                aria-label="New chat"
                 className="rounded-lg p-2 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
               >
                 <Plus className="h-4 w-4" />
@@ -163,7 +201,7 @@ export function ChatHistorySidebar({
               type="button"
               onClick={() => setIsCollapsed(false)}
               title="Recent chats"
-              aria-label="Mở danh sách chat gần đây"
+              aria-label="Open recent chats"
               className="rounded-lg p-2 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
             >
               <MessageSquare className="h-4 w-4" />
@@ -171,8 +209,8 @@ export function ChatHistorySidebar({
             <button
               type="button"
               disabled
-              title="Pinned chats chưa được hỗ trợ"
-              aria-label="Pinned chats chưa được hỗ trợ"
+              title="Pinned chats are not supported yet"
+              aria-label="Pinned chats are not supported yet"
               className="cursor-not-allowed rounded-lg p-2 text-slate-300"
             >
               <Pin className="h-4 w-4" />
@@ -180,8 +218,8 @@ export function ChatHistorySidebar({
             <button
               type="button"
               disabled
-              title="Tìm kiếm chat chưa được hỗ trợ"
-              aria-label="Tìm kiếm chat chưa được hỗ trợ"
+              title="Chat search is not supported yet"
+              aria-label="Chat search is not supported yet"
               className="cursor-not-allowed rounded-lg p-2 text-slate-300"
             >
               <Search className="h-4 w-4" />
@@ -195,8 +233,8 @@ export function ChatHistorySidebar({
                 <button
                   type="button"
                   onClick={onNewChat}
-                  title="Bắt đầu cuộc trò chuyện mới"
-                  aria-label="Bắt đầu cuộc trò chuyện mới"
+                  title="Start a new chat"
+                  aria-label="Start a new chat"
                   className="rounded-lg p-1.5 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
                 >
                   <Plus className="h-4 w-4" />
@@ -205,8 +243,8 @@ export function ChatHistorySidebar({
               <button
                 type="button"
                 onClick={() => setIsCollapsed(true)}
-                title="Thu gọn lịch sử chat"
-                aria-label="Thu gọn lịch sử chat"
+                title="Collapse chat history"
+                aria-label="Collapse chat history"
                 aria-expanded="true"
                 className="rounded-lg p-1.5 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
               >
@@ -237,7 +275,7 @@ export function ChatHistorySidebar({
                 onClick={loadSessions}
                 className="mt-1 text-xs px-2.5 py-1 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors flex items-center gap-1.5"
               >
-                <RefreshCw className="h-3 w-3" /> Thử lại
+                <RefreshCw className="h-3 w-3" /> Retry
               </button>
             </div>
           )}
@@ -246,7 +284,7 @@ export function ChatHistorySidebar({
           {!isLoading && !error && sessions.length === 0 && !isCollapsed && (
             <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400 dark:text-slate-500 gap-2 my-auto">
               <MessageSquare className="h-8 w-8 stroke-1 opacity-40" />
-              <p className="text-xs">Chưa có cuộc trò chuyện nào</p>
+              <p className="text-xs">No conversations yet</p>
             </div>
           )}
 
@@ -277,32 +315,60 @@ export function ChatHistorySidebar({
                         )}
                       />
                       <span className="truncate text-xs">
-                        {session.title || 'Cuộc trò chuyện'}
+                        {session.title || 'Conversation'}
                       </span>
                     </div>
 
-                    {/* Delete Trigger Button (Opens Confirmation Modal) */}
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSessionToDelete(session);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
+                    {/* Session actions stay beside each other and never select the row. */}
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openRenameDialog(session);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openRenameDialog(session);
+                          }
+                        }}
+                        title="Rename conversation"
+                        aria-label={`Rename ${session.title || 'conversation'}`}
+                        className={cn(
+                          'p-1 rounded text-slate-400 hover:text-[#2563EB] hover:bg-slate-200 dark:hover:bg-slate-700 transition-opacity',
+                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        )}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </div>
+
+                      {/* Delete Trigger Button (Opens Confirmation Modal) */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
                           e.stopPropagation();
                           setSessionToDelete(session);
-                        }
-                      }}
-                      title="Xóa cuộc trò chuyện"
-                      className={cn(
-                        'p-1 rounded text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-opacity',
-                        isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                      )}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSessionToDelete(session);
+                          }
+                        }}
+                        title="Delete conversation"
+                        aria-label={`Delete ${session.title || 'conversation'}`}
+                        className={cn(
+                          'p-1 rounded text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-opacity',
+                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        )}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </div>
                     </div>
                   </div>
 
@@ -327,13 +393,13 @@ export function ChatHistorySidebar({
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa cuộc trò chuyện</DialogTitle>
+            <DialogTitle>Delete conversation</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa cuộc trò chuyện{' '}
+              Are you sure you want to delete{' '}
               <span className="font-semibold text-slate-900 dark:text-slate-100">
-                &ldquo;{sessionToDelete?.title || 'Cuộc trò chuyện'}&rdquo;
+                &ldquo;{sessionToDelete?.title || 'Conversation'}&rdquo;
               </span>
-              ? Hành động này sẽ xóa toàn bộ nội dung tin nhắn và không thể hoàn tác.
+              ? This removes all messages and cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
@@ -343,7 +409,7 @@ export function ChatHistorySidebar({
               disabled={isDeleting}
               onClick={() => setSessionToDelete(null)}
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               type="button"
@@ -353,9 +419,84 @@ export function ChatHistorySidebar({
               className="gap-2"
             >
               {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Xác nhận xóa
+              Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename dialog: keep the title editable without touching the transcript. */}
+      <Dialog
+        open={Boolean(sessionToRename)}
+        onOpenChange={(open) => {
+          if (!open && !isRenaming) {
+            setSessionToRename(null);
+            setRenameTitle('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleConfirmRename();
+            }}
+            className="space-y-4"
+          >
+            <DialogHeader>
+              <DialogTitle>Rename conversation</DialogTitle>
+              <DialogDescription>
+                Give this conversation a memorable name. The message content stays unchanged.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="rename-session-title"
+                className="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                Conversation title
+              </label>
+              <Input
+                id="rename-session-title"
+                value={renameTitle}
+                onChange={(event) => setRenameTitle(event.target.value)}
+                maxLength={255}
+                autoFocus
+                disabled={isRenaming}
+                placeholder="e.g. Chapter 3 review"
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {renameTitle.trim().length}/255 characters
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isRenaming}
+                onClick={() => {
+                  setSessionToRename(null);
+                  setRenameTitle('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  isRenaming ||
+                  !renameTitle.trim() ||
+                  renameTitle.trim() === (sessionToRename?.title ?? '')
+                }
+                className="gap-2"
+              >
+                {isRenaming && <Loader2 className="h-4 w-4 animate-spin" />}
+                Save name
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>

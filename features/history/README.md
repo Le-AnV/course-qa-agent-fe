@@ -9,3 +9,8 @@
 
 **Planned files:** `history-sidebar.tsx`, `conversation-item.tsx`, `history-search.tsx`.
 Route: `/chat` (sidebar) — consumed by `features/chat`.
+
+**Session title:** a new session is auto-titled from the first 50 characters of
+its first question. The pencil button beside Delete opens a rename dialog and
+calls `PATCH /api/history/{session_id}`; renaming does not reorder the sidebar
+or change the transcript.
