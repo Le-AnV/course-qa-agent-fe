@@ -10,7 +10,7 @@ describe("createSseParser", () => {
     parser.push(
       'event: token\ndata: {"text":"Hello "}\n\n' +
         'event: citation\ndata: {"index":1,"kind":"curriculum","title":"lesson.pdf","url":null,"snippet":"Evidence","document_id":"doc-1","page":2}\n\n' +
-        'event: done\ndata: {"source":"curriculum","used_web_search":false,"threshold":0.8,"top_score":0.91}\n\n',
+        'event: done\ndata: {"source":"curriculum","used_web_search":false,"threshold":0.8,"top_score":0.91,"session_id":"session-1","user_message_id":"user-1","assistant_message_id":"assistant-1"}\n\n',
     );
 
     expect(events).toEqual([
@@ -33,6 +33,31 @@ describe("createSseParser", () => {
         usedWebSearch: false,
         threshold: 0.8,
         topScore: 0.91,
+        sessionId: "session-1",
+        userMessageId: "user-1",
+        assistantMessageId: "assistant-1",
+      },
+    ]);
+  });
+
+  it("fills missing conversation ids on the done event with null", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push(
+      'event: done\ndata: {"source":"none","used_web_search":false,"threshold":0.8,"top_score":null}\n\n',
+    );
+
+    expect(events).toEqual([
+      {
+        type: "done",
+        source: "none",
+        usedWebSearch: false,
+        threshold: 0.8,
+        topScore: null,
+        sessionId: null,
+        userMessageId: null,
+        assistantMessageId: null,
       },
     ]);
   });

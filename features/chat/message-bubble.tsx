@@ -2,6 +2,7 @@ import * as React from 'react';
 import { ThinkingTrace } from './thinking-trace';
 import { ChatMarkdown } from './chat-markdown';
 import { CitationChip } from '@/features/citations/citation-chip';
+import { citationKey } from '@/lib/citations';
 import type { ChatCitation } from '@/lib/sse';
 
 interface MessageBubbleProps {
@@ -70,8 +71,11 @@ export function MessageBubble({
         {!isUser && !isLoading && !isStreaming && citations.length > 0 && (
           <div className="mt-3 pt-3 border-t border-[#F0F0F0]">
             <div className="flex flex-wrap gap-2" aria-label="Sources">
-              {citations.map((citation) => (
-                <CitationChip key={`${citation.kind}-${citation.index}`} citation={citation} />
+              {citations.map((citation, position) => (
+                <CitationChip
+                  key={`${citationKey(citation)}-${position}`}
+                  citation={citation}
+                />
               ))}
             </div>
           </div>

@@ -20,8 +20,13 @@ export type ChatStreamEvent =
       usedWebSearch: boolean;
       threshold: number;
       topScore: number | null;
+      sessionId: string | null;
+      userMessageId: string | null;
+      assistantMessageId: string | null;
     }
   | { type: "error"; message: string };
+
+export type ChatDoneEvent = Extract<ChatStreamEvent, { type: "done" }>;
 
 type EventHandler = (event: ChatStreamEvent) => void;
 
@@ -88,6 +93,13 @@ function decodeEvent(eventName: string, rawData: string): ChatStreamEvent | null
       usedWebSearch: data.used_web_search,
       threshold: data.threshold,
       topScore: data.top_score,
+      sessionId: typeof data.session_id === "string" ? data.session_id : null,
+      userMessageId:
+        typeof data.user_message_id === "string" ? data.user_message_id : null,
+      assistantMessageId:
+        typeof data.assistant_message_id === "string"
+          ? data.assistant_message_id
+          : null,
     };
   }
 
