@@ -37,8 +37,6 @@ export default function AdminSettingsPage() {
 
   const load = React.useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
       const [s, c, r, cls] = await Promise.all([
         adminApi.adminSettings(),
         adminApi.emailConfig(),
@@ -67,6 +65,7 @@ export default function AdminSettingsPage() {
   }, []);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
@@ -187,7 +186,7 @@ export default function AdminSettingsPage() {
       {error && (
         <div className="bg-white border border-[#DFB2A6] rounded-xl p-4 text-[#9D4C38] text-[13px]">
           {error}
-          <button onClick={() => void load()} className="ml-2 underline">Retry</button>
+          <button onClick={() => { setLoading(true); setError(null); void load(); }} className="ml-2 underline">Retry</button>
         </div>
       )}
       {notice && <div className="bg-[#F7F7F7] border border-[#CFCFCF] rounded-xl p-4 text-[#111111] text-[13px]">{notice}</div>}
