@@ -3,6 +3,7 @@
 import * as React from 'react';
 import {
   MessageSquare,
+  Pencil,
   Trash2,
   Plus,
   RefreshCw,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +26,12 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { getSessions, deleteSession, getHistoryErrorMessage } from './api';
+import {
+  getSessions,
+  deleteSession,
+  renameSession,
+  getHistoryErrorMessage,
+} from './api';
 import type { ChatSessionItem } from './types';
 
 /**
@@ -75,6 +82,11 @@ export function ChatHistorySidebar({
   // State for delete confirmation modal
   const [sessionToDelete, setSessionToDelete] = React.useState<ChatSessionItem | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+
+  // State for rename dialog
+  const [sessionToRename, setSessionToRename] = React.useState<ChatSessionItem | null>(null);
+  const [renameTitle, setRenameTitle] = React.useState('');
+  const [isRenaming, setIsRenaming] = React.useState(false);
 
   // Fetch past chat sessions for the current class
   const loadSessions = React.useCallback(async () => {
@@ -129,6 +141,32 @@ export function ChatHistorySidebar({
       toast.error(`Delete failed: ${getHistoryErrorMessage(err)}`);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const openRenameDialog = (session: ChatSessionItem) => {
+    setSessionToRename(session);
+    setRenameTitle(session.title ?? '');
+  };
+
+  const handleConfirmRename = async () => {
+    if (!sessionToRename || isRenaming) return;
+
+    const title = renameTitle.trim();
+    if (!title || title === sessionToRename.title) return;
+
+    setIsRenaming(true);
+    try {
+      const updated = await renameSession(sessionToRename.id, title);
+      setSessions((prev) =>
+        prev.map((session) => (session.id === updated.id ? updated : session))
+      );
+      setSessionToRename(null);
+      toast.success('Conversation renamed.');
+    } catch (err) {
+      toast.error(`Rename failed: ${getHistoryErrorMessage(err)}`);
+    } finally {
+      setIsRenaming(false);
     }
   };
 
@@ -281,29 +319,56 @@ export function ChatHistorySidebar({
                       </span>
                     </div>
 
-                    {/* Delete Trigger Button (Opens Confirmation Modal) */}
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSessionToDelete(session);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
+                    {/* Session actions stay beside each other and never select the row. */}
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openRenameDialog(session);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openRenameDialog(session);
+                          }
+                        }}
+                        title="Rename conversation"
+                        aria-label={`Rename ${session.title || 'conversation'}`}
+                        className={cn(
+                          'p-1 rounded text-slate-400 hover:text-[#2563EB] hover:bg-slate-200 dark:hover:bg-slate-700 transition-opacity',
+                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        )}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </div>
+
+                      {/* Delete Trigger Button (Opens Confirmation Modal) */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
                           e.stopPropagation();
                           setSessionToDelete(session);
-                        }
-                      }}
-                      title="Delete conversation"
-                      aria-label={`Delete ${session.title || 'conversation'}`}
-                      className={cn(
-                        'p-1 rounded text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-opacity',
-                        isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                      )}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSessionToDelete(session);
+                          }
+                        }}
+                        title="Delete conversation"
+                        aria-label={`Delete ${session.title || 'conversation'}`}
+                        className={cn(
+                          'p-1 rounded text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-opacity',
+                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        )}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </div>
                     </div>
                   </div>
 
@@ -357,6 +422,81 @@ export function ChatHistorySidebar({
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename dialog: keep the title editable without touching the transcript. */}
+      <Dialog
+        open={Boolean(sessionToRename)}
+        onOpenChange={(open) => {
+          if (!open && !isRenaming) {
+            setSessionToRename(null);
+            setRenameTitle('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleConfirmRename();
+            }}
+            className="space-y-4"
+          >
+            <DialogHeader>
+              <DialogTitle>Rename conversation</DialogTitle>
+              <DialogDescription>
+                Give this conversation a memorable name. The message content stays unchanged.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="rename-session-title"
+                className="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                Conversation title
+              </label>
+              <Input
+                id="rename-session-title"
+                value={renameTitle}
+                onChange={(event) => setRenameTitle(event.target.value)}
+                maxLength={255}
+                autoFocus
+                disabled={isRenaming}
+                placeholder="e.g. Chapter 3 review"
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {renameTitle.trim().length}/255 characters
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isRenaming}
+                onClick={() => {
+                  setSessionToRename(null);
+                  setRenameTitle('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  isRenaming ||
+                  !renameTitle.trim() ||
+                  renameTitle.trim() === (sessionToRename?.title ?? '')
+                }
+                className="gap-2"
+              >
+                {isRenaming && <Loader2 className="h-4 w-4 animate-spin" />}
+                Save name
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>

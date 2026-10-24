@@ -13,6 +13,7 @@ import type {
   ChatSessionListResponse,
   CreateSessionRequest,
   DeleteSessionResponse,
+  RenameSessionRequest,
 } from "./types";
 
 /**
@@ -72,6 +73,24 @@ export async function createSession(
 }
 
 /**
+ * Rename an owned chat session. The backend keeps the sidebar activity order.
+ *
+ * @param sessionId UUID of the chat session
+ * @param title New conversation title
+ * @returns Updated session summary
+ */
+export async function renameSession(
+  sessionId: string,
+  title: string
+): Promise<ChatSessionItem> {
+  const payload: RenameSessionRequest = { title };
+  return await apiFetch<ChatSessionItem>(`/api/history/${encodeURIComponent(sessionId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * Append a single message to an existing chat session (AC-01, AC-02).
  *
  * @param sessionId UUID of the chat session
@@ -110,6 +129,7 @@ export const historyApi = {
   getSessions,
   getSessionDetail,
   createSession,
+  renameSession,
   appendMessage,
   deleteSession,
   getErrorMessage: getHistoryErrorMessage,
