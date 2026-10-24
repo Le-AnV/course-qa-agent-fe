@@ -108,6 +108,17 @@ export type RetrievalConfig = {
   default_threshold: number;
   is_default: boolean;
   updated_at: string | null;
+  unrelated_threshold: number;
+  default_unrelated_threshold: number;
+};
+export type RetrievalTestResult = {
+  question: string;
+  top_score: number | null;
+  class_id: string | null;
+  class_name: string | null;
+  matched_document: string | null;
+  matched_snippet: string | null;
+  source: string;
 };
 export type HealthComponent = {
   name: string;
@@ -290,10 +301,15 @@ export const adminApi = {
   testLlm: () => apiFetch<ConnectionTest>("/api/admin/llm/test-connection", { method: "POST" }),
   // AI-65: KB-vs-Internet routing threshold (T35, admin-configurable).
   retrievalConfig: () => apiFetch<RetrievalConfig>("/api/admin/retrieval-config"),
-  updateRetrievalConfig: (threshold: number) =>
+  updateRetrievalConfig: (threshold: number, unrelated_threshold?: number) =>
     apiFetch<RetrievalConfig>("/api/admin/retrieval-config", {
       method: "PATCH",
-      body: JSON.stringify({ threshold }),
+      body: JSON.stringify({ threshold, unrelated_threshold }),
+    }),
+  testRetrievalQuery: (question: string, class_id?: string) =>
+    apiFetch<RetrievalTestResult>("/api/admin/retrieval-config/test", {
+      method: "POST",
+      body: JSON.stringify({ question, class_id }),
     }),
   // AI-109 system monitoring: live DB/Qdrant/LLM component health.
   systemHealth: () => apiFetch<SystemHealth>("/api/admin/system/health"),
