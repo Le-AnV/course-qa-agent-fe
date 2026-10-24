@@ -22,6 +22,20 @@ export interface ChatSessionItem {
 export type ChatSessionSummary = ChatSessionItem;
 
 /**
+ * Citation snapshot stored with an assistant answer (AI-63 AC-03).
+ * Backend JSON uses snake_case; ChatWindow maps it to the SSE camelCase shape.
+ */
+export interface ChatMessageCitation {
+  index: number;
+  kind: string;
+  title: string;
+  url: string | null;
+  snippet: string;
+  document_id: string | null;
+  page: number | null;
+}
+
+/**
  * Individual chat message in a conversation session (AC-01, AC-02).
  */
 export interface ChatMessageItem {
@@ -30,6 +44,7 @@ export interface ChatMessageItem {
   role: ChatRole;
   content: string;
   used_web_search: boolean;
+  citations?: ChatMessageCitation[] | null;
   created_at: string; // ISO 8601 string
 }
 
@@ -72,6 +87,7 @@ export interface AppendMessageRequest {
   role: ChatRole;
   content: string;
   used_web_search?: boolean;
+  citations?: ChatMessageCitation[];
 }
 
 /**

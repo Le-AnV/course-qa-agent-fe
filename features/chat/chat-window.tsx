@@ -5,7 +5,8 @@ import { MessageBubble } from './message-bubble';
 import { ChatInput } from './chat-input';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { getSessionDetail } from '@/features/history/api';
-import type { ChatMessageItem } from '@/features/history/types';
+import { mergeCitation, uniqueCitations } from '@/lib/citations';
+import type { ChatMessageCitation, ChatMessageItem } from '@/features/history/types';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ChatCitation, ChatProgressStage } from '@/lib/sse';
@@ -24,15 +25,48 @@ type Message = {
   isError?: boolean;
 };
 
+/**
+ * One in-flight answer. It is intentionally independent from the currently
+ * selected conversation so switching sessions does not abort or lose it.
+ */
+type StreamContext = {
+  /** Session key used while the answer is produced; NEW_CHAT_KEY until created. */
+  key: string;
+  /** Real backend session id, null while the first turn is still being created. */
+  sessionId: string | null;
+  /** Transcript before the user message was appended. */
+  baseMessages: Message[];
+  userMessage: Message;
+  answer: Message;
+  completed: boolean;
+};
+
+const NEW_CHAT_KEY = '__new_chat__';
+
+/**
+ * Render-safe snapshot of the in-flight stream. The ref below stays the source
+ * of truth for stream callbacks; this state only mirrors what the current
+ * render needs so we never read a ref during render.
+ */
+type StreamSnapshot = {
+  key: string;
+  sessionId: string | null;
+  answerId: string;
+};
+
+function transcriptForContext(context: StreamContext): Message[] {
+  return [...context.baseMessages, context.userMessage, context.answer];
+}
+
 // Initialize chat state
 // History is fetched via getSessionDetail(activeSessionId) (Task AI-95)
 // History must be filtered by classId - each class has its own chat scope.
 const INITIAL_MESSAGES: Message[] = [
-  { 
-    id: 'welcome-msg', 
-    role: 'ai', 
-    content: "Hello! I am your course AI assistant. What can I help you with regarding today's lectures or assignments?" 
-  }
+  {
+    id: 'welcome-msg',
+    role: 'ai',
+    content: "Hello! I am your course AI assistant. What can I help you with regarding today's lectures or assignments?",
+  },
 ];
 
 // Suggested starter questions - prevents empty chat window for new users.
@@ -54,17 +88,41 @@ const THINKING_STEP_INDEX: Record<ChatProgressStage, number> = {
   drafting: 2,
 };
 
+function mapHistoryCitation(citation: ChatMessageCitation): ChatCitation {
+  return {
+    index: citation.index,
+    kind: citation.kind === 'internet' ? 'internet' : 'curriculum',
+    title: citation.title,
+    url: citation.url ?? null,
+    snippet: citation.snippet ?? '',
+    documentId: citation.document_id ?? null,
+    page: citation.page ?? null,
+  };
+}
+
 export function ChatWindow({
   classId,
   activeSessionId,
+  onTurnComplete,
+  onBackgroundTurnComplete,
+  onOpenSession,
+  onNewChat,
 }: {
   classId: string;
   activeSessionId?: string | null;
+  /** Called when the selected conversation's turn is persisted. */
+  onTurnComplete?: (sessionId: string) => void;
+  /** Called when a background turn finishes so the sidebar can refresh only. */
+  onBackgroundTurnComplete?: (sessionId: string) => void;
+  /** Lets the background-answer banner return to the conversation. */
+  onOpenSession?: (sessionId: string) => void;
+  /** Lets the banner return to a first-turn conversation that has no id yet. */
+  onNewChat?: () => void;
 }) {
   const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
   const [isTyping, setIsTyping] = React.useState(false); // Waiting state for the first chunk (to show typing indicator)
   const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
-  
+
   // Message ID counter (stable IDs, avoid calling impure fn during render).
   const msgIdRef = React.useRef(0);
   const nextMsgId = React.useCallback(() => {
@@ -72,11 +130,61 @@ export function ChatWindow({
     return `msg-${msgIdRef.current}`;
   }, []);
 
+  // The answer currently being produced, even if the user opens another chat.
+  const streamContextRef = React.useRef<StreamContext | null>(null);
+  // Render mirror of the ref above; keeps ref access out of the render phase.
+  const [streamSnapshot, setStreamSnapshot] = React.useState<StreamSnapshot | null>(null);
+
+  const currentKey = activeSessionId ?? NEW_CHAT_KEY;
+  // Stream callbacks are created at send time; this ref always tells them which
+  // conversation is actually on screen right now.
+  const currentKeyRef = React.useRef(currentKey);
+  React.useEffect(() => {
+    currentKeyRef.current = currentKey;
+  }, [currentKey]);
+
   // Anchor to reference the bottom of the message list
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
-  // Load chat session history when activeSessionId changes (AC-07)
+  // Keep the typing indicator tied to the conversation that owns the stream.
   React.useEffect(() => {
+    const timer = setTimeout(() => {
+      const context = streamContextRef.current;
+      const key = activeSessionId ?? NEW_CHAT_KEY;
+      setIsTyping(
+        Boolean(
+          context &&
+            context.key === key &&
+            !context.completed &&
+            !context.answer.content,
+        ),
+      );
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [activeSessionId]);
+
+  // Load chat session history when activeSessionId changes (AC-07).
+  // If the selected conversation owns the live answer, render that local
+  // transcript instead: refetching would temporarily hide the streamed text.
+  React.useEffect(() => {
+    const key = activeSessionId ?? NEW_CHAT_KEY;
+    const context = streamContextRef.current;
+
+    if (context && context.key === key) {
+      const timer = setTimeout(() => {
+        setMessages(transcriptForContext(context));
+        setIsLoadingHistory(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
+    // A finished background answer is already persisted. Drop the local copy;
+    // the next visit can load the canonical transcript from the server.
+    if (context?.completed) {
+      streamContextRef.current = null;
+      setStreamSnapshot(null);
+    }
+
     if (!activeSessionId) {
       const timer = setTimeout(() => {
         setMessages(INITIAL_MESSAGES);
@@ -99,6 +207,7 @@ export function ChatWindow({
           id: m.id,
           role: m.role.toLowerCase() === 'user' ? 'user' : 'ai',
           content: m.content,
+          citations: uniqueCitations((m.citations ?? []).map(mapHistoryCitation)),
         }));
 
         setMessages(loaded.length > 0 ? loaded : INITIAL_MESSAGES);
@@ -126,73 +235,136 @@ export function ChatWindow({
     }
   }, [messages, isTyping]);
 
+  const updateStreamAnswer = React.useCallback(
+    (updater: (message: Message) => Message) => {
+      const context = streamContextRef.current;
+      if (!context) return;
+
+      const nextAnswer = updater(context.answer);
+      context.answer = nextAnswer;
+
+      // Background answers only update their context; the visible transcript
+      // belongs to another conversation and must not be touched.
+      if (currentKeyRef.current !== context.key) return;
+
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === nextAnswer.id ? nextAnswer : message,
+        ),
+      );
+    },
+    [],
+  );
+
   // Step 4.2: Initialize Stream Hook
   const { sendMessage, isStreaming } = useChatStream({
     classId,
+    sessionId: activeSessionId,
     onProgress: (stage) => {
-      setMessages((prev) => {
-        const lastMsg = prev[prev.length - 1];
-        if (!lastMsg || lastMsg.role !== 'ai') return prev;
-        return [
-          ...prev.slice(0, -1),
-          { ...lastMsg, traceStep: THINKING_STEP_INDEX[stage] },
-        ];
-      });
+      updateStreamAnswer((message) => ({
+        ...message,
+        traceStep: THINKING_STEP_INDEX[stage],
+      }));
     },
     onChunk: (chunkText, elapsedMs) => {
       // Turn off typing indicator when first chunk arrives
       setIsTyping(false);
-      
-      // Append new text to the last AI message, and freeze how long the
+
+      // Append new text to the pending AI message, and freeze how long the
       // retrieval/thinking phase actually took (measured by the stream hook).
-      setMessages(prev => {
-        const lastMsg = prev[prev.length - 1];
-        if (!lastMsg || lastMsg.role !== 'ai') return prev;
-        
-        const updatedMsg: Message = {
-          ...lastMsg,
-          content: lastMsg.content + chunkText,
-          thinkingMs: lastMsg.thinkingMs ?? elapsedMs,
-        };
-        return [...prev.slice(0, -1), updatedMsg];
-      });
+      updateStreamAnswer((message) => ({
+        ...message,
+        content: message.content + chunkText,
+        thinkingMs: message.thinkingMs ?? elapsedMs,
+      }));
     },
     onCitation: (citation) => {
-      setMessages(prev => {
-        const lastMsg = prev[prev.length - 1];
-        if (!lastMsg || lastMsg.role !== 'ai') return prev;
-        return [
-          ...prev.slice(0, -1),
-          { ...lastMsg, citations: [...(lastMsg.citations ?? []), citation] },
-        ];
-      });
+      updateStreamAnswer((message) => ({
+        ...message,
+        citations: mergeCitation(message.citations, citation),
+      }));
     },
-    onDone: () => {
+    onDone: (event) => {
+      const context = streamContextRef.current;
+      if (!context) return;
+
+      const wasActive = currentKeyRef.current === context.key;
+
+      if (event.sessionId) {
+        context.sessionId = event.sessionId;
+        // A first turn starts on the temporary new-chat key; adopt the real id
+        // so returning to that conversation can find the local transcript.
+        if (context.key === NEW_CHAT_KEY) {
+          context.key = event.sessionId;
+        }
+      }
+
+      context.completed = true;
+      context.answer = { ...context.answer, traceCompleted: true };
       setIsTyping(false);
-      setMessages((prev) => {
-        const lastMsg = prev[prev.length - 1];
-        if (!lastMsg || lastMsg.role !== 'ai') return prev;
-        return [...prev.slice(0, -1), { ...lastMsg, traceCompleted: true }];
+      setStreamSnapshot({
+        key: context.key,
+        sessionId: context.sessionId,
+        answerId: context.answer.id,
       });
+
+      if (wasActive) {
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === context.answer.id ? context.answer : message,
+          ),
+        );
+
+        if (event.sessionId) {
+          // First turn: the parent selects the new session and the effect above
+          // renders the local transcript. Existing sessions only need a sidebar
+          // refresh, not a transcript reload.
+          onTurnComplete?.(event.sessionId);
+        }
+      } else if (event.sessionId) {
+        // Do not steal the user's current selection. The sidebar still needs to
+        // know that the background conversation has a new turn.
+        onBackgroundTurnComplete?.(event.sessionId);
+        toast.success('The answer finished in another conversation.');
+      }
     },
     onError: (error) => {
+      const context = streamContextRef.current;
+      if (!context) return;
+
+      const wasActive = currentKeyRef.current === context.key;
+      context.completed = true;
+      context.answer = {
+        ...context.answer,
+        content: error.message,
+        isError: true,
+      };
       setIsTyping(false);
-      setMessages(prev => {
-        const lastMsg = prev[prev.length - 1];
-        if (!lastMsg || lastMsg.role !== 'ai') return prev;
-        return [
-          ...prev.slice(0, -1),
-          { ...lastMsg, content: error.message, isError: true },
-        ];
+      setStreamSnapshot({
+        key: context.key,
+        sessionId: context.sessionId,
+        answerId: context.answer.id,
       });
-      toast.error(error.message);
-    }
+
+      if (wasActive) {
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === context.answer.id ? context.answer : message,
+          ),
+        );
+        toast.error(error.message);
+      } else {
+        toast.error(`The answer failed in another conversation: ${error.message}`);
+      }
+    },
   });
 
   // Handler for user sending a message
   const handleSend = (text: string) => {
     // 1. Append the user message and a pending AI message carrying the trace,
     //    so the reasoning steps are visible while the answer is produced.
+    const key = activeSessionId ?? NEW_CHAT_KEY;
+    const baseMessages = messages;
     const newUserMsg: Message = { id: nextMsgId(), role: 'user', content: text };
     const pendingAiMsg: Message = {
       id: nextMsgId(),
@@ -201,8 +373,24 @@ export function ChatWindow({
       trace: THINKING_STEPS,
       traceStep: 0,
     };
-    setMessages(prev => [...prev, newUserMsg, pendingAiMsg]);
-    
+
+    streamContextRef.current = {
+      key,
+      sessionId: activeSessionId ?? null,
+      baseMessages,
+      userMessage: newUserMsg,
+      answer: pendingAiMsg,
+      completed: false,
+    };
+    setStreamSnapshot({
+      key,
+      sessionId: activeSessionId ?? null,
+      answerId: pendingAiMsg.id,
+    });
+    currentKeyRef.current = key;
+
+    setMessages([...baseMessages, newUserMsg, pendingAiMsg]);
+
     // 2. Enable AI typing indicator
     setIsTyping(true);
 
@@ -210,11 +398,50 @@ export function ChatWindow({
     sendMessage(text);
   };
 
+  const backgroundStream =
+    streamSnapshot && isStreaming && streamSnapshot.key !== currentKey
+      ? streamSnapshot
+      : null;
+
+  // The banner is actionable only when the parent can actually navigate back.
+  const canReturnToBackground = backgroundStream
+    ? backgroundStream.sessionId
+      ? Boolean(onOpenSession)
+      : Boolean(onNewChat)
+    : false;
+
+  const activeStreamAnswerId =
+    streamSnapshot?.key === currentKey ? streamSnapshot.answerId : null;
+
   return (
     <div className="flex flex-col h-full relative bg-[#F7F7F7]">
       <header className="flex h-14 shrink-0 items-center border-b border-[#BFDBFE] bg-[#EFF6FF] px-3 md:px-4">
         <h1 className="truncate text-sm font-semibold text-[#1D4ED8]">Course AI Assistant</h1>
       </header>
+
+      {backgroundStream && (
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 md:px-4">
+          <span className="truncate">
+            AI is still answering in another conversation. You can go back to it.
+          </span>
+          {canReturnToBackground && (
+            <button
+              type="button"
+              onClick={() => {
+                if (backgroundStream.sessionId) {
+                  onOpenSession?.(backgroundStream.sessionId);
+                } else {
+                  onNewChat?.();
+                }
+              }}
+              className="shrink-0 rounded-md border border-amber-300 bg-white px-2 py-1 font-medium text-amber-900 transition-colors hover:bg-amber-100"
+            >
+              Back to chat
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top area: Message list container (auto-scrolls if long) */}
       <div className="flex-1 overflow-y-auto bg-[#F7F7F7] p-4 md:p-6 pb-8">
         <div className="w-full">
@@ -224,10 +451,9 @@ export function ChatWindow({
               <span className="text-xs">Loading conversation...</span>
             </div>
           ) : (
-            messages.map((msg, idx) => {
-              const isLastMessage = idx === messages.length - 1;
-              const isMessageStreaming = isStreaming && isLastMessage && msg.role === 'ai';
-              const isMessagePending = isTyping && isLastMessage && msg.role === 'ai';
+            messages.map((msg) => {
+              const isMessageStreaming = isStreaming && msg.id === activeStreamAnswerId;
+              const isMessagePending = isTyping && msg.id === activeStreamAnswerId;
 
               return (
                 <MessageBubble

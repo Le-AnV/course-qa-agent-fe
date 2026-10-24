@@ -1,6 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { AUTH_TOKEN_KEY } from '@/components/ui/nav-config';
-import { createSseParser, type ChatCitation, type ChatProgressStage } from '@/lib/sse';
+import {
+  createSseParser,
+  type ChatCitation,
+  type ChatDoneEvent,
+  type ChatProgressStage,
+} from '@/lib/sse';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const CLIENT_TIMEOUT_MS = 305_000;
@@ -8,17 +13,20 @@ const CLIENT_TIMEOUT_MS = 305_000;
 interface UseChatStreamProps {
   /** Class scope — BE dùng để lọc syllabus/tài liệu của đúng lớp, tránh lẫn dữ liệu giữa các lớp. */
   classId: string;
+  /** Active conversation. Omit for a new chat; the backend creates it on the first answer. */
+  sessionId?: string | null;
   /** elapsedMs: thời gian từ lúc gửi tới chunk này (đo trong hook, không đo ở render). */
   onChunk: (chunk: string, elapsedMs: number) => void;
   onProgress?: (stage: ChatProgressStage) => void;
   onCitation?: (citation: ChatCitation) => void;
-  onDone?: () => void;
+  onDone?: (event: ChatDoneEvent) => void;
   onFinish?: () => void;
   onError?: (error: Error) => void;
 }
 
 export function useChatStream({
   classId,
+  sessionId,
   onChunk,
   onProgress,
   onCitation,
@@ -27,12 +35,34 @@ export function useChatStream({
   onError,
 }: UseChatStreamProps) {
   const [isStreaming, setIsStreaming] = useState(false);
+  const controllerRef = useRef<AbortController | null>(null);
+
+  // Switching conversations keeps the answer running in the background: the
+  // chat window routes its callbacks back to the conversation that started it.
+  // Only a class change invalidates the request scope.
+  useEffect(() => {
+    controllerRef.current?.abort();
+  }, [classId]);
+
+  useEffect(() => {
+    return () => {
+      controllerRef.current?.abort();
+      controllerRef.current = null;
+    };
+  }, []);
 
   const sendMessage = useCallback(async (message: string) => {
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
     setIsStreaming(true);
     const startedAt = Date.now();
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, CLIENT_TIMEOUT_MS);
 
     try {
       const response = await fetch(`${API_URL}/api/chat`, {
@@ -41,7 +71,11 @@ export function useChatStream({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY) || ''}`
         },
-        body: JSON.stringify({ message, class_id: classId }),
+        body: JSON.stringify({
+          message,
+          class_id: classId,
+          session_id: sessionId ?? null,
+        }),
         signal: controller.signal,
       });
 
@@ -66,7 +100,7 @@ export function useChatStream({
           onCitation?.(event.citation);
         } else if (event.type === 'done') {
           completed = true;
-          onDone?.();
+          onDone?.(event);
         } else {
           throw new Error(event.message);
         }
@@ -83,6 +117,10 @@ export function useChatStream({
       if (!completed) throw new Error('The chat stream ended unexpectedly.');
       onFinish?.();
     } catch (err) {
+      // A session switch aborts the request intentionally; do not show the
+      // timeout toast for a stream the user has already navigated away from.
+      if (controller.signal.aborted && !timedOut) return;
+
       const error =
         err instanceof DOMException && err.name === 'AbortError'
           ? new Error('The answer timed out. Please try again.')
@@ -92,9 +130,12 @@ export function useChatStream({
       onError?.(error);
     } finally {
       window.clearTimeout(timeout);
-      setIsStreaming(false);
+      if (controllerRef.current === controller) {
+        controllerRef.current = null;
+        setIsStreaming(false);
+      }
     }
-  }, [classId, onChunk, onProgress, onCitation, onDone, onFinish, onError]);
+  }, [classId, sessionId, onChunk, onProgress, onCitation, onDone, onFinish, onError]);
 
   return {
     sendMessage,
