@@ -279,8 +279,8 @@ export function ChatHistorySidebar({
                 className={cn(
                   'flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
                   isActive
-                    ? 'border-[#CFCFCF] bg-[#F7F7F7] text-[#111111]'
-                    : 'border-transparent text-[#6F6F6F] hover:border-[#DADADA] hover:bg-[#F7F7F7] hover:text-[#111111]',
+                    ? 'border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-ink)]'
+                    : 'border-transparent bg-[#F7F7F7] text-[#5A5A5A] hover:border-[#DADADA] hover:text-[#111111]',
                 )}
               >
                 {initial ? initial : <MessageSquare className="h-4 w-4" />}
@@ -301,7 +301,7 @@ export function ChatHistorySidebar({
           className={cn(
             'group flex items-start gap-1 rounded-lg border px-1 py-1 transition-colors',
             isActive
-              ? 'border-[#DADADA] bg-[#F7F7F7]'
+              ? 'border-[var(--brand-line)] bg-[var(--brand-soft)]'
               : 'border-transparent hover:bg-[#F7F7F7]',
           )}
         >
@@ -313,7 +313,10 @@ export function ChatHistorySidebar({
             className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
           >
             <MessageSquare
-              className={cn('h-3.5 w-3.5 shrink-0', isActive ? 'text-[#111111]' : 'text-[#6F6F6F]')}
+              className={cn(
+                'h-3.5 w-3.5 shrink-0',
+                isActive ? 'text-[var(--brand-ink)]' : 'text-[#6F6F6F]',
+              )}
             />
             <span className="min-w-0 flex-1">
               <span

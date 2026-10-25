@@ -40,7 +40,7 @@ export default function TeacherAgentPage() {
         />
 
         {/* Centre column: the chat itself, scoped to this class */}
-        <div className="flex-1 flex flex-col bg-[#F7F7F7] border border-[#DADADA] rounded-xl overflow-hidden relative">
+        <div className="flex-1 flex flex-col bg-white border border-[#DADADA] rounded-xl overflow-hidden relative">
           <ChatWindow
             classId={classId}
             activeSessionId={activeSessionId}

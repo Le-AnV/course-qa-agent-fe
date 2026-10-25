@@ -417,7 +417,7 @@ export function ChatWindow({
     streamSnapshot?.key === currentKey ? streamSnapshot.answerId : null;
 
   return (
-    <div className="flex flex-col h-full relative bg-[#F7F7F7]">
+    <div className="flex flex-col h-full relative bg-white">
       {/* Same surface tokens as the history panel next to it: one neutral bar, not two palettes. */}
       <header className="flex h-14 shrink-0 items-center gap-1 border-b border-[#DADADA] bg-[#F7F7F7] px-3 md:px-4">
         {onOpenHistory && (
@@ -458,7 +458,7 @@ export function ChatWindow({
       )}
 
       {/* Top area: Message list container (auto-scrolls if long) */}
-      <div className="flex-1 overflow-y-auto bg-[#F7F7F7] p-4 md:p-6 pb-8">
+      <div className="flex-1 overflow-y-auto bg-white p-4 md:p-6 pb-8">
         <div className="w-full">
           {isLoadingHistory ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#6F6F6F]">
