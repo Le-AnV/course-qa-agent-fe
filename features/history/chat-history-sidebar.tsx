@@ -30,7 +30,6 @@ import { cn } from '@/lib/utils';
 import { useIsomorphicLayoutEffect } from '@/hooks/use-isomorphic-layout-effect';
 import { getSessions, deleteSession, renameSession, getHistoryErrorMessage } from './api';
 import { readHistoryCollapsed, writeHistoryCollapsed } from './history-prefs';
-import { railSessions } from './session-rail';
 import type { ChatSessionItem } from './types';
 
 /**
@@ -265,7 +264,7 @@ export function ChatHistorySidebar({
     if (compact) {
       return (
         <div className="flex flex-col items-center gap-1.5">
-          {railSessions(sessions, activeSessionId, 3).map((session) => {
+          {sessions.map((session) => {
             const isActive = activeSessionId === session.id;
             const initial = railInitial(session);
             return (
