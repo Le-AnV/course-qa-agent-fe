@@ -418,19 +418,20 @@ export function ChatWindow({
 
   return (
     <div className="flex flex-col h-full relative bg-[#F7F7F7]">
-      <header className="flex h-14 shrink-0 items-center gap-1 border-b border-[#BFDBFE] bg-[#EFF6FF] px-3 md:px-4">
+      {/* Same surface tokens as the history panel next to it: one neutral bar, not two palettes. */}
+      <header className="flex h-14 shrink-0 items-center gap-1 border-b border-[#DADADA] bg-[#F7F7F7] px-3 md:px-4">
         {onOpenHistory && (
           <button
             type="button"
             onClick={onOpenHistory}
             title="Chat history"
             aria-label="Open chat history"
-            className="-ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#1D4ED8] transition-colors hover:bg-[#DBEAFE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]/30 md:hidden"
+            className="-ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6F6F6F] transition-colors hover:bg-[#EDEDED] hover:text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20 md:hidden"
           >
             <History className="h-4 w-4" />
           </button>
         )}
-        <h1 className="truncate text-sm font-semibold text-[#1D4ED8]">Course AI Assistant</h1>
+        <h1 className="truncate text-[13px] font-semibold text-[#111111]">Course AI Assistant</h1>
       </header>
 
       {backgroundStream && (
