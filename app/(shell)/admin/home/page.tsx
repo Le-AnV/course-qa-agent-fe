@@ -3,7 +3,9 @@
 import * as React from "react";
 import { AlertTriangle, FileText, Mail } from "lucide-react";
 import Link from "next/link";
+import { motion, useReducedMotion } from "motion/react";
 import { adminApi, type EmailStats, type ImportBatch } from "@/lib/admin-api";
+import { PageContainer } from "@/components/shared/PageShell";
 
 type Notice = {
   id: string;
@@ -103,9 +105,13 @@ export default function AdminHomePage() {
     (n) => !dismissed.has(n.id) && (filter === "All" || n.unread)
   );
   const unreadCount = notices.filter((n) => n.unread && !dismissed.has(n.id)).length;
+  const reduceMotion = useReducedMotion();
+  const tabTransition = reduceMotion
+    ? { duration: 0 }
+    : { type: "spring" as const, stiffness: 420, damping: 38 };
 
   return (
-    <div className="w-full max-w-[960px] mx-auto px-6 pt-8 pb-12 space-y-6 bg-[#F5F5F5]">
+    <PageContainer className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-[28px] font-bold text-[#111111] font-heading tracking-tight">Home</h1>
@@ -117,22 +123,36 @@ export default function AdminHomePage() {
         <div className="flex items-center gap-6">
           <button
             onClick={() => setFilter("All")}
-            className={`text-[13px] font-semibold pb-3 border-b-2 -mb-[13px] transition-colors ${
-              filter === "All" ? "border-[#111111] text-[#111111]" : "border-transparent text-[#5A5A5A] hover:text-[#111111]"
+            className={`relative text-[13px] font-semibold pb-3 -mb-[13px] transition-colors ${
+              filter === "All" ? "text-[#111111]" : "text-[#5A5A5A] hover:text-[#111111]"
             }`}
           >
             All
+            {filter === "All" && (
+              <motion.span
+                layoutId="admin-home-tab"
+                className="absolute inset-x-0 bottom-0 h-0.5 bg-[#111111]"
+                transition={tabTransition}
+              />
+            )}
           </button>
           <button
             onClick={() => setFilter("Unread")}
-            className={`flex items-center gap-1.5 text-[13px] font-semibold pb-3 border-b-2 -mb-[13px] transition-colors ${
-              filter === "Unread" ? "border-[#111111] text-[#111111]" : "border-transparent text-[#5A5A5A] hover:text-[#111111]"
+            className={`relative flex items-center gap-1.5 text-[13px] font-semibold pb-3 -mb-[13px] transition-colors ${
+              filter === "Unread" ? "text-[#111111]" : "text-[#5A5A5A] hover:text-[#111111]"
             }`}
           >
             Unread
             <span className="flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-white border border-[#ECDCB8] text-[#8F6B16] text-[10px] font-bold shrink-0">
               {unreadCount}
             </span>
+            {filter === "Unread" && (
+              <motion.span
+                layoutId="admin-home-tab"
+                className="absolute inset-x-0 bottom-0 h-0.5 bg-[#111111]"
+                transition={tabTransition}
+              />
+            )}
           </button>
         </div>
         <button
@@ -191,6 +211,6 @@ export default function AdminHomePage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -9,6 +9,7 @@ import {
   homeRouteFor,
   type Role,
 } from "./nav-config";
+import { clearClassCache } from "@/lib/class-cache";
 
 export type AuthSession = {
   role: Role;
@@ -93,6 +94,7 @@ export function useAuth():
   const signOut = React.useCallback(() => {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(AUTH_ROLE_KEY);
+    clearClassCache();
     // Clear cookies for Next.js Middleware
     document.cookie = `${AUTH_ROLE_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
     document.cookie = `${AUTH_TOKEN_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;

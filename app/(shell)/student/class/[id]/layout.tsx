@@ -4,9 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { CourseBanner } from "@/components/shared/CourseBanner";
 import { CourseTabs, CourseTabItem } from "@/components/shared/CourseTabs";
+import { PageContainer } from "@/components/shared/PageShell";
 import { useParams, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { studentApi, accentFor, termFor, type StudentClass } from "@/lib/student-api";
+import { peekClassDetail, peekClasses } from "@/lib/class-cache";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
 export default function StudentClassWorkspaceLayout({
   children,
@@ -18,6 +21,22 @@ export default function StudentClassWorkspaceLayout({
   const id = params.id as string;
   const [cls, setCls] = React.useState<StudentClass | null>(null);
   const [myClasses, setMyClasses] = React.useState<StudentClass[]>([]);
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Seed from the session cache before the first paint (see the teacher
+  // layout): keeps the banner title and the mobile class switcher from
+  // flashing a placeholder on every entry into a class.
+  useIsomorphicLayoutEffect(() => {
+    setCls(peekClassDetail(id));
+    const cachedList = peekClasses();
+    if (cachedList) setMyClasses(cachedList);
+  }, [id]);
+
+  // See the teacher layout: the tab content scrolls independently of Next, so
+  // reset it before paint on every tab change.
+  useIsomorphicLayoutEffect(() => {
+    scrollRef.current?.scrollTo(0, 0);
+  }, [pathname]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -43,7 +62,7 @@ export default function StudentClassWorkspaceLayout({
     };
   }, [id]);
 
-  const title = cls?.name ?? "Class workspace";
+  const title = cls?.name ?? null;
   const meta = cls ? `${cls.code} · ${termFor(cls)}` : undefined;
 
   const tabs: CourseTabItem[] = [
@@ -73,14 +92,12 @@ export default function StudentClassWorkspaceLayout({
       <ClassSwitcherChips currentId={id} classes={myClasses} />
 
       {isAgentPage ? (
-        <div className="flex-1 min-h-0 overflow-hidden p-4 md:p-6">
-          {children}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <PageContainer className="h-full pb-6">{children}</PageContainer>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-6 md:p-8">
-          <div className="max-w-5xl mx-auto">
-            {children}
-          </div>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges]">
+          <PageContainer>{children}</PageContainer>
         </div>
       )}
     </div>

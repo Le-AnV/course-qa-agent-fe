@@ -5,6 +5,7 @@ import { Search, Users, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { studentApi, accentFor, termFor, type StudentClass, type CatalogClass } from "@/lib/student-api";
+import { PageContainer } from "@/components/shared/PageShell";
 
 export default function StudentClassesPage() {
   const router = useRouter();
@@ -71,6 +72,27 @@ export default function StudentClassesPage() {
       )
     : classes;
 
+  // Same footprint as a real card (~278px) so the catalog below does not jump
+  // when the fetched classes replace the placeholder.
+  const renderSkeletonCard = (key: number) => (
+    <div key={key} className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden animate-pulse">
+      <div className="h-2 w-full bg-slate-200" />
+      <div className="p-5 flex-1 flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <div className="h-4 w-16 rounded bg-slate-200" />
+          <div className="h-3 w-20 rounded bg-slate-100" />
+        </div>
+        <div className="h-5 w-3/4 rounded bg-slate-200 mb-2" />
+        <div className="h-3 w-1/3 rounded bg-slate-100 mb-2" />
+        <div className="h-3 w-1/2 rounded bg-slate-100 mb-6" />
+        <div className="mt-auto space-y-4">
+          <div className="h-3 w-2/3 rounded bg-slate-100" />
+          <div className="h-9 w-full rounded-lg bg-slate-100" />
+        </div>
+      </div>
+    </div>
+  );
+
   const renderClassCard = (cls: StudentClass) => (
     <div key={cls.id} className="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all hover:-translate-y-0.5 flex flex-col overflow-hidden group cursor-pointer" onClick={() => router.push(`/student/class/${cls.id}/overview`)}>
       <div className="h-2 w-full" style={{ backgroundColor: accentFor(cls.id) }} />
@@ -108,7 +130,7 @@ export default function StudentClassesPage() {
   );
 
   return (
-    <div className="w-full max-w-[920px] mx-auto px-6 pt-8 pb-12 space-y-8">
+    <PageContainer className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-[28px] font-bold text-[#111111] font-heading tracking-tight">My Classes</h1>
@@ -130,8 +152,8 @@ export default function StudentClassesPage() {
       </div>
 
       {loading ? (
-        <div className="bg-white border border-[#DADADA] rounded-xl p-8 text-center text-[#5A5A5A] text-[13px]">
-          Loading your classes…
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+          {[0, 1, 2, 3, 4, 5].map(renderSkeletonCard)}
         </div>
       ) : error ? (
         <div className="bg-white border border-[#CFCFCF] rounded-xl p-6 text-center text-[13px]">
@@ -230,6 +252,6 @@ export default function StudentClassesPage() {
           </table>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

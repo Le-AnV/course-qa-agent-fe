@@ -38,7 +38,7 @@ const STATUS_META = {
 
 export default function StudentProposalsPage() {
   return (
-    <div className="max-w-[920px] space-y-6">
+    <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">

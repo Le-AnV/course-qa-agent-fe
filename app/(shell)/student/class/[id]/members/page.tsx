@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { useParams } from "next/navigation";
 import { studentApi, type ClassMember } from "@/lib/student-api";
 import { useProfile } from "@/features/profile/profile-context";
+import { Reveal, SkeletonLine } from "@/components/shared/page-skeleton";
 
 export default function StudentMembersPage() {
   const params = useParams();
@@ -17,7 +18,6 @@ export default function StudentMembersPage() {
 
   const load = React.useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
       setMembers(await studentApi.members(id));
     } catch (err) {
@@ -27,7 +27,13 @@ export default function StudentMembersPage() {
     }
   }, [id]);
 
+  const retry = () => {
+    setLoading(true);
+    void load();
+  };
+
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time fetch; load() only sets state after await.
     void load();
   }, [load]);
 
@@ -39,7 +45,7 @@ export default function StudentMembersPage() {
     : members;
 
   return (
-    <div className="max-w-[920px] space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h2 className="text-xl font-bold font-heading text-[#111111]">Class Members</h2>
@@ -61,17 +67,24 @@ export default function StudentMembersPage() {
       </div>
 
       {loading ? (
-        <div className="bg-white border border-[#DADADA] rounded-lg p-8 text-center text-[#5A5A5A] text-[13px]">
-          Loading members…
+        <div className="bg-white border border-[#DADADA] rounded-lg overflow-hidden">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-3 border-b border-[#DADADA] px-4 py-3 last:border-b-0">
+              <SkeletonLine className="h-8 w-8 rounded-full" />
+              <SkeletonLine className="h-3.5 w-32" />
+              <SkeletonLine className="ml-auto h-4 w-20" />
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="bg-[#F7F7F7] border border-[#DFB2A6] rounded-lg p-6 text-center text-[13px]">
           <p className="text-[#9D4C38]">{error}</p>
-          <button onClick={() => void load()} className="mt-2 text-[#111111] font-semibold hover:underline">
+          <button onClick={retry} className="mt-2 text-[#111111] font-semibold hover:underline">
             Retry
           </button>
         </div>
       ) : (
+        <Reveal>
         <div className="bg-white border border-[#DADADA] rounded-lg overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -124,6 +137,7 @@ export default function StudentMembersPage() {
             </tbody>
           </table>
         </div>
+        </Reveal>
       )}
     </div>
   );

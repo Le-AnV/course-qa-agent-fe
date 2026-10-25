@@ -16,6 +16,9 @@ import {
 import { formatFileSize } from "@/lib/documents";
 import { Modal } from "@/components/shared/Modal";
 import { AppSelect } from "@/components/ui/app-select";
+import { peekClassDetail } from "@/lib/class-cache";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
+import { Reveal, SkeletonCard, SkeletonLine } from "@/components/shared/page-skeleton";
 
 function ReadOnlyField({
   label,
@@ -182,6 +185,13 @@ export default function ClassSettingsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time fetch; load() only sets state after await.
     void load();
   }, [load]);
+
+  // Warm cache seeded by the class layout: the General card can render with real
+  // values on the first frame instead of a "Loading class settings…" line.
+  useIsomorphicLayoutEffect(() => {
+    const cached = peekClassDetail(id);
+    if (cached) setCls((current) => current ?? cached);
+  }, [id]);
 
   const changes = React.useMemo(() => {
     if (!config || !draft) return {} as Partial<Draft>;
@@ -362,7 +372,7 @@ export default function ClassSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-[#111111]">Course Settings</h2>
         <p className="mt-0.5 text-[13px] text-[#5A5A5A]">
@@ -372,8 +382,15 @@ export default function ClassSettingsPage() {
 
       <div className="rounded-lg border border-[#DADADA] bg-white p-6">
         <h3 className="mb-4 text-[14px] font-bold text-[#111111]">General</h3>
-        {loading ? (
-          <p className="text-[13px] text-[#5A5A5A]">Loading class settings…</p>
+        {!cls && loading ? (
+          <div className="space-y-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i}>
+                <SkeletonLine className="mb-1 h-3 w-24" />
+                <SkeletonLine className="h-9 w-full" />
+              </div>
+            ))}
+          </div>
         ) : error || !cls ? (
           <div className="text-[13px]">
             <p className="text-[#9D4C38]">{error ?? "Class not found."}</p>
@@ -382,7 +399,7 @@ export default function ClassSettingsPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <Reveal className="space-y-4">
             <ReadOnlyField label="Course title" value={cls.name} />
             <ReadOnlyField label="Course code" value={cls.code} mono />
             <div className="grid grid-cols-2 gap-4">
@@ -393,11 +410,14 @@ export default function ClassSettingsPage() {
               <ReadOnlyField label="Credits" value={cls.credits} />
               <ReadOnlyField label="Trainer" value={cls.trainer_name ?? "Unassigned"} />
             </div>
-          </div>
+          </Reveal>
         )}
       </div>
 
-      {!loading && !error && info && (
+      {loading && !error && !info ? (
+        <SkeletonCard className="h-[260px]" />
+      ) : !error && info ? (
+        <Reveal>
         <form
           onSubmit={(e) => void handleInfoSave(e)}
           className="rounded-lg border border-[#DADADA] bg-white p-6"
@@ -529,9 +549,13 @@ export default function ClassSettingsPage() {
             </button>
           </div>
         </form>
-      )}
+        </Reveal>
+      ) : null}
 
-      {!loading && !error && draft && config && (
+      {loading && !error && (!draft || !config) ? (
+        <SkeletonCard className="h-[320px]" />
+      ) : !error && draft && config ? (
+        <Reveal>
         <form onSubmit={(e) => void handleSave(e)} className="rounded-lg border border-[#DADADA] bg-white p-6">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -624,27 +648,35 @@ export default function ClassSettingsPage() {
             </button>
           </div>
         </form>
+        </Reveal>
+      ) : null}
+
+      {/* Two static cards. They follow the fetched sections, whose skeletons now
+          reserve the same height, so rendering them immediately no longer shifts
+          the page when the data lands. */}
+      {!loading && (
+        <>
+          <div className="rounded-lg border border-[#DADADA] bg-white p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-[14px] font-bold text-[#111111]">
+              <Info className="h-4 w-4 text-[#6F6F6F]" /> Access &amp; notifications
+            </h3>
+            <p className="max-w-lg text-[13px] leading-relaxed text-[#5A5A5A]">
+              Join rules, join-code rotation and notification preferences aren&apos;t editable yet — the backend
+              doesn&apos;t expose an endpoint for them, so nothing is shown as if it were already configured.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-[#DADADA] bg-white p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-[14px] font-bold text-[#111111]">
+              <Info className="h-4 w-4 text-[#6F6F6F]" /> Archive &amp; delete
+            </h3>
+            <p className="max-w-lg text-[13px] leading-relaxed text-[#5A5A5A]">
+              An administrator can archive this class to hide it (and its roster) from teachers and students
+              without losing any data, and can delete it permanently only after it is archived.
+            </p>
+          </div>
+        </>
       )}
-
-      <div className="rounded-lg border border-[#DADADA] bg-white p-6">
-        <h3 className="mb-3 flex items-center gap-2 text-[14px] font-bold text-[#111111]">
-          <Info className="h-4 w-4 text-[#6F6F6F]" /> Access &amp; notifications
-        </h3>
-        <p className="max-w-lg text-[13px] leading-relaxed text-[#5A5A5A]">
-          Join rules, join-code rotation and notification preferences aren&apos;t editable yet — the backend
-          doesn&apos;t expose an endpoint for them, so nothing is shown as if it were already configured.
-        </p>
-      </div>
-
-      <div className="rounded-lg border border-[#DADADA] bg-white p-6">
-        <h3 className="mb-3 flex items-center gap-2 text-[14px] font-bold text-[#111111]">
-          <Info className="h-4 w-4 text-[#6F6F6F]" /> Archive &amp; delete
-        </h3>
-        <p className="max-w-lg text-[13px] leading-relaxed text-[#5A5A5A]">
-          An administrator can archive this class to hide it (and its roster) from teachers and students
-          without losing any data, and can delete it permanently only after it is archived.
-        </p>
-      </div>
 
       <Modal
         isOpen={isCopyOpen}

@@ -7,6 +7,20 @@ import { AppSidebar } from "@/components/shared/Sidebar";
 import { MobileNav } from "@/components/shared/MobileNav";
 import { ProfileProvider } from "@/features/profile/profile-context";
 
+/**
+ * Plain layout shell for the matched route.
+ *
+ * There is deliberately no route-level fade or slide here. The App Router
+ * replaces the subtree instantly, so animating opacity from 0 paints a blank
+ * frame before the new page appears (reads as a flicker), and a translate
+ * changes the scrollable overflow of `main`, making the scrollbar blink. The
+ * micro-interactions (pressed buttons, the tab indicator, dialogs, selects)
+ * carry the motion instead.
+ */
+function ShellContent({ children }: { children: React.ReactNode }) {
+  return <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>;
+}
+
 export function AppLayoutShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
@@ -22,9 +36,13 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
             <AppSidebar role={role} />
 
             {/* Main Content Area fills remaining space. Off-white canvas so white
-                cards read as raised surfaces instead of melting into the page. */}
-            <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto bg-[#F5F5F5]">
-              {children}
+                cards read as raised surfaces instead of melting into the page.
+                `relative` is load-bearing: Radix Select renders a 1px absolute
+                <select> at the trigger's offset, and without a positioned
+                ancestor here it escapes every inner scroller and stretches the
+                document, giving the whole app a second scrollbar. */}
+            <main className="relative flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto bg-[#F5F5F5] [scrollbar-gutter:stable]">
+              <ShellContent>{children}</ShellContent>
             </main>
             <Toaster position="top-right" closeButton />
           </div>

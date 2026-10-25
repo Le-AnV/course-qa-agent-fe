@@ -17,15 +17,12 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = React.useState(false);
   const [savingRetrieval, setSavingRetrieval] = React.useState(false);
   const [testingLlm, setTestingLlm] = React.useState(false);
-  const [testingEmail, setTestingEmail] = React.useState(false);
 
   const [host, setHost] = React.useState("");
   const [port, setPort] = React.useState("");
   const [sender, setSender] = React.useState("");
   const [appPassword, setAppPassword] = React.useState("");
   const [rate, setRate] = React.useState("");
-  const [dryRun, setDryRun] = React.useState(true);
-  const [testTo, setTestTo] = React.useState("");
   const [threshold, setThreshold] = React.useState("0.80");
   const [unrelatedThreshold, setUnrelatedThreshold] = React.useState("0.45");
 
@@ -56,7 +53,6 @@ export default function AdminSettingsPage() {
       setPort(String(c.smtp_port));
       setSender(c.smtp_sender);
       setRate(String(c.smtp_rate_per_minute));
-      setDryRun(c.email_dry_run);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load settings");
     } finally {
@@ -81,7 +77,6 @@ export default function AdminSettingsPage() {
         smtp_sender: sender,
         ...(appPassword ? { smtp_app_password: appPassword } : {}),
         smtp_rate_per_minute: Number(rate),
-        email_dry_run: dryRun,
       });
       setConfig(updated);
       setAppPassword("");
@@ -162,22 +157,6 @@ export default function AdminSettingsPage() {
       setError(err instanceof Error ? err.message : "LLM test failed.");
     } finally {
       setTestingLlm(false);
-    }
-  }
-
-  async function testEmail(e: React.FormEvent) {
-    e.preventDefault();
-    setTestingEmail(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const r = await adminApi.sendTestEmail(testTo.trim());
-      setNotice(`Test email queued & sent to ${r.sent_to}.`);
-      setTestTo("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Test email failed.");
-    } finally {
-      setTestingEmail(false);
     }
   }
 
@@ -674,24 +653,25 @@ export default function AdminSettingsPage() {
                   <input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="numeric"
                     className="mt-1.5 w-full bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#111111]" />
                 </label>
-                <label className="flex items-end gap-2 pb-2 text-[13px] text-[#111111]">
-                  <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} className="w-4 h-4 rounded" />
-                  Dry-run (no real sending)
-                </label>
               </div>
+              {config?.email_dry_run && (
+                <p role="status" className="text-[12px] text-[#9D4C38]">
+                  Dry-run is still enabled in system config: emails are marked sent without being delivered.
+                </p>
+              )}
               <div className="flex flex-wrap gap-3">
                 <button type="submit" disabled={saving}
                   className="px-4 py-2 border border-[#CFCFCF] bg-white text-[#111111] shadow-xs text-[13px] font-semibold rounded-md hover:bg-[#F7F7F7] disabled:opacity-50 shadow-sm">
                   {saving ? "Saving…" : "Save sender"}</button>
               </div>
             </form>
-            <form onSubmit={(e) => void testEmail(e)} className="flex gap-2 mt-4">
-              <input type="email" required value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="you@gmail.com"
-                className="flex-1 bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] outline-none focus:border-[#111111]" aria-label="Test recipient" />
-              <button type="submit" disabled={testingEmail}
-                className="px-4 py-2 border border-[#DADADA] bg-white text-[13px] font-semibold rounded-md hover:bg-slate-50 disabled:opacity-50 shadow-sm">
-                {testingEmail ? "Sending…" : "Send test mail"}</button>
-            </form>
+            <p className="text-[12px] text-[#5A5A5A] mt-4">
+              Send pending mail and review delivery history in{" "}
+              <Link href="/admin/email" className="font-semibold text-[#111111] hover:underline">
+                Email
+              </Link>
+              .
+            </p>
           </div>
 
           {/* Role overview (static info) */}

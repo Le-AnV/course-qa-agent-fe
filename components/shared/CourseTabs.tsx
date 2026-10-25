@@ -3,8 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, useReducedMotion } from "motion/react";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PAGE_MAX_WIDTH } from "@/components/shared/PageShell";
 
 export interface CourseTabItem {
   id: string;
@@ -34,8 +36,12 @@ function TabBadge({ count }: { count: number }) {
  */
 export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
   const active =
     tabs.find((tab) => pathname === tab.href || pathname.startsWith(`${tab.href}/`)) ?? tabs[0];
+  const indicatorTransition = reduceMotion
+    ? { duration: 0 }
+    : { type: "spring" as const, stiffness: 420, damping: 38 };
   const [menuOpen, setMenuOpen] = React.useState(false);
   // Close the list on navigation (render-phase adjustment, no effect).
   const [openedAt, setOpenedAt] = React.useState(pathname);
@@ -116,7 +122,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
       {/* lg+: the original strip, in the same column as the page content and
           centered, so it does not hug the left edge when the sidebar collapses. */}
       <div className="hidden lg:block px-6 md:px-8">
-        <div className="mx-auto max-w-5xl">
+        <div className={`mx-auto ${PAGE_MAX_WIDTH}`}>
           <div className="flex items-center justify-center gap-6 min-w-max">
             {tabs.map((tab) => {
               const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
@@ -124,17 +130,25 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
                 <Link
                   key={tab.id}
                   href={tab.href}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "py-3 text-[13.5px] whitespace-nowrap border-b-2 transition-all",
+                    "relative py-3 text-[13.5px] whitespace-nowrap border-b-2 border-transparent transition-colors",
                     isActive
-                      ? "border-[var(--brand-ink)] text-[#111111] font-semibold"
-                      : "border-transparent text-[#5A5A5A] hover:text-[#111111] font-medium",
+                      ? "text-[#111111] font-semibold"
+                      : "text-[#5A5A5A] hover:text-[#111111] font-medium",
                   )}
                 >
                   <span className="inline-flex items-center gap-1.5">
                     {tab.label}
                     <TabBadge count={tab.badge ?? 0} />
                   </span>
+                  {isActive && (
+                    <motion.span
+                      layoutId="course-tab-indicator"
+                      className="absolute inset-x-0 bottom-0 h-0.5 bg-[var(--brand-ink)]"
+                      transition={indicatorTransition}
+                    />
+                  )}
                 </Link>
               );
             })}

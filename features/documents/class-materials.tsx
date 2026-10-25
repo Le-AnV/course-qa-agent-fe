@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FileText, Upload, X } from "lucide-react";
 import { AppSelect } from "@/components/ui/app-select";
 import { AUTH_TOKEN_KEY } from "@/components/ui/nav-config";
+import { Reveal, SkeletonLine } from "@/components/shared/page-skeleton";
 import {
   Dialog,
   DialogContent,
@@ -587,15 +588,24 @@ export function ClassMaterials({
       )}
 
       {loading ? (
-        <div className="rounded-lg border border-[#DADADA] bg-white p-8 text-center text-[13px] text-[#5A5A5A]">
-          Loading materials…
+        <div className="overflow-hidden rounded-lg border border-[#DADADA] bg-white">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2.5 border-b border-[#DADADA] px-4 py-3 last:border-b-0"
+            >
+              <SkeletonLine className="h-4 w-4" />
+              <SkeletonLine className="h-3.5 w-2/5" />
+              <SkeletonLine className="ml-auto h-4 w-16" />
+            </div>
+          ))}
         </div>
       ) : documents.length === 0 ? (
         <p className="rounded-lg border border-[#DADADA] bg-white py-8 text-center text-[13px] text-[#5A5A5A]">
           No materials yet — upload the first file for this class.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-[#DADADA] bg-white">
+        <Reveal className="overflow-hidden rounded-lg border border-[#DADADA] bg-white">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-[#DADADA] bg-white text-[12px] font-medium text-[#6F6F6F]">
@@ -747,7 +757,7 @@ export function ClassMaterials({
               ))}
             </tbody>
           </table>
-        </div>
+        </Reveal>
       )}
 
       {total > PAGE_SIZE && (

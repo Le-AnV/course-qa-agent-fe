@@ -63,7 +63,7 @@ export type EmailStats = {
   pending: number;
   sent: number;
   failed: number;
-  // Live drain progress (AC-09) — present while "Process queue now" is running.
+  // Live drain progress (AC-09) — present while "Send pending emails" is running.
   draining?: boolean;
   drain_started_at?: string | null;
   drain_total?: number;
@@ -281,7 +281,9 @@ export const adminApi = {
 
   // Email (AC-08, AC-09)
   emailConfig: () => apiFetch<EmailConfig>("/api/admin/email-config"),
-  updateEmailConfig: (patch: Partial<EmailConfig> & { smtp_app_password?: string }) =>
+  updateEmailConfig: (
+    patch: Omit<Partial<EmailConfig>, "email_dry_run"> & { smtp_app_password?: string },
+  ) =>
     apiFetch<EmailConfig>("/api/admin/email-config", { method: "PATCH", body: JSON.stringify(patch) }),
   emailStats: () => apiFetch<EmailStats>("/api/admin/email-queue/stats"),
   emailQueue: (status?: string) =>
@@ -289,11 +291,6 @@ export const adminApi = {
   processQueue: () => apiFetch<{ processed: number; sent: number; failed: number; busy?: boolean }>("/api/admin/email-queue/process", { method: "POST" }),
   retryEmail: (emailId: number) =>
     apiFetch<{ id: number; status: string }>(`/api/admin/email-queue/${emailId}/retry`, { method: "POST" }),
-  sendTestEmail: (to_email: string) =>
-    apiFetch<{ sent_to: string }>("/api/admin/email-config/test", {
-      method: "POST",
-      body: JSON.stringify({ to_email }),
-    }),
   retryImportRow: (rowId: number) =>
     apiFetch<ImportRow>(`/api/admin/import-rows/${rowId}/retry`, { method: "POST" }),
   // AI-105 runtime settings (read-only from UI, secrets never returned)

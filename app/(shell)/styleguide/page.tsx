@@ -24,6 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageContainer } from "@/components/shared/PageShell";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -125,7 +126,7 @@ export default function StyleguidePage() {
   const [formClass, setFormClass] = React.useState("");
 
   return (
-    <div className="pb-16">
+    <PageContainer className="pb-16">
       <header>
         <h1 className="text-2xl font-semibold">Styleguide</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
@@ -559,6 +560,6 @@ export default function UploadPage() {
   )
 }`}</Code>
       </Section>
-    </div>
+    </PageContainer>
   );
 }
