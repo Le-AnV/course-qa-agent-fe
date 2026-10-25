@@ -6,12 +6,14 @@ export type ChatCitation = {
   snippet: string;
   documentId: string | null;
   page: number | null;
+  indexes: number[];
+  highlights: string[];
 };
 
 export type ChatProgressStage = "searching" | "reading" | "drafting";
 
 export type ChatStreamEvent =
-  | { type: "progress"; stage: ChatProgressStage }
+  | { type: "progress"; stage: ChatProgressStage; message?: string }
   | { type: "token"; text: string }
   | { type: "citation"; citation: ChatCitation }
   | {
@@ -46,7 +48,11 @@ function decodeEvent(eventName: string, rawData: string): ChatStreamEvent | null
     if (data.stage !== "searching" && data.stage !== "reading" && data.stage !== "drafting") {
       return invalidData();
     }
-    return { type: "progress", stage: data.stage };
+    return {
+      type: "progress",
+      stage: data.stage,
+      message: typeof data.message === "string" ? data.message : undefined,
+    };
   }
 
   if (eventName === "token") {
@@ -74,6 +80,12 @@ function decodeEvent(eventName: string, rawData: string): ChatStreamEvent | null
         documentId:
           typeof data.document_id === "string" ? data.document_id : null,
         page: typeof data.page === "number" ? data.page : null,
+        indexes: Array.isArray(data.indexes)
+          ? data.indexes.filter((value): value is number => typeof value === "number")
+          : [],
+        highlights: Array.isArray(data.highlights)
+          ? data.highlights.filter((value): value is string => typeof value === "string")
+          : [],
       },
     };
   }

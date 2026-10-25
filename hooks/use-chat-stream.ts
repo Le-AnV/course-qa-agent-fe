@@ -17,7 +17,7 @@ interface UseChatStreamProps {
   sessionId?: string | null;
   /** elapsedMs: thời gian từ lúc gửi tới chunk này (đo trong hook, không đo ở render). */
   onChunk: (chunk: string, elapsedMs: number) => void;
-  onProgress?: (stage: ChatProgressStage) => void;
+  onProgress?: (stage: ChatProgressStage, message?: string) => void;
   onCitation?: (citation: ChatCitation) => void;
   onDone?: (event: ChatDoneEvent) => void;
   onFinish?: () => void;
@@ -93,7 +93,7 @@ export function useChatStream({
       let completed = false;
       const parser = createSseParser((event) => {
         if (event.type === 'progress') {
-          onProgress?.(event.stage);
+          onProgress?.(event.stage, event.message);
         } else if (event.type === 'token') {
           onChunk(event.text, Date.now() - startedAt);
         } else if (event.type === 'citation') {

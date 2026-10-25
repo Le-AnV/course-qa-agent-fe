@@ -78,9 +78,9 @@ const SUGGESTED_QUESTIONS = [
 
 // Progress stages emitted by the class chat SSE stream.
 const THINKING_STEPS = [
-  'Searching this class\u2019s materials',
-  'Reviewing the matching material sections',
-  'Drafting an answer with citations',
+  'Searching class materials',
+  'Reviewing matching sections',
+  'Synthesizing answer',
 ];
 const THINKING_STEP_INDEX: Record<ChatProgressStage, number> = {
   searching: 0,
@@ -97,6 +97,8 @@ function mapHistoryCitation(citation: ChatMessageCitation): ChatCitation {
     snippet: citation.snippet ?? '',
     documentId: citation.document_id ?? null,
     page: citation.page ?? null,
+    indexes: citation.index ? [citation.index] : [],
+    highlights: [],
   };
 }
 
@@ -260,11 +262,19 @@ export function ChatWindow({
   const { sendMessage, isStreaming } = useChatStream({
     classId,
     sessionId: activeSessionId,
-    onProgress: (stage) => {
-      updateStreamAnswer((message) => ({
-        ...message,
-        traceStep: THINKING_STEP_INDEX[stage],
-      }));
+    onProgress: (stage, stageMessage) => {
+      const stepIdx = THINKING_STEP_INDEX[stage];
+      updateStreamAnswer((message) => {
+        const nextTrace = message.trace ? [...message.trace] : [...THINKING_STEPS];
+        if (stageMessage) {
+          nextTrace[stepIdx] = stageMessage;
+        }
+        return {
+          ...message,
+          trace: nextTrace,
+          traceStep: stepIdx,
+        };
+      });
     },
     onChunk: (chunkText, elapsedMs) => {
       // Turn off typing indicator when first chunk arrives
@@ -370,7 +380,7 @@ export function ChatWindow({
       id: nextMsgId(),
       role: 'ai',
       content: '',
-      trace: THINKING_STEPS,
+      trace: [...THINKING_STEPS],
       traceStep: 0,
     };
 

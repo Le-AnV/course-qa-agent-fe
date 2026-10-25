@@ -295,8 +295,8 @@ export default function AdminSettingsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {retrieval &&
-                        (Number(threshold) !== retrieval.threshold ||
-                          Number(unrelatedThreshold) !== retrieval.unrelated_threshold) ? (
+                          (Number(threshold) !== retrieval.threshold ||
+                            Number(unrelatedThreshold) !== retrieval.unrelated_threshold) ? (
                           <span className="px-2.5 py-1 rounded-md text-[12px] font-medium bg-amber-50 text-amber-800 border border-amber-300">
                             Unsaved changes
                           </span>
@@ -324,11 +324,10 @@ export default function AdminSettingsPage() {
                                 setThreshold(p.high);
                                 setUnrelatedThreshold(p.low);
                               }}
-                              className={`p-2.5 rounded-lg border text-left transition-all ${
-                                isActive
+                              className={`p-2.5 rounded-lg border text-left transition-all ${isActive
                                   ? "bg-slate-900 border-slate-900 text-white shadow-sm"
                                   : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center justify-between text-[12.5px] font-bold">
                                 <span>{p.label}</span>
