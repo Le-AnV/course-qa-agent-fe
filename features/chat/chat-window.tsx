@@ -59,7 +59,7 @@ function transcriptForContext(context: StreamContext): Message[] {
 }
 
 // Initialize chat state
-// History is fetched via getSessionDetail(activeSessionId) (Task AI-95)
+// History is fetched via getSessionDetail(activeSessionId) (Task AI-95, AI-97)
 // History must be filtered by classId - each class has its own chat scope.
 const INITIAL_MESSAGES: Message[] = [
   {

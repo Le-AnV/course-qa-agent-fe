@@ -13,7 +13,7 @@ const CLIENT_TIMEOUT_MS = 305_000;
 interface UseChatStreamProps {
   /** Class scope — BE dùng để lọc syllabus/tài liệu của đúng lớp, tránh lẫn dữ liệu giữa các lớp. */
   classId: string;
-  /** Active conversation. Omit for a new chat; the backend creates it on the first answer. */
+  /** Active conversation session for continuity (AI-97). Omit for a new chat; the backend creates it on the first answer. */
   sessionId?: string | null;
   /** elapsedMs: thời gian từ lúc gửi tới chunk này (đo trong hook, không đo ở render). */
   onChunk: (chunk: string, elapsedMs: number) => void;
