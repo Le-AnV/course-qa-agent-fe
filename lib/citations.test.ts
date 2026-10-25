@@ -12,6 +12,8 @@ function citation(overrides: Partial<ChatCitation> = {}): ChatCitation {
     snippet: "Question 6",
     documentId: "doc-quiz",
     page: 1,
+    indexes: [1],
+    highlights: [],
     ...overrides,
   };
 }
