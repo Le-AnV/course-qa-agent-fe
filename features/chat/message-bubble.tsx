@@ -1,9 +1,14 @@
+'use client';
+
 import * as React from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { ThinkingTrace } from './thinking-trace';
 import { ChatMarkdown } from './chat-markdown';
 import { CitationChip } from '@/features/citations/citation-chip';
 import { citationKey } from '@/lib/citations';
 import type { ChatCitation } from '@/lib/sse';
+
+const subscribeNoop = () => () => {};
 
 interface MessageBubbleProps {
   role: 'user' | 'ai';
@@ -36,9 +41,18 @@ export function MessageBubble({
   chatSurface = false,
 }: MessageBubbleProps) {
   const isUser = role === 'user';
+  const reduceMotion = useReducedMotion();
+  // Messages already present at hydration (history, landing preview) render
+  // as-is; only messages that mount later animate in.
+  const hydrated = React.useSyncExternalStore(subscribeNoop, () => true, () => false);
 
   return (
-    <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+    <motion.div
+      initial={!hydrated || reduceMotion ? false : { opacity: 0, scale: 0.99 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+      className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
+    >
       <div
         className={`min-w-0 max-w-[92%] break-words rounded-2xl px-4 py-3 ${
           isUser && !chatSurface
@@ -81,6 +95,6 @@ export function MessageBubble({
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
