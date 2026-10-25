@@ -10,6 +10,7 @@ export default function AgentPage() {
   const classId = (routeParams?.id as string) || '';
   const [activeSessionId, setActiveSessionId] = React.useState<string | null>(null);
   const [historyRefresh, setHistoryRefresh] = React.useState(0);
+  const [historyOpen, setHistoryOpen] = React.useState(false);
 
   const handleTurnComplete = (sessionId: string) => {
     setActiveSessionId(sessionId);
@@ -30,7 +31,8 @@ export default function AgentPage() {
         onSelectSession={(sessionId) => setActiveSessionId(sessionId)}
         onNewChat={() => setActiveSessionId(null)}
         refreshTrigger={historyRefresh}
-        className="hidden md:flex"
+        mobileOpen={historyOpen}
+        onMobileOpenChange={setHistoryOpen}
       />
 
       {/* Cột Giữa: Khung Chat Chính & Tiếp tục phiên hội thoại cũ (AI-97) */}
@@ -46,6 +48,7 @@ export default function AgentPage() {
           onBackgroundTurnComplete={handleBackgroundTurnComplete}
           onOpenSession={(sessionId) => setActiveSessionId(sessionId)}
           onNewChat={() => setActiveSessionId(null)}
+          onOpenHistory={() => setHistoryOpen(true)}
         />
       </div>
 

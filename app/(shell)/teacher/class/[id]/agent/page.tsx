@@ -14,6 +14,7 @@ export default function TeacherAgentPage() {
   const classId = (routeParams?.id as string) || '';
   const [activeSessionId, setActiveSessionId] = React.useState<string | null>(null);
   const [historyRefresh, setHistoryRefresh] = React.useState(0);
+  const [historyOpen, setHistoryOpen] = React.useState(false);
 
   const handleTurnComplete = (sessionId: string) => {
     setActiveSessionId(sessionId);
@@ -34,7 +35,8 @@ export default function TeacherAgentPage() {
           onSelectSession={(sessionId) => setActiveSessionId(sessionId)}
           onNewChat={() => setActiveSessionId(null)}
           refreshTrigger={historyRefresh}
-          className="hidden md:flex"
+          mobileOpen={historyOpen}
+          onMobileOpenChange={setHistoryOpen}
         />
 
         {/* Centre column: the chat itself, scoped to this class */}
@@ -46,6 +48,7 @@ export default function TeacherAgentPage() {
             onBackgroundTurnComplete={handleBackgroundTurnComplete}
             onOpenSession={(sessionId) => setActiveSessionId(sessionId)}
             onNewChat={() => setActiveSessionId(null)}
+            onOpenHistory={() => setHistoryOpen(true)}
           />
         </div>
 

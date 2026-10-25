@@ -7,7 +7,7 @@ import { useChatStream } from '@/hooks/use-chat-stream';
 import { getSessionDetail } from '@/features/history/api';
 import { mergeCitation, uniqueCitations } from '@/lib/citations';
 import type { ChatMessageCitation, ChatMessageItem } from '@/features/history/types';
-import { Loader2 } from 'lucide-react';
+import { History, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ChatCitation, ChatProgressStage } from '@/lib/sse';
 
@@ -107,6 +107,7 @@ export function ChatWindow({
   onBackgroundTurnComplete,
   onOpenSession,
   onNewChat,
+  onOpenHistory,
 }: {
   classId: string;
   activeSessionId?: string | null;
@@ -118,6 +119,8 @@ export function ChatWindow({
   onOpenSession?: (sessionId: string) => void;
   /** Lets the banner return to a first-turn conversation that has no id yet. */
   onNewChat?: () => void;
+  /** Mobile only: opens the chat-history drawer (the panel is hidden < md). */
+  onOpenHistory?: () => void;
 }) {
   const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
   const [isTyping, setIsTyping] = React.useState(false); // Waiting state for the first chunk (to show typing indicator)
@@ -415,7 +418,18 @@ export function ChatWindow({
 
   return (
     <div className="flex flex-col h-full relative bg-[#F7F7F7]">
-      <header className="flex h-14 shrink-0 items-center border-b border-[#BFDBFE] bg-[#EFF6FF] px-3 md:px-4">
+      <header className="flex h-14 shrink-0 items-center gap-1 border-b border-[#BFDBFE] bg-[#EFF6FF] px-3 md:px-4">
+        {onOpenHistory && (
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            title="Chat history"
+            aria-label="Open chat history"
+            className="-ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#1D4ED8] transition-colors hover:bg-[#DBEAFE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]/30 md:hidden"
+          >
+            <History className="h-4 w-4" />
+          </button>
+        )}
         <h1 className="truncate text-sm font-semibold text-[#1D4ED8]">Course AI Assistant</h1>
       </header>
 
