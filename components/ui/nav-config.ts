@@ -33,11 +33,13 @@ export type NavItem = {
  * Routes that do not exist yet (other tickets) will 404 until those land.
  */
 export const NAV_ITEMS: NavItem[] = [
-  // Admin onboarding dashboard (AI-31): reachable via direct URL + mobile nav.
+  // Admin onboarding dashboard (AI-31): admin-only. Its pages call
+  // /api/admin/* endpoints, so letting trainers in only produced a 403 banner.
+  // The prefix rule in canAccessRoute also gates /dashboard/* subroutes.
   {
     href: "/dashboard",
     label: "Dashboard",
-    roles: ["trainer", "teaching_assistant", "admin"],
+    roles: ["admin"],
     icon: LayoutDashboard,
   },
 // Shared Routes
