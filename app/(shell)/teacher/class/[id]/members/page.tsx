@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { studentApi, type ClassMember, type JoinRequest } from "@/lib/student-api";
 import { AppSelect } from "@/components/ui/app-select";
 import { AUTH_ROLE_KEY } from "@/components/ui/nav-config";
+import { Reveal, SkeletonLine } from "@/components/shared/page-skeleton";
 
 export default function ClassMembersPage() {
   const params = useParams();
@@ -30,7 +31,6 @@ export default function ClassMembersPage() {
 
   const load = React.useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
       const [m, p] = await Promise.all([
         studentApi.members(id),
@@ -47,7 +47,13 @@ export default function ClassMembersPage() {
     }
   }, [id]);
 
+  const retry = () => {
+    setLoading(true);
+    void load();
+  };
+
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time fetch; load() only sets state after await.
     void load();
   }, [load]);
 
@@ -143,6 +149,7 @@ export default function ClassMembersPage() {
   return (
     <div className="space-y-6">
       {canReview && (
+        <Reveal>
         <div className="bg-white border border-[#DADADA] rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b border-[#DADADA] flex items-center justify-between">
             <h3 className="text-[14px] font-bold text-[#111111]">
@@ -194,21 +201,41 @@ export default function ClassMembersPage() {
             </table>
           )}
         </div>
+        </Reveal>
       )}
 
       {loading ? (
-        <div className="bg-white border border-[#DADADA] rounded-lg p-8 text-center text-[#5A5A5A] text-[13px]">
-          Loading members…
-        </div>
+        <MembersTable toolbar={toolbar}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <tr key={i}>
+              <td className="py-3 px-4">
+                <div className="flex items-center gap-3">
+                  <SkeletonLine className="h-8 w-8 rounded-full" />
+                  <SkeletonLine className="h-3.5 w-32" />
+                </div>
+              </td>
+              <td className="py-3 px-4">
+                <SkeletonLine className="h-3 w-48" />
+              </td>
+              <td className="py-3 px-4">
+                <SkeletonLine className="h-4 w-16" />
+              </td>
+              <td className="py-3 px-4">
+                <SkeletonLine className="ml-auto h-6 w-24" />
+              </td>
+            </tr>
+          ))}
+        </MembersTable>
       ) : error ? (
         <div className="bg-[#F7F7F7] border border-[#DFB2A6] rounded-lg p-6 text-center text-[13px]">
           <p className="text-[#9D4C38]">{error}</p>
-          <button onClick={() => void load()} className="mt-2 text-[#111111] font-semibold hover:underline">
+          <button onClick={retry} className="mt-2 text-[#111111] font-semibold hover:underline">
             Retry
           </button>
         </div>
       ) : (
-        <MembersTable toolbar={toolbar}>
+        <Reveal>
+          <MembersTable toolbar={toolbar}>
           {filtered.length === 0 ? (
             <tr>
               <td colSpan={4} className="py-8 px-4 text-center text-[13px] text-[#5A5A5A]">
@@ -271,6 +298,7 @@ export default function ClassMembersPage() {
             ))
           )}
         </MembersTable>
+        </Reveal>
       )}
     </div>
   );

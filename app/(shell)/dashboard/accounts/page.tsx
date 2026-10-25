@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { PageContainer } from "@/components/shared/PageShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -107,7 +108,7 @@ export default function AccountsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold">Accounts</h1>
         <p className="text-sm text-muted-foreground">
@@ -246,6 +247,6 @@ export default function AccountsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   );
 }

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { PAGE_COLUMN } from "@/components/shared/PageShell";
 
 type AdminPageShellProps = {
   title: string;
@@ -13,12 +14,12 @@ type AdminPageShellProps = {
 
 /**
  * Single container for every /admin/* page (Operate mode).
- * Enforces: max-w 960, same padding, same H1/subtitle scale,
- * same card/table grammar as Users/Classes.
+ * Enforces the app-wide content column (see PageShell) plus the same H1/subtitle
+ * scale and card/table grammar as Users/Classes.
  */
 export function AdminPageShell({ title, subtitle, actions, children, className }: AdminPageShellProps) {
   return (
-    <div className={cn("w-full max-w-[960px] mx-auto px-6 pt-8 pb-12 space-y-6 bg-[#F5F5F5]", className)}>
+    <div className={cn(PAGE_COLUMN, "space-y-6 bg-[#F5F5F5]", className)}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-[26px] font-semibold text-[#111111] font-heading tracking-tight">{title}</h1>

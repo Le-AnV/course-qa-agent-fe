@@ -4,6 +4,7 @@ import * as React from "react";
 import { ChevronDown, ChevronRight, FileText, Search } from "lucide-react";
 import { ChatMarkdown } from "@/features/chat/chat-markdown";
 import { studentApi, type ClassSyllabusRoadmap } from "@/lib/student-api";
+import { Reveal, SkeletonLine } from "@/components/shared/page-skeleton";
 
 interface SyllabusTableProps {
   toolbar: React.ReactNode;
@@ -181,7 +182,13 @@ export function SyllabusRoadmap({
           </p>
         </div>
 
-        {units.length > 0 && (
+        {loading ? (
+          <div className="flex flex-wrap items-center gap-2.5">
+            <SkeletonLine className="h-8 w-56" />
+            <SkeletonLine className="h-8 w-24" />
+          </div>
+        ) : (
+          units.length > 0 && (
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="relative">
               <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#6F6F6F]" />
@@ -202,12 +209,21 @@ export function SyllabusRoadmap({
               {allExpanded ? "Collapse all" : "Expand all"}
             </button>
           </div>
+          )
         )}
       </div>
 
       {loading ? (
-        <div className="rounded-lg border border-[#DADADA] bg-white p-8 text-center text-[13px] text-[#5A5A5A]">
-          Loading syllabus roadmap…
+        <div className="divide-y divide-[#DADADA] overflow-hidden rounded-lg border border-[#DADADA] bg-white">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-3.5 px-4 py-3.5">
+              <SkeletonLine className="h-7 w-9" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <SkeletonLine className="h-4 w-2/3" />
+                <SkeletonLine className="h-3 w-1/3" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="rounded-lg border border-[#DFB2A6] bg-[#F7F7F7] p-6 text-center text-[13px]">
@@ -231,7 +247,7 @@ export function SyllabusRoadmap({
           No units match &ldquo;{search.trim()}&rdquo;.
         </p>
       ) : (
-        <div className="divide-y divide-[#DADADA] overflow-hidden rounded-lg border border-[#DADADA] bg-white">
+        <Reveal className="divide-y divide-[#DADADA] overflow-hidden rounded-lg border border-[#DADADA] bg-white">
           {filteredUnits.map((unit) => {
             const isExpanded = Boolean(expandedIds[unit.id]) || Boolean(q);
             const formattedNum = String(unit.unit_number).padStart(2, "0");
@@ -279,7 +295,7 @@ export function SyllabusRoadmap({
               </div>
             );
           })}
-        </div>
+        </Reveal>
       )}
     </section>
   );

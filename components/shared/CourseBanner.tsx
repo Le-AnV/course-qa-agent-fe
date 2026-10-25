@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 interface CourseBannerProps {
-  title: string;
+  /** Null while the class detail is still loading — renders a placeholder bar. */
+  title: string | null;
   backHref: string;
   backLabel?: string;
   accentColor?: string;
@@ -46,14 +47,27 @@ export function CourseBanner({
 
         {/* Giữa: tên lớp to, căn giữa; mã lớp nhỏ bên dưới */}
         <div className="min-w-0 text-center">
-          <h1 className="text-[18px] md:text-[20px] font-bold tracking-tight text-[#111111] truncate leading-snug">
-            {title}
-          </h1>
-          {meta && (
-            <p className="text-[11px] font-medium text-[#5A5A5A] truncate mt-0.5">
-              {meta}
-            </p>
+          {/* A skeleton instead of a generic "Class workspace" label: the class
+              name arrives a beat after mount and a text swap reads as a flash. */}
+          {title ? (
+            <h1 className="text-[18px] md:text-[20px] font-bold tracking-tight text-[#111111] truncate leading-snug">
+              {title}
+            </h1>
+          ) : (
+            <div
+              aria-hidden
+              className="mx-auto h-[25px] w-40 animate-pulse rounded bg-black/5 md:h-[28px]"
+            />
           )}
+          {/* Always reserve the meta line: the class detail arrives a beat after
+              the layout mounts, and adding this line later pushed the tabs and
+              the whole page down by ~18px (visible jump on class entry). */}
+          <p
+            className="text-[11px] font-medium text-[#5A5A5A] truncate mt-0.5"
+            aria-hidden={!meta}
+          >
+            {meta ?? "\u00A0"}
+          </p>
         </div>
 
         {/* Phải: giáo viên góc phải, rộng cố định; mobile giữ chỗ để không lệch giữa */}

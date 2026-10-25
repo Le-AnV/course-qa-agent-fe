@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { PageContainer } from "@/components/shared/PageShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -122,7 +123,7 @@ export default function ImportPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold">Bulk import</h1>
         <p className="text-sm text-muted-foreground">
@@ -253,6 +254,6 @@ export default function ImportPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 }

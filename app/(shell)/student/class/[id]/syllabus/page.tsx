@@ -50,7 +50,7 @@ export default function StudentClassSyllabusPage() {
     : docs;
 
   return (
-    <div className="max-w-full">
+    <div>
       <SyllabusRoadmap classId={id} />
 
       <section className="mt-8" aria-labelledby="student-materials-heading">

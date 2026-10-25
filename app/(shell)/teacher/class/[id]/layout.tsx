@@ -3,8 +3,11 @@
 import * as React from "react";
 import { CourseBanner } from "@/components/shared/CourseBanner";
 import { CourseTabs, CourseTabItem } from "@/components/shared/CourseTabs";
+import { PageContainer } from "@/components/shared/PageShell";
 import { useParams, usePathname } from "next/navigation";
 import { studentApi, termFor, type StudentClass } from "@/lib/student-api";
+import { peekClassDetail } from "@/lib/class-cache";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
 export default function ClassWorkspaceLayout({
   children,
@@ -16,6 +19,23 @@ export default function ClassWorkspaceLayout({
   const id = params.id as string;
   const [cls, setCls] = React.useState<StudentClass | null>(null);
   const [pendingCount, setPendingCount] = React.useState(0);
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Seed the banner from the session cache before the first paint. A fetch in
+  // an effect only lands after paint, so an uncached class showed the loading
+  // placeholder (and previously a generic title) for ~400ms and then swapped.
+  // Layout effect, not useState: storage is unavailable during SSR, and a
+  // different initial state on the client would be a hydration mismatch.
+  useIsomorphicLayoutEffect(() => {
+    setCls(peekClassDetail(id));
+  }, [id]);
+
+  // The tab content lives in its own scroll container, which Next does not
+  // reset on client navigation. Reset it before paint so a new tab never
+  // opens scrolled to wherever the previous one was.
+  useIsomorphicLayoutEffect(() => {
+    scrollRef.current?.scrollTo(0, 0);
+  }, [pathname]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -70,7 +90,7 @@ export default function ClassWorkspaceLayout({
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#F5F5F5]">
       <CourseBanner
-        title={cls?.name ?? "Class workspace"}
+        title={cls?.name ?? null}
         backHref="/teacher/classes"
         accentColor="#F7F7F7"
         teacherName={cls?.trainer_name ?? ""}
@@ -79,14 +99,12 @@ export default function ClassWorkspaceLayout({
       <CourseTabs tabs={tabs} />
 
       {isAgentPage ? (
-        <div className="flex-1 min-h-0 overflow-hidden p-4 md:p-6">
-          {children}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <PageContainer className="h-full pb-6">{children}</PageContainer>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-6 md:p-8">
-          <div className="max-w-5xl mx-auto">
-            {children}
-          </div>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges]">
+          <PageContainer>{children}</PageContainer>
         </div>
       )}
     </div>

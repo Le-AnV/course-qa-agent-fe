@@ -4,6 +4,7 @@ import * as React from "react";
 import { Search, Users, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { studentApi, accentFor, termFor, type StudentClass } from "@/lib/student-api";
+import { PageContainer } from "@/components/shared/PageShell";
 
 export default function TeacherClassesPage() {
   const router = useRouter();
@@ -75,7 +76,7 @@ export default function TeacherClassesPage() {
   );
 
   return (
-    <div className="max-w-[920px] mx-auto px-6 pt-8 pb-12 space-y-8">
+    <PageContainer className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-[28px] font-bold text-[#111111] font-heading tracking-tight">My Classes</h1>
@@ -116,6 +117,6 @@ export default function TeacherClassesPage() {
           {filtered.map(renderClassCard)}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

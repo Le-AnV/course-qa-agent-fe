@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { Check, KeyRound, Loader2, Mail } from "lucide-react";
 import { errorMessage, isSessionError, profileApi } from "./api";
+import { PageContainer, PAGE_COLUMN } from "@/components/shared/PageShell";
 import { useProfile } from "./profile-context";
 import { PasswordDialog } from "./password-dialog";
 import {
@@ -16,7 +17,7 @@ import {
 /** Suspense fallback for `app/(shell)/account/page.tsx` — masthead + two cards. */
 export function ProfileLoadingSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-3xl" aria-busy="true">
+    <div className={PAGE_COLUMN} aria-busy="true">
       <div className="h-7 w-32 animate-pulse rounded bg-[#F7F7F7]" />
       <div className="mt-2 h-4 w-64 animate-pulse rounded bg-[#F7F7F7]" />
       <div className="mt-10 flex flex-col gap-6">
@@ -117,7 +118,7 @@ export function ProfilePanel({ signOut }: { signOut: () => void }) {
 
   if (!profile) {
     return (
-      <div className="mx-auto w-full max-w-3xl">
+      <PageContainer>
         <div className="rounded-lg border border-[#ECD2CB] bg-[#FBF5F4] p-6 shadow-sm">
           <h2 className="text-[15px] font-semibold text-[#9D4C38]">Profile unavailable</h2>
           <p className="mt-1 text-[13px] text-[#7F3D2D]">{error}</p>
@@ -129,12 +130,12 @@ export function ProfilePanel({ signOut }: { signOut: () => void }) {
             Retry
           </button>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <PageContainer>
       <h1 className="font-heading text-[28px] font-bold tracking-tight text-[#111111]">
         Account
       </h1>
@@ -283,6 +284,6 @@ export function ProfilePanel({ signOut }: { signOut: () => void }) {
         onOpenChange={setPasswordOpen}
         onSessionExpired={expireSession}
       />
-    </div>
+    </PageContainer>
   );
 }

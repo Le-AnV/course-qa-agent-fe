@@ -381,4 +381,28 @@
   table {
     font-variant-numeric: tabular-nums;
   }
+
+  /* Press feedback: instant, small, and on the scale property so it never
+     fights Tailwind's translate/transform utilities. */
+  button:not(:disabled):active {
+    scale: 0.97;
+  }
+
+  /* Radix Select keeps a 1px aria-hidden native <select> at the trigger's
+     offset (inline position:absolute) for form submission. When its containing
+     block is an ancestor that scrolls, the element inflates that ancestor's
+     scrollHeight even though it is clipped and invisible, so you can scroll
+     into a blank tail (class settings: `main` grew 900 -> 1616). Fixed keeps
+     it out of flow and out of every scroll area. */
+  select[aria-hidden="true"] {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button:not(:disabled):active {
+      scale: 1;
+    }
+  }
 }

@@ -5,6 +5,7 @@ import { BookOpen, ChevronRight, Users, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useProfile } from "@/features/profile/profile-context";
 import { studentApi, accentFor, type StudentClass } from "@/lib/student-api";
+import { PageContainer } from "@/components/shared/PageShell";
 
 export default function StudentHomePage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function StudentHomePage() {
   const greetingName = profile?.username ?? (profileLoading ? "…" : "there");
 
   return (
-    <div className="mx-auto w-full max-w-[920px] space-y-8 bg-[#F5F5F5] px-6 pb-12 pt-8">
+    <PageContainer className="space-y-8">
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
         <div>
           <h1 className="text-[28px] font-heading font-bold tracking-tight text-[#111111]">
@@ -105,6 +106,6 @@ export default function StudentHomePage() {
           )}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

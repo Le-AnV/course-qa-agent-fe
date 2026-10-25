@@ -1,4 +1,5 @@
 import { AUTH_TOKEN_KEY } from "@/components/ui/nav-config";
+import { cacheClassDetail, cacheClasses } from "@/lib/class-cache";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -158,8 +159,16 @@ async function studentFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const studentApi = {
-  classes: () => studentFetch<StudentClass[]>("/api/student/classes"),
-  classDetail: (id: string) => studentFetch<StudentClass>(`/api/student/classes/${id}`),
+  classes: () =>
+    studentFetch<StudentClass[]>("/api/student/classes").then((list) => {
+      cacheClasses(list);
+      return list;
+    }),
+  classDetail: (id: string) =>
+    studentFetch<StudentClass>(`/api/student/classes/${id}`).then((cls) => {
+      cacheClassDetail(cls);
+      return cls;
+    }),
   members: (id: string) => studentFetch<ClassMember[]>(`/api/student/classes/${id}/members`),
   // Trainer only: mark a member's term result (null | PASSED | FAILED).
   setResult: (classId: string, studentId: string, result: "PASSED" | "FAILED" | null) =>

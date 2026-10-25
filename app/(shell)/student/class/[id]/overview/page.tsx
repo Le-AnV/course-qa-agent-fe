@@ -5,6 +5,9 @@ import { BookOpen, Users, FileText } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { studentApi, type ClassInfo, type StudentClass } from "@/lib/student-api";
 import { ClassInfoCard, hasClassInfo } from "@/components/shared/ClassInfoCard";
+import { peekClassDetail } from "@/lib/class-cache";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
+import { Reveal, SkeletonCard, SkeletonLine } from "@/components/shared/page-skeleton";
 
 export default function StudentClassOverviewPage() {
   const params = useParams();
@@ -15,11 +18,17 @@ export default function StudentClassOverviewPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Warm cache seeded by the class layout: render the real name/counts on the
+  // first frame instead of flashing a placeholder for one tick.
+  useIsomorphicLayoutEffect(() => {
+    const cached = peekClassDetail(id);
+    if (cached) setCls((current) => current ?? cached);
+  }, [id]);
+
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        setLoading(true);
         setError(null);
         const detail = await studentApi.classDetail(id);
         if (!cancelled) setCls(detail);
@@ -36,19 +45,32 @@ export default function StudentClassOverviewPage() {
     };
   }, [id]);
 
-  if (loading) {
+  const cold = loading && !cls;
+
+  if (cold) {
     return (
-      <div className="space-y-8 max-w-[920px]">
-        <div className="bg-white border border-[#DADADA] rounded-xl p-8 text-center text-[#5A5A5A] text-[13px]">
-          Loading class overview…
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-[22px] font-bold font-heading text-[#111111]">Class Overview</h2>
+          <SkeletonLine className="mt-2 h-4 w-64" />
         </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => (
+            <SkeletonCard key={i}>
+              <SkeletonLine className="h-8 w-8" />
+              <SkeletonLine className="mt-3 h-3 w-20" />
+              <SkeletonLine className="mt-2 h-6 w-12" />
+            </SkeletonCard>
+          ))}
+        </div>
+        <SkeletonCard className="h-[180px]" />
       </div>
     );
   }
 
   if (error || !cls) {
     return (
-      <div className="space-y-8 max-w-[920px]">
+      <div className="space-y-8">
         <div className="bg-white border border-[#CFCFCF] rounded-xl p-6 text-center text-[13px]">
           <p className="text-[#9D4C38]">{error ?? "Class not found."}</p>
           <button onClick={() => router.push("/student/classes")} className="mt-2 text-[#111111] font-semibold hover:underline">
@@ -60,7 +82,7 @@ export default function StudentClassOverviewPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-[920px]">
+    <div className="space-y-8">
       <div>
         <h2 className="text-[22px] font-bold font-heading text-[#111111]">Class Overview</h2>
         <p className="text-[14px] text-[#5A5A5A] mt-0.5">
@@ -69,6 +91,7 @@ export default function StudentClassOverviewPage() {
       </div>
 
       {/* Stats Grid — real counts from the backend */}
+      <Reveal className="space-y-8">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-white border border-[#DADADA] rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
@@ -103,6 +126,7 @@ export default function StudentClassOverviewPage() {
 
       {/* Class information — written by the trainer on Course Settings */}
       {hasClassInfo(info) && <ClassInfoCard info={info} />}
+      </Reveal>
 
     </div>
   );

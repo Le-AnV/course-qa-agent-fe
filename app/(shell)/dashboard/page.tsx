@@ -6,6 +6,7 @@ import { BookOpen, Inbox, Mail, School, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminApi } from "@/lib/admin-api";
+import { PageContainer } from "@/components/shared/PageShell";
 
 /**
  * Admin dashboard (AI-31): entry point for classes, accounts,
@@ -47,7 +48,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Admin dashboard</h1>
@@ -88,6 +89,6 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
-    </div>
+    </PageContainer>
   );
 }

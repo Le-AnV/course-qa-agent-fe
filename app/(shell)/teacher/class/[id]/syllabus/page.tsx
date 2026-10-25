@@ -11,7 +11,7 @@ export default function ClassSyllabusPage() {
   const [refreshKey, setRefreshKey] = React.useState(0);
 
   return (
-    <div className="max-w-full">
+    <div>
       <SyllabusRoadmap classId={id} isTeacher refreshKey={refreshKey} />
       <ClassMaterials
         classId={id}

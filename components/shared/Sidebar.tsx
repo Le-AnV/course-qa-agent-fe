@@ -22,6 +22,9 @@ import { Role, settingsHrefForRole } from "@/components/ui/nav-config";
 import { useAuth } from "@/components/ui/auth-guard";
 import { useProfile } from "@/features/profile/profile-context";
 import { initialsFor, roleBadgeLabel } from "@/features/profile/validation";
+import { peekClasses } from "@/lib/class-cache";
+import { accentFor, studentApi } from "@/lib/student-api";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
 // Class lists come from the backend (student enrollments / trainer ownership).
 // Admins have no class workspace, so they get no class list at all.
@@ -29,12 +32,24 @@ function useSidebarClasses(role: Role) {
   const [realClasses, setRealClasses] = React.useState<
     { id: string; code: string; title: string; accentColor: string }[] | null
   >(null);
+
+  // Seed from the session cache before paint so entering a class does not
+  // flash an empty "Classes" group and then fill it in.
+  useIsomorphicLayoutEffect(() => {
+    if (role === "admin") return;
+    const cached = peekClasses();
+    if (cached) {
+      setRealClasses(
+        cached.map((c) => ({ id: c.id, code: c.code, title: c.name, accentColor: accentFor(c.id) })),
+      );
+    }
+  }, [role]);
+
   React.useEffect(() => {
     if (role === "admin") return;
     let cancelled = false;
     (async () => {
       try {
-        const { studentApi, accentFor } = await import("@/lib/student-api");
         const list = await studentApi.classes();
         if (!cancelled) {
           setRealClasses(
@@ -49,7 +64,7 @@ function useSidebarClasses(role: Role) {
       cancelled = true;
     };
   }, [role]);
-  return realClasses ?? [];
+  return realClasses;
 }
 
 /**
@@ -173,53 +188,69 @@ export function SidebarNavBody({
           {role !== "admin" && (
             <>
               {/* Classes = accordion: vừa tới hub, vừa xổ list lớp con.
-                  Gộp "Classes" + "Your/Active Classes" làm một — hết trùng lặp. */}
-              <button
-                onClick={() => {
-                  if (collapsed) onExpand?.();
-                  setClassesOpen(!open);
-                }}
-                title="Classes"
-                className={cn(linkCls(classesActive), "w-full")}
-              >
-                <BookOpen className="h-4 w-4 shrink-0" />
-                {!collapsed && (
-                  <>
-                    <Link
-                      href={`${basePath}/classes`}
-                      className="flex-1 text-left"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Classes
-                    </Link>
+                  Gộp "Classes" + "Your/Active Classes" làm một — hết trùng lặp.
+                  Two separate controls (link + chevron), never a <Link> inside a
+                  <button>: nested interactive content is invalid HTML and screen
+                  readers announce it as one confusing control. */}
+              {collapsed ? (
+                <button
+                  type="button"
+                  onClick={() => onExpand?.()}
+                  title="Classes"
+                  className={cn(linkCls(classesActive), "w-full")}
+                >
+                  <BookOpen className="h-4 w-4 shrink-0" />
+                </button>
+              ) : (
+                <div className={cn(linkCls(classesActive), "w-full")}>
+                  <BookOpen className="h-4 w-4 shrink-0" />
+                  <Link href={`${basePath}/classes`} className="flex-1 text-left">
+                    Classes
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setClassesOpen(!open)}
+                    title={open ? "Collapse classes" : "Expand classes"}
+                    aria-expanded={open}
+                    aria-controls="sidebar-classes"
+                    className="shrink-0 rounded p-0.5 hover:bg-[#EDEDED]"
+                  >
                     <ChevronDown
                       className={cn(
-                        "h-3.5 w-3.5 shrink-0 text-[#6F6F6F] transition-transform",
+                        "h-3.5 w-3.5 text-[#6F6F6F] transition-transform",
                         open && "rotate-180",
                       )}
                     />
-                  </>
-                )}
-              </button>
+                  </button>
+                </div>
+              )}
               {!collapsed && open && (
-                <div className="mt-0.5 space-y-0.5 border-l-2 border-[#DADADA] ml-[22px] pl-2">
-                  {myClasses.map((cls) => {
-                    const isActive = pathname.includes(cls.id);
-                    return (
-                      <Link
-                        key={cls.id}
-                        href={`${basePath}/class/${cls.id}/overview`}
-                        title={cls.title}
-                        className={cn(
-                          "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[12.5px] font-medium transition-colors",
-                          isActive ? "bg-[var(--brand-soft)] text-[#111111]" : "text-[#111111] hover:bg-[#F7F7F7]",
-                        )}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cls.accentColor }} />
-                        <span className="truncate flex-1">{cls.title}</span>
-                      </Link>
-                    );
-                  })}
+                <div id="sidebar-classes" className="mt-0.5 space-y-0.5 border-l-2 border-[#DADADA] ml-[22px] pl-2">
+                  {myClasses === null ? (
+                    <div className="animate-pulse space-y-2 px-2 py-1.5" aria-hidden>
+                      <div className="h-3.5 w-3/4 rounded bg-[#EDEDED]" />
+                      <div className="h-3.5 w-2/3 rounded bg-[#EDEDED]" />
+                      <div className="h-3.5 w-1/2 rounded bg-[#EDEDED]" />
+                    </div>
+                  ) : (
+                    myClasses.map((cls) => {
+                      const isActive = pathname.includes(cls.id);
+                      return (
+                        <Link
+                          key={cls.id}
+                          href={`${basePath}/class/${cls.id}/overview`}
+                          title={cls.title}
+                          className={cn(
+                            "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[12.5px] font-medium transition-colors",
+                            isActive ? "bg-[var(--brand-soft)] text-[#111111]" : "text-[#111111] hover:bg-[#F7F7F7]",
+                          )}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: cls.accentColor }} />
+                          <span className="truncate flex-1">{cls.title}</span>
+                        </Link>
+                      );
+                    })
+                  )}
                   <Link
                     href={`${basePath}/classes`}
                     className="block rounded-md px-2 py-1.5 text-[12px] font-semibold text-[#111111] hover:bg-[#F7F7F7]"
