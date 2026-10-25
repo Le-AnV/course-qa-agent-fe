@@ -55,9 +55,9 @@ export function MessageBubble({
     >
       <div
         className={`min-w-0 max-w-[92%] break-words rounded-2xl px-4 py-3 ${
-          isUser && !chatSurface
-            ? 'bg-[#F7F7F7] text-[#111111] rounded-tr-sm' 
-            : 'bg-white border border-[#DADADA] text-[#111111] rounded-tl-sm shadow-xs'
+          isUser
+            ? 'bg-[#F7F7F7] text-[#111111] rounded-tr-sm'
+            : `bg-white border border-[#DADADA] text-[#111111] rounded-tl-sm ${chatSurface ? '' : 'shadow-xs'}`
         }`}
       >
         {/* Reasoning trace: live while thinking, collapsed summary afterwards */}

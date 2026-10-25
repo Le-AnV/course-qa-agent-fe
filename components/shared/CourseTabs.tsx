@@ -51,7 +51,9 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
   }
 
   return (
-    <div className="relative w-full bg-white border-b border-[#DADADA] shrink-0">
+    // Tinted with the brand soft/line pair already used by the sidebar's active
+    // state: a white strip here merged into the white header + sidebar above it.
+    <div className="relative w-full bg-[var(--brand-soft)] border-b border-[var(--brand-line)] shrink-0">
       {/* Below lg: no scrolling, one row + expandable list */}
       <div className="lg:hidden">
         <button
@@ -62,10 +64,10 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
           }}
           aria-expanded={menuOpen}
           aria-controls="course-tab-menu"
-          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--brand-soft-strong)]"
         >
           <span className="flex min-w-0 items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[#6F6F6F]">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[#5A5A5A]">
               Section
             </span>
             <span className="truncate text-[14px] font-semibold text-[#111111]">
@@ -75,7 +77,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
           </span>
           <ChevronDown
             className={cn(
-              "h-4 w-4 shrink-0 text-[#6F6F6F] transition-transform motion-reduce:transition-none",
+              "h-4 w-4 shrink-0 text-[#5A5A5A] transition-transform motion-reduce:transition-none",
               menuOpen && "rotate-180",
             )}
           />
@@ -90,7 +92,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
             />
             <div
               id="course-tab-menu"
-              className="absolute inset-x-0 top-full z-20 border-b border-[#DADADA] bg-white shadow-sm"
+              className="absolute inset-x-0 top-full z-20 border-b border-[var(--brand-line)] bg-white shadow-sm"
             >
               {tabs.map((tab) => {
                 const isActive = tab.id === active.id;
