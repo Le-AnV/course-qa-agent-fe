@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 
 import { AUTH_TOKEN_KEY } from '@/components/ui/nav-config';
+import { cn } from '@/lib/utils';
 import type { ChatCitation } from '@/lib/sse';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -53,9 +55,123 @@ async function openClassSource(citation: ChatCitation) {
   }
 }
 
+type CardPosition = {
+  top: number;
+  left: number;
+  width: number;
+  /** Which side of the chip the card sits on, so it can grow out of the chip. */
+  above: boolean;
+  /** Horizontal offset of the chip centre inside the card: the transform origin. */
+  originX: number;
+};
+
+const CLOSE_DELAY_MS = 90;
+const EXIT_MS = 170;
+
+/**
+ * Only one citation card may be visible at a time: the chips sit a few pixels
+ * apart, so crossing two of them would otherwise show two overlapping cards.
+ */
+let activeCard: { token: string; close: () => void } | null = null;
+
 export function CitationChip({ citation }: { citation: ChatCitation }) {
   const [isOpen, setIsOpen] = React.useState(false);
+  // Stays true through the exit animation so the card can animate out before unmount.
+  const [isRendered, setIsRendered] = React.useState(false);
+  const [position, setPosition] = React.useState<CardPosition | null>(null);
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const unmountRef = React.useRef<NodeJS.Timeout | null>(null);
+  const anchorRef = React.useRef<HTMLSpanElement | null>(null);
+  const cardRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Stable per-chip identity, so the shared registry can tell cards apart.
+  const token = React.useId();
+
+  // Superseded cards disappear at once (no grace, no fade) so they never stack.
+  const closeNow = React.useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (unmountRef.current) {
+      clearTimeout(unmountRef.current);
+      unmountRef.current = null;
+    }
+    if (activeCard?.token === token) activeCard = null;
+    setIsOpen(false);
+    setIsRendered(false);
+  }, [token]);
+
+  // The card floats above the transcript and overflows the chat card when the chip
+  // sits near an edge, so it is positioned against the viewport instead of the chip.
+  const placeCard = React.useCallback(() => {
+    const anchor = anchorRef.current;
+    const card = cardRef.current;
+    if (!anchor || !card) return;
+
+    const margin = 12;
+    const gap = 10;
+    const rect = anchor.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const width = Math.min(320, viewportWidth - margin * 2);
+    const height = card.offsetHeight;
+    const left = Math.min(
+      Math.max(rect.left, margin),
+      Math.max(margin, viewportWidth - width - margin),
+    );
+    const aboveEdge = rect.top - height - gap;
+    const belowEdge = rect.bottom + gap;
+    // Keep the card inside the viewport: above the chip when it fits, else below,
+    // and never closer than `margin` to the edges.
+    const isAbove = aboveEdge >= margin;
+    const top = isAbove
+      ? aboveEdge
+      : Math.max(margin, Math.min(belowEdge, viewportHeight - height - margin));
+    const originX = Math.min(Math.max(rect.left + rect.width / 2 - left, 16), width - 16);
+
+    setPosition((previous) =>
+      previous &&
+      previous.top === top &&
+      previous.left === left &&
+      previous.width === width &&
+      previous.above === isAbove &&
+      previous.originX === originX
+        ? previous
+        : { top, left, width, above: isAbove, originX },
+    );
+  }, []);
+
+  // Measure as soon as the portalled card commits; no effect-driven setState needed.
+  const attachCard = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      cardRef.current = node;
+      if (node) placeCard();
+    },
+    [placeCard],
+  );
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const reposition = () => placeCard();
+    window.addEventListener('resize', reposition);
+    // Capture phase so scrolling inside the transcript also moves the card.
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [isOpen, placeCard]);
+
+  React.useEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (unmountRef.current) clearTimeout(unmountRef.current);
+      if (activeCard?.token === token) activeCard = null;
+    },
+    [token],
+  );
 
   const isCurriculum = citation.kind === 'curriculum';
   const markers = citation.indexes.length > 0 ? citation.indexes : [citation.index];
@@ -71,13 +187,34 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
+    if (unmountRef.current) {
+      clearTimeout(unmountRef.current);
+      unmountRef.current = null;
+    }
+    // Take over from any other open card before this one appears.
+    if (activeCard && activeCard.token !== token) activeCard.close();
+    activeCard = { token, close: closeNow };
+    // A fresh card is measured from scratch; a card kept alive during the close
+    // delay is reused and only re-placed (the transcript may have scrolled).
+    if (!isRendered) setPosition(null);
+    setIsRendered(true);
     setIsOpen(true);
+    placeCard();
   };
 
+  // Leaving keeps the card on screen briefly, so a diagonal trip from the chip into
+  // the card (or a hesitant mouse) does not make it flicker away.
   const handleMouseLeave = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
+      if (activeCard?.token === token) activeCard = null;
       setIsOpen(false);
-    }, 200);
+      unmountRef.current = setTimeout(() => {
+        unmountRef.current = null;
+        setIsRendered(false);
+      }, EXIT_MS);
+    }, CLOSE_DELAY_MS);
   };
 
   const handleActionClick = (e: React.MouseEvent) => {
@@ -91,9 +228,12 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
 
   return (
     <span
+      ref={anchorRef}
       className="relative inline-block align-baseline"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onFocus={handleMouseEnter}
+      onBlur={handleMouseLeave}
     >
       {citation.url ? (
         <a
@@ -140,64 +280,100 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
         </button>
       )}
 
-      {/* Rich Hover Popover Card */}
-      {isOpen && (
-        <div
-          role="tooltip"
-          className="absolute bottom-full left-0 mb-2 z-50 w-80 max-w-[85vw] rounded-xl border border-slate-200 bg-white p-3.5 shadow-xl text-left pointer-events-auto transition-all animate-in fade-in duration-150"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 shrink-0">
-                {markerLabel}
-              </span>
-              <span className="text-xs font-semibold text-slate-800 truncate" title={citation.title}>
-                {citation.title}
-              </span>
-            </div>
-            {isCurriculum && citation.page !== null ? (
-              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
-                Trang {citation.page}
-              </span>
-            ) : (
-              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">
-                Web
-              </span>
-            )}
-          </div>
+      {/* Rich Hover Popover Card: portalled so the chat card can never clip it */}
+      {isRendered && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={attachCard}
+              role="tooltip"
+              data-state={isOpen ? 'open' : 'closed'}
+              style={{
+                top: position?.top ?? 0,
+                left: position?.left ?? 0,
+                width: position?.width ?? 320,
+                visibility: position ? 'visible' : 'hidden',
+                transformOrigin: position
+                  ? `${position.originX}px ${position.above ? '100%' : '0'}`
+                  : '50% 100%',
+              }}
+              className={cn(
+                'fixed z-[80] rounded-xl border border-slate-200 bg-white p-3.5 text-left shadow-xl',
+                // Place the card instantly. Any inherited `transition: all` would animate
+                // left/top from 0,0 and read as the card flying in from the corner.
+                'transition-none motion-reduce:animate-none',
 
-          {/* Snippet / Quote Body */}
-          {citation.snippet ? (
-            <div className="rounded-lg bg-slate-50 border border-slate-100 p-2.5 text-xs text-slate-700 leading-relaxed italic line-clamp-4">
-              “{citation.snippet}”
-            </div>
-          ) : (
-            <div className="text-xs text-slate-400 italic py-1">
-              Trích đoạn nguồn tài liệu được dùng cho câu trả lời.
-            </div>
-          )}
-
-          {/* Footer Action */}
-          <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-            <span className="text-slate-400 text-[11px]">
-              {isCurriculum ? 'Tài liệu khóa học' : 'Nguồn Internet'}
-            </span>
-            <button
-              type="button"
-              onClick={handleActionClick}
-              className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                isOpen
+                  ? position && 'animate-in fade-in-0 duration-150 ease-out'
+                  : 'pointer-events-none animate-out fade-out-0 duration-150 ease-in',
+                isOpen && (position?.above ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1'),
+              )}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
             >
-              <span>{isCurriculum ? 'Mở tài liệu' : 'Xem trang web'}</span>
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
+              {position ? (
+                <span
+                  aria-hidden
+                  style={{ left: Math.round(position.originX) - 5 }}
+                  className={cn(
+                    'absolute h-2.5 w-2.5 rotate-45 border-slate-200 bg-white',
+                    position.above
+                      ? '-bottom-[5.5px] border-b border-r'
+                      : '-top-[5.5px] border-l border-t',
+                  )}
+                />
+              ) : null}
+              {/* Header */}
+              <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 shrink-0">
+                    {markerLabel}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-800 truncate" title={citation.title}>
+                    {citation.title}
+                  </span>
+                </div>
+                {isCurriculum && citation.page !== null ? (
+                  <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                    Trang {citation.page}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">
+                    Web
+                  </span>
+                )}
+              </div>
+
+              {/* Snippet / Quote Body */}
+              {citation.snippet ? (
+                <div className="rounded-lg bg-slate-50 border border-slate-100 p-2.5 text-xs text-slate-700 leading-relaxed italic line-clamp-4">
+                  “{citation.snippet}”
+                </div>
+              ) : (
+                <div className="text-xs text-slate-400 italic py-1">
+                  Trích đoạn nguồn tài liệu được dùng cho câu trả lời.
+                </div>
+              )}
+
+              {/* Footer Action */}
+              <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                <span className="text-slate-400 text-[11px]">
+                  {isCurriculum ? 'Tài liệu khóa học' : 'Nguồn Internet'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleActionClick}
+                  className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                >
+                  <span>{isCurriculum ? 'Mở tài liệu' : 'Xem trang web'}</span>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                  </svg>
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </span>
   );
 }
