@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { adminApi, type EmailConfig, type EmailEntry, type EmailStats } from "@/lib/admin-api";
+import { PageContainer } from "@/components/shared/PageShell";
 
 /**
  * Email sender (AC-08, AC-09, AI-105). App password (Gmail / Workspace),
@@ -34,8 +35,6 @@ export default function EmailPage() {
   const [sender, setSender] = React.useState("");
   const [appPassword, setAppPassword] = React.useState("");
   const [rate, setRate] = React.useState("");
-  const [dryRun, setDryRun] = React.useState(true);
-  const [testTo, setTestTo] = React.useState("");
   const [processing, setProcessing] = React.useState(false);
 
   // NOTE: no synchronous setState here — this runs inside a useEffect,
@@ -55,7 +54,6 @@ export default function EmailPage() {
       setPort(String(cfg.smtp_port));
       setSender(cfg.smtp_sender);
       setRate(String(cfg.smtp_rate_per_minute));
-      setDryRun(cfg.email_dry_run);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Load failed.");
     }
@@ -77,26 +75,12 @@ export default function EmailPage() {
         smtp_sender: sender,
         ...(appPassword ? { smtp_app_password: appPassword } : {}),
         smtp_rate_per_minute: Number(rate),
-        email_dry_run: dryRun,
       });
       setAppPassword("");
       setNotice("Email sender saved. App password is stored, never shown.");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed.");
-    }
-  }
-
-  async function sendTest(event: React.FormEvent) {
-    event.preventDefault();
-    setNotice(null);
-    setError(null);
-    try {
-      const res = await adminApi.sendTestEmail(testTo.trim());
-      setNotice(`Test email sent to ${res.sent_to}.`);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Test email failed.");
     }
   }
 
@@ -126,12 +110,12 @@ export default function EmailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Email sender</h1>
           <p className="text-sm text-muted-foreground">
-            Gmail / Workspace app password — never a personal password, never hardcoded (AC-08).
+            Gmail / Workspace app password — every queued email is delivered for real (AC-08).
           </p>
         </div>
         {stats && (
@@ -156,10 +140,15 @@ export default function EmailPage() {
             <CardDescription>
               {config?.has_app_password
                 ? "An app password is stored (masked). Leave blank to keep it."
-                : "No app password stored yet — dry-run mode only."}
+                : "No app password stored yet — sending will fail until one is set."}
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {config?.email_dry_run && (
+              <p role="status" className="mb-3 text-sm text-destructive">
+                Dry-run is still enabled in system config: emails are marked sent without being delivered.
+              </p>
+            )}
             <form onSubmit={saveConfig} className="flex flex-col gap-3">
               <div className="grid grid-cols-3 gap-3">
                 <label className="col-span-2 flex flex-col gap-1.5 text-sm font-medium">
@@ -190,10 +179,6 @@ export default function EmailPage() {
                   Max emails / minute
                   <Input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="numeric" />
                 </label>
-                <label className="flex items-end gap-2 pb-2 text-sm font-medium">
-                  <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} />
-                  Dry-run (no real sending)
-                </label>
               </div>
               <Button type="submit">Save sender</Button>
             </form>
@@ -202,26 +187,13 @@ export default function EmailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Test &amp; queue</CardTitle>
-            <CardDescription>Verify the sender, then drain pending emails at the limited rate (AC-09).</CardDescription>
+            <CardTitle>Send queue</CardTitle>
+            <CardDescription>Deliver every pending email for real, paced at the configured rate (AC-09).</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <form onSubmit={sendTest} className="flex gap-2">
-              <Input
-                type="email"
-                value={testTo}
-                onChange={(e) => setTestTo(e.target.value)}
-                placeholder="you@gmail.com"
-                required
-                aria-label="Test recipient"
-              />
-              <Button type="submit" variant="outline">
-                Send test
-              </Button>
-            </form>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => void processNow()} disabled={processing}>
-                {processing ? "Processing…" : "Process queue now"}
+                {processing ? "Sending…" : "Send pending emails"}
               </Button>
               <AppSelect
                 value={queueFilter}
@@ -268,6 +240,6 @@ export default function EmailPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   );
 }
