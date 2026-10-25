@@ -33,7 +33,7 @@ export default function AgentPage() {
         className="hidden md:flex"
       />
 
-      {/* Cột Giữa: Khung Chat Chính */}
+      {/* Cột Giữa: Khung Chat Chính & Tiếp tục phiên hội thoại cũ (AI-97) */}
       <div className="flex-1 flex flex-col bg-[#F7F7F7] border border-[#DADADA] rounded-xl overflow-hidden relative">
         {/*
           Mỗi lớp 1 scope chat riêng: classId đi kèm mọi request để BE
