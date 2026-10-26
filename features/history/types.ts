@@ -16,6 +16,8 @@ export interface ChatSessionItem {
   title: string | null;
   created_at?: string; // ISO 8601 string
   updated_at: string; // ISO 8601 string
+  is_pinned?: boolean;
+  pinned_at?: string | null;
 }
 
 /** Alias for ChatSessionItem */
@@ -103,3 +105,24 @@ export interface AppendMessageRequest {
 export interface DeleteSessionResponse {
   message: string;
 }
+
+/**
+ * Single search result item representing a matching conversation (AI-101 AC-01, AC-03).
+ */
+export interface SearchResultItem {
+  session_id: string;
+  title: string | null;
+  updated_at: string;
+  snippet: string;
+  match_in: 'title' | 'message';
+}
+
+/**
+ * Response payload for search endpoint `GET /api/history/search` (AI-101).
+ */
+export interface ChatSearchResponse {
+  items: SearchResultItem[];
+  total: number;
+  query: string;
+}
+
