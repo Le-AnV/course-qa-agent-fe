@@ -32,6 +32,11 @@ export function Modal({ isOpen, onClose, title, subtitle, children, widthClass =
     // keyboard users do not land on <body> after dismissing the dialog.
     const restoreTo = document.activeElement as HTMLElement | null;
     panelRef.current?.focus();
+    // Radix Select restores focus to its trigger when it closes. If a dialog
+    // opens from that selection, re-assert focus inside after that handoff.
+    const focusTimer = window.setTimeout(() => {
+      if (panelRef.current?.isConnected) panelRef.current.focus();
+    }, 0);
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -59,6 +64,7 @@ export function Modal({ isOpen, onClose, title, subtitle, children, widthClass =
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => {
+      window.clearTimeout(focusTimer);
       document.removeEventListener("keydown", onKeyDown, true);
       if (restoreTo?.isConnected) restoreTo.focus();
     };
