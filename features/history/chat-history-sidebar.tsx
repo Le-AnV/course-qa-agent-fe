@@ -349,13 +349,15 @@ export function ChatHistorySidebar({
     <div className="relative px-2 pb-1.5 pt-2" role="search">
       <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6F6F6F]" />
       <input
-        type="search"
+        type="text"
+        inputMode="search"
+        autoComplete="off"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="Search conversations..."
         aria-label="Search conversations"
         data-testid="search-history-input"
-        className="w-full rounded-md border border-[#DADADA] bg-[#F7F7F7] py-1.5 pl-8 pr-8 text-[12px] text-[#111111] placeholder:text-[#9F9F9F] focus:border-[#111111] focus:outline-none focus:ring-1 focus:ring-[#111111]/20"
+        className="w-full rounded-md border border-[#DADADA] bg-[#F7F7F7] py-1.5 pl-8 pr-8 text-[12px] text-[#111111] placeholder:text-[#9F9F9F] focus:border-[#111111] focus:outline-none focus:ring-1 focus:ring-[#111111]/20 [&::-webkit-search-cancel-button]:hidden"
       />
       {searchQuery && (
         <button
