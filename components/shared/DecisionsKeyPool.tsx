@@ -336,7 +336,7 @@ export function DecisionsKeyPool() {
         <div
           id="decisions-key-list"
           hidden={!keysExpanded}
-          className="max-h-[22rem] overflow-y-auto p-2 [scrollbar-color:#D4D4D4_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#D4D4D4] [&::-webkit-scrollbar-track]:bg-transparent"
+          className="max-h-[22rem] overflow-y-auto p-2"
         >
           {loading ? (
             <p className="p-6 text-center text-[13px] text-[#5A5A5A]">Loading keys...</p>
