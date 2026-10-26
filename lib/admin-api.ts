@@ -100,6 +100,43 @@ export type AdminSettings = {
     app_password_configured: boolean;
   };
 };
+export type GeminiKeyStatus = "active" | "paused" | "invalid" | "cooldown";
+export type GeminiKey = {
+  id: string;
+  name: string;
+  account_label: string | null;
+  project_label: string | null;
+  masked_key: string;
+  status: GeminiKeyStatus;
+  priority: number;
+  available_models: string[];
+  cooldown_until: string | null;
+  last_error: string;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type GeminiKeys = {
+  keys: GeminiKey[];
+  active_count: number;
+  env_configured: boolean;
+  auto_switch: boolean;
+};
+export type GeminiAutoSwitch = {
+  enabled: boolean;
+};
+export type GeminiModelConfig = {
+  model: string;
+  available_models: string[];
+};
+export type GeminiKeyCreate = {
+  name: string;
+  api_key: string;
+};
+export type GeminiKeyUpdate = {
+  name?: string;
+  status?: "active" | "paused";
+};
 export type ConnectionTest = { success: boolean; message: string };
 export type RetrievalConfig = {
   // AI-65: best similarity score needed to answer from class materials.
@@ -153,6 +190,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { detail?: string }).detail ?? `Request failed (${res.status})`);
   }
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
@@ -295,6 +333,32 @@ export const adminApi = {
     apiFetch<ImportRow>(`/api/admin/import-rows/${rowId}/retry`, { method: "POST" }),
   // AI-105 runtime settings (read-only from UI, secrets never returned)
   adminSettings: () => apiFetch<AdminSettings>("/api/admin/settings"),
+  geminiKeys: () => apiFetch<GeminiKeys>("/api/admin/llm/keys"),
+  updateGeminiAutoSwitch: (enabled: boolean) =>
+    apiFetch<GeminiAutoSwitch>("/api/admin/llm/auto-switch", {
+      method: "PATCH",
+      body: JSON.stringify({ enabled }),
+    }),
+  createGeminiKey: (payload: GeminiKeyCreate) =>
+    apiFetch<GeminiKey>("/api/admin/llm/keys", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateGeminiKey: (keyId: string, payload: GeminiKeyUpdate) =>
+    apiFetch<GeminiKey>(`/api/admin/llm/keys/${keyId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteGeminiKey: (keyId: string) =>
+    apiFetch<void>(`/api/admin/llm/keys/${keyId}`, { method: "DELETE" }),
+  testGeminiKey: (keyId: string) =>
+    apiFetch<ConnectionTest>(`/api/admin/llm/keys/${keyId}/test`, { method: "POST" }),
+  geminiModels: () => apiFetch<GeminiModelConfig>("/api/admin/llm/models"),
+  updateGeminiModel: (model: string) =>
+    apiFetch<GeminiModelConfig>("/api/admin/llm/model", {
+      method: "PATCH",
+      body: JSON.stringify({ model }),
+    }),
   testLlm: () => apiFetch<ConnectionTest>("/api/admin/llm/test-connection", { method: "POST" }),
   // AI-65: KB-vs-Internet routing threshold (T35, admin-configurable).
   retrievalConfig: () => apiFetch<RetrievalConfig>("/api/admin/retrieval-config"),
