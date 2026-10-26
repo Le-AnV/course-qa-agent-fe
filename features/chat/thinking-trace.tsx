@@ -33,13 +33,13 @@ export function ThinkingTrace({
         </summary>
         <ol className="mt-1.5 space-y-1.5">
           {visibleSteps.map((step, index) => (
-            <li key={step} className="flex items-start gap-2 text-[12px] leading-relaxed text-[#4D4D4D]">
+            <li key={`collapsed-${index}`} className="flex items-start gap-2 text-[12px] leading-relaxed text-[#4D4D4D]">
               {completed || index < lastVisibleStep ? (
                 <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#4B9E76]" aria-hidden="true" />
               ) : (
                 <span className="mt-0.5 h-3.5 w-3.5 shrink-0 text-center text-[#6F6F6F]" aria-hidden="true">•</span>
               )}
-              <span>{index === lastVisibleStep && !completed ? <strong>{step}</strong> : step}</span>
+              <span>{step}</span>
             </li>
           ))}
         </ol>
@@ -61,19 +61,35 @@ export function ThinkingTrace({
         <span className="text-[11.5px] font-semibold text-[#111111]">Thinking</span>
       </div>
       <ol className="space-y-1.5">
-        {visibleSteps.map((step, index) => (
-          <li
-            key={step}
-            className="flex items-start gap-2 text-[12px] leading-relaxed text-[#4D4D4D]"
-          >
-            {index < lastVisibleStep ? (
-              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#4B9E76]" aria-hidden="true" />
-            ) : (
-              <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-[#2563EB]" aria-hidden="true" />
-            )}
-            <span>{index === lastVisibleStep ? <strong>{step}</strong> : step}</span>
-          </li>
-        ))}
+        {visibleSteps.map((step, index) => {
+          const isCurrentActive = index === lastVisibleStep;
+          return (
+            <li
+              key={`active-${index}`}
+              className="flex items-start gap-2 text-[12px] leading-relaxed text-[#4D4D4D]"
+            >
+              {index < lastVisibleStep ? (
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#4B9E76]" aria-hidden="true" />
+              ) : (
+                <span className="mt-0.5 h-3.5 w-3.5 shrink-0 text-center font-bold text-[#6F6F6F] leading-none" aria-hidden="true">•</span>
+              )}
+              <span>
+                {isCurrentActive ? (
+                  <span className="inline-flex items-center">
+                    <strong>{step}</strong>
+                    <span className="inline-flex ml-0.5 font-bold text-[#6F6F6F]" aria-hidden="true">
+                      <span className="animate-pulse" style={{ animationDelay: '0ms' }}>.</span>
+                      <span className="animate-pulse" style={{ animationDelay: '250ms' }}>.</span>
+                      <span className="animate-pulse" style={{ animationDelay: '500ms' }}>.</span>
+                    </span>
+                  </span>
+                ) : (
+                  step
+                )}
+              </span>
+            </li>
+          );
+        })}
       </ol>
     </div>
   );

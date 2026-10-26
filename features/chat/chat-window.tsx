@@ -7,7 +7,7 @@ import { useChatStream } from '@/hooks/use-chat-stream';
 import { getSessionDetail } from '@/features/history/api';
 import { mergeCitation, uniqueCitations } from '@/lib/citations';
 import type { ChatMessageCitation, ChatMessageItem } from '@/features/history/types';
-import { Loader2 } from 'lucide-react';
+import { History, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ChatCitation, ChatProgressStage } from '@/lib/sse';
 
@@ -78,9 +78,9 @@ const SUGGESTED_QUESTIONS = [
 
 // Progress stages emitted by the class chat SSE stream.
 const THINKING_STEPS = [
-  'Searching this class\u2019s materials',
-  'Reviewing the matching material sections',
-  'Drafting an answer with citations',
+  'Searching class materials',
+  'Reviewing matching sections',
+  'Synthesizing answer',
 ];
 const THINKING_STEP_INDEX: Record<ChatProgressStage, number> = {
   searching: 0,
@@ -97,6 +97,8 @@ function mapHistoryCitation(citation: ChatMessageCitation): ChatCitation {
     snippet: citation.snippet ?? '',
     documentId: citation.document_id ?? null,
     page: citation.page ?? null,
+    indexes: citation.index ? [citation.index] : [],
+    highlights: [],
   };
 }
 
@@ -107,6 +109,7 @@ export function ChatWindow({
   onBackgroundTurnComplete,
   onOpenSession,
   onNewChat,
+  onOpenHistory,
 }: {
   classId: string;
   activeSessionId?: string | null;
@@ -118,6 +121,8 @@ export function ChatWindow({
   onOpenSession?: (sessionId: string) => void;
   /** Lets the banner return to a first-turn conversation that has no id yet. */
   onNewChat?: () => void;
+  /** Mobile only: opens the chat-history drawer (the panel is hidden < md). */
+  onOpenHistory?: () => void;
 }) {
   const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
   const [isTyping, setIsTyping] = React.useState(false); // Waiting state for the first chunk (to show typing indicator)
@@ -264,11 +269,19 @@ export function ChatWindow({
   const { sendMessage, isStreaming } = useChatStream({
     classId,
     sessionId: activeSessionId,
-    onProgress: (stage) => {
-      updateStreamAnswer((message) => ({
-        ...message,
-        traceStep: THINKING_STEP_INDEX[stage],
-      }));
+    onProgress: (stage, stageMessage) => {
+      const stepIdx = THINKING_STEP_INDEX[stage];
+      updateStreamAnswer((message) => {
+        const nextTrace = message.trace ? [...message.trace] : [...THINKING_STEPS];
+        if (stageMessage) {
+          nextTrace[stepIdx] = stageMessage;
+        }
+        return {
+          ...message,
+          trace: nextTrace,
+          traceStep: stepIdx,
+        };
+      });
     },
     onChunk: (chunkText, elapsedMs) => {
       // Turn off typing indicator when first chunk arrives
@@ -374,7 +387,7 @@ export function ChatWindow({
       id: nextMsgId(),
       role: 'ai',
       content: '',
-      trace: THINKING_STEPS,
+      trace: [...THINKING_STEPS],
       traceStep: 0,
     };
 
@@ -418,9 +431,21 @@ export function ChatWindow({
     streamSnapshot?.key === currentKey ? streamSnapshot.answerId : null;
 
   return (
-    <div className="flex flex-col h-full relative bg-[#F7F7F7]">
-      <header className="flex h-14 shrink-0 items-center border-b border-[#BFDBFE] bg-[#EFF6FF] px-3 md:px-4">
-        <h1 className="truncate text-sm font-semibold text-[#1D4ED8]">Course AI Assistant</h1>
+    <div className="flex flex-col h-full relative bg-white">
+      {/* Same surface tokens as the history panel next to it: one neutral bar, not two palettes. */}
+      <header className="flex h-14 shrink-0 items-center gap-1 border-b border-[#DADADA] bg-[#F7F7F7] px-3 md:px-4">
+        {onOpenHistory && (
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            title="Chat history"
+            aria-label="Open chat history"
+            className="-ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6F6F6F] transition-colors hover:bg-[#EDEDED] hover:text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20 md:hidden"
+          >
+            <History className="h-4 w-4" />
+          </button>
+        )}
+        <h1 className="truncate text-[13px] font-semibold text-[#111111]">Course AI Assistant</h1>
       </header>
 
       {backgroundStream && (
@@ -447,7 +472,7 @@ export function ChatWindow({
       )}
 
       {/* Top area: Message list container (auto-scrolls if long) */}
-      <div className="flex-1 overflow-y-auto bg-[#F7F7F7] p-4 md:p-6 pb-8">
+      <div className="flex-1 overflow-y-auto bg-white p-4 md:p-6 pb-8">
         <div className="w-full">
           {isLoadingHistory ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#6F6F6F]">

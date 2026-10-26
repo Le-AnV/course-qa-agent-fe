@@ -2,22 +2,23 @@
 
 import * as React from 'react';
 import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
   MessageSquare,
   Pencil,
-  Trash2,
   Plus,
   RefreshCw,
-  AlertCircle,
-  Loader2,
-  ChevronLeft,
-  Pin,
-  Search,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -26,12 +27,9 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import {
-  getSessions,
-  deleteSession,
-  renameSession,
-  getHistoryErrorMessage,
-} from './api';
+import { useIsomorphicLayoutEffect } from '@/hooks/use-isomorphic-layout-effect';
+import { getSessions, deleteSession, renameSession, getHistoryErrorMessage } from './api';
+import { readHistoryCollapsed, writeHistoryCollapsed } from './history-prefs';
 import type { ChatSessionItem } from './types';
 
 /**
@@ -57,6 +55,12 @@ function formatRelativeTime(isoString: string): string {
   }
 }
 
+/** One letter is enough to tell conversations apart in the 64 px rail. */
+function railInitial(session: ChatSessionItem): string {
+  const title = session.title?.trim();
+  return title ? title[0].toUpperCase() : '';
+}
+
 export interface ChatHistorySidebarProps {
   classId: string;
   activeSessionId?: string | null;
@@ -64,8 +68,19 @@ export interface ChatHistorySidebarProps {
   onNewChat?: () => void;
   refreshTrigger?: number;
   className?: string;
+  /** Mobile drawer (< md). Desktop always renders the persistent panel. */
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (open: boolean) => void;
 }
 
+/**
+ * Chat history has two shapes of the *same* surface:
+ * - desktop: a 256 px panel that collapses to a 64 px rail (state persisted).
+ * - mobile (< md): a left drawer opened from the chat header.
+ *
+ * Both shapes share one 56 px header row, so switching states never reflows the
+ * panel's contents vertically — the bug that made collapsing feel unstable.
+ */
 export function ChatHistorySidebar({
   classId,
   activeSessionId,
@@ -73,6 +88,8 @@ export function ChatHistorySidebar({
   onNewChat,
   refreshTrigger = 0,
   className,
+  mobileOpen = false,
+  onMobileOpenChange,
 }: ChatHistorySidebarProps) {
   const [sessions, setSessions] = React.useState<ChatSessionItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -87,6 +104,16 @@ export function ChatHistorySidebar({
   const [sessionToRename, setSessionToRename] = React.useState<ChatSessionItem | null>(null);
   const [renameTitle, setRenameTitle] = React.useState('');
   const [isRenaming, setIsRenaming] = React.useState(false);
+
+  // Restore the last shape before paint; the server/first client render is expanded.
+  useIsomorphicLayoutEffect(() => {
+    setIsCollapsed(readHistoryCollapsed());
+  }, []);
+
+  const setCollapsed = (collapsed: boolean) => {
+    setIsCollapsed(collapsed);
+    writeHistoryCollapsed(collapsed);
+  };
 
   // Fetch past chat sessions for the current class
   const loadSessions = React.useCallback(async () => {
@@ -123,6 +150,16 @@ export function ChatHistorySidebar({
     };
   }, [classId, refreshTrigger]);
 
+  const selectSession = (sessionId: string) => {
+    onSelectSession(sessionId);
+    onMobileOpenChange?.(false);
+  };
+
+  const startNewChat = () => {
+    onNewChat?.();
+    onMobileOpenChange?.(false);
+  };
+
   // Execute deletion after user confirms in dialog (AC-05)
   const handleConfirmDelete = async () => {
     if (!sessionToDelete || isDeleting) return;
@@ -158,9 +195,7 @@ export function ChatHistorySidebar({
     setIsRenaming(true);
     try {
       const updated = await renameSession(sessionToRename.id, title);
-      setSessions((prev) =>
-        prev.map((session) => (session.id === updated.id ? updated : session))
-      );
+      setSessions((prev) => prev.map((session) => (session.id === updated.id ? updated : session)));
       setSessionToRename(null);
       toast.success('Conversation renamed.');
     } catch (err) {
@@ -170,218 +205,274 @@ export function ChatHistorySidebar({
     }
   };
 
+  const iconButton =
+    'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6F6F6F] transition-colors hover:bg-[#EDEDED] hover:text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20 disabled:cursor-not-allowed disabled:opacity-40';
+
+  const states = (compact: boolean) => {
+    if (isLoading) {
+      return compact ? (
+        <div className="flex flex-col items-center gap-2" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-9 w-9 rounded-lg" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2" aria-hidden>
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
+      );
+    }
+
+    if (error) {
+      return compact ? (
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          title={error}
+          aria-label={`Chat history failed to load: ${error}`}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#9D4C38] hover:bg-[#F7F7F7]"
+        >
+          <AlertCircle className="h-4 w-4" />
+        </button>
+      ) : (
+        <div className="my-auto flex flex-col items-center justify-center gap-2 p-3 text-center">
+          <AlertCircle className="h-6 w-6 stroke-1.5 text-[#9D4C38]" />
+          <p className="text-[12px] text-[#5A5A5A]">{error}</p>
+          <button
+            type="button"
+            onClick={loadSessions}
+            className="mt-1 flex items-center gap-1.5 rounded-md border border-[#DADADA] bg-white px-2.5 py-1 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7]"
+          >
+            <RefreshCw className="h-3 w-3" /> Retry
+          </button>
+        </div>
+      );
+    }
+
+    if (sessions.length === 0) {
+      if (compact) return null;
+      return (
+        <div className="my-auto flex flex-col items-center justify-center gap-2 p-4 text-center">
+          <MessageSquare className="h-7 w-7 stroke-1 text-[#CFCFCF]" />
+          <p className="text-[12px] text-[#6F6F6F]">No conversations yet</p>
+        </div>
+      );
+    }
+
+    if (compact) {
+      return (
+        <div className="flex flex-col items-center gap-1.5">
+          {sessions.map((session) => {
+            const isActive = activeSessionId === session.id;
+            const initial = railInitial(session);
+            return (
+              <button
+                key={session.id}
+                type="button"
+                onClick={() => selectSession(session.id)}
+                title={session.title || 'Conversation'}
+                aria-label={`Open ${session.title || 'conversation'}`}
+                aria-current={isActive ? 'true' : undefined}
+                className={cn(
+                  'flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
+                  isActive
+                    ? 'border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-ink)]'
+                    : 'border-transparent bg-[#F7F7F7] text-[#5A5A5A] hover:border-[#DADADA] hover:text-[#111111]',
+                )}
+              >
+                {initial ? initial : <MessageSquare className="h-4 w-4" />}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    return sessions.map((session) => {
+      const isActive = activeSessionId === session.id;
+      const label = session.title || 'Conversation';
+
+      return (
+        <div
+          key={session.id}
+          className={cn(
+            'group flex items-start gap-1 rounded-lg border px-1 py-1 transition-colors',
+            isActive
+              ? 'border-[var(--brand-line)] bg-[var(--brand-soft)]'
+              : 'border-transparent hover:bg-[#F7F7F7]',
+          )}
+        >
+          {/* Real button for selection; the icon actions are siblings, never nested. */}
+          <button
+            type="button"
+            onClick={() => selectSession(session.id)}
+            aria-current={isActive ? 'true' : undefined}
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
+          >
+            <MessageSquare
+              className={cn(
+                'h-3.5 w-3.5 shrink-0',
+                isActive ? 'text-[var(--brand-ink)]' : 'text-[#6F6F6F]',
+              )}
+            />
+            <span className="min-w-0 flex-1">
+              <span
+                className={cn(
+                  'block truncate text-[12.5px]',
+                  isActive ? 'font-semibold text-[#111111]' : 'font-medium text-[#111111]',
+                )}
+              >
+                {label}
+              </span>
+              <span className="mt-0.5 block truncate text-[11px] text-[#6F6F6F]">
+                {formatRelativeTime(session.updated_at)}
+              </span>
+            </span>
+          </button>
+
+          <div
+            className={cn(
+              'flex shrink-0 items-center gap-0.5 transition-opacity focus-within:opacity-100 group-hover:opacity-100',
+              isActive ? 'opacity-100' : 'opacity-0',
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => openRenameDialog(session)}
+              title="Rename conversation"
+              aria-label={`Rename ${label}`}
+              className="rounded p-1.5 text-[#6F6F6F] transition-colors hover:bg-[#EDEDED] hover:text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              data-testid={`delete-session-btn-${session.id}`}
+              onClick={() => setSessionToDelete(session)}
+              title="Delete conversation"
+              aria-label={`Delete ${label}`}
+              className="rounded p-1.5 text-[#6F6F6F] transition-colors hover:bg-[#EDEDED] hover:text-[#9D4C38] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      );
+    });
+  };
+
   return (
     <>
       <aside
         aria-label="Chat history"
         className={cn(
-          'flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-900',
+          // Width snaps instead of animating: animating it reflowed the whole
+          // transcript (865 -> 1057 px) on every frame of the toggle.
+          'hidden shrink-0 flex-col overflow-hidden rounded-xl border border-[#DADADA] bg-white shadow-sm md:flex',
           isCollapsed ? 'w-16' : 'w-64',
-          className
+          className,
         )}
       >
-        {/* Expanded title bar or the compact icon rail. */}
-        {isCollapsed ? (
-          <nav
-            aria-label="Chat history navigation"
-            className="flex shrink-0 flex-col items-center gap-2 border-b border-[#BFDBFE] bg-[#EFF6FF] px-1 py-3"
-          >
-            {onNewChat && (
+        <div
+          className={cn(
+            'flex h-14 shrink-0 items-center border-b border-[#DADADA] bg-[#F7F7F7]',
+            isCollapsed ? 'justify-center' : 'justify-between pl-3 pr-1.5',
+          )}
+        >
+          {!isCollapsed && (
+            <span className="truncate text-[13px] font-semibold text-[#111111]">Chat History</span>
+          )}
+          <div className="flex items-center gap-0.5">
+            {!isCollapsed && onNewChat && (
               <button
                 type="button"
-                onClick={onNewChat}
-                title="New chat"
-                aria-label="New chat"
-                className="rounded-lg p-2 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
+                onClick={startNewChat}
+                title="Start a new chat"
+                aria-label="Start a new chat"
+                className={iconButton}
               >
                 <Plus className="h-4 w-4" />
               </button>
             )}
             <button
               type="button"
-              onClick={() => setIsCollapsed(false)}
-              title="Recent chats"
-              aria-label="Open recent chats"
-              className="rounded-lg p-2 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
+              onClick={() => setCollapsed(!isCollapsed)}
+              title={isCollapsed ? 'Expand chat history' : 'Collapse chat history'}
+              aria-label={isCollapsed ? 'Expand chat history' : 'Collapse chat history'}
+              aria-expanded={!isCollapsed}
+              aria-controls="chat-history-panel"
+              className={iconButton}
             >
-              <MessageSquare className="h-4 w-4" />
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
             </button>
+          </div>
+        </div>
+
+        <div
+          id="chat-history-panel"
+          className={cn(
+            'flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden p-2',
+            isCollapsed && 'items-center',
+          )}
+        >
+          {/* In the rail, "new chat" is an item like the conversations. */}
+          {isCollapsed && onNewChat && (
             <button
               type="button"
-              disabled
-              title="Pinned chats are not supported yet"
-              aria-label="Pinned chats are not supported yet"
-              className="cursor-not-allowed rounded-lg p-2 text-slate-300"
+              onClick={startNewChat}
+              title="New chat"
+              aria-label="Start a new chat"
+              className="mb-1 flex h-9 w-9 items-center justify-center rounded-lg border border-dashed border-[#CFCFCF] text-[#111111] transition-colors hover:border-[#111111] hover:bg-[#F7F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
             >
-              <Pin className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              disabled
-              title="Chat search is not supported yet"
-              aria-label="Chat search is not supported yet"
-              className="cursor-not-allowed rounded-lg p-2 text-slate-300"
-            >
-              <Search className="h-4 w-4" />
-            </button>
-          </nav>
-        ) : (
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#BFDBFE] bg-[#EFF6FF] px-3">
-            <span className="font-semibold text-sm text-[#1D4ED8]">Chat History</span>
-            <div className="flex items-center">
+          )}
+          {states(isCollapsed)}
+        </div>
+      </aside>
+
+      {/* Mobile: the same panel as a drawer, opened from the chat header. */}
+      <Dialog open={mobileOpen} onOpenChange={onMobileOpenChange}>
+        <DialogContent
+          showCloseButton={false}
+          className="fixed inset-y-0 left-0 top-0 h-full w-[86vw] max-w-[320px] translate-x-0 translate-y-0 gap-0 rounded-none rounded-r-xl border-r border-[#DADADA] bg-white p-0 sm:max-w-[320px]"
+        >
+          <DialogTitle className="sr-only">Chat history</DialogTitle>
+          <DialogDescription className="sr-only">
+            Choose a past conversation from this class or start a new one.
+          </DialogDescription>
+
+          <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#DADADA] bg-[#F7F7F7] pl-3 pr-1.5">
+            <span className="truncate text-[13px] font-semibold text-[#111111]">Chat History</span>
+            <div className="flex items-center gap-0.5">
               {onNewChat && (
                 <button
                   type="button"
-                  onClick={onNewChat}
+                  onClick={startNewChat}
                   title="Start a new chat"
                   aria-label="Start a new chat"
-                  className="rounded-lg p-1.5 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
+                  className={iconButton}
                 >
                   <Plus className="h-4 w-4" />
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setIsCollapsed(true)}
-                title="Collapse chat history"
-                aria-label="Collapse chat history"
-                aria-expanded="true"
-                className="rounded-lg p-1.5 text-[#2563EB] transition-colors hover:bg-[#DBEAFE] hover:text-[#1D4ED8]"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
+              <DialogClose asChild>
+                <button type="button" title="Close" aria-label="Close chat history" className={iconButton}>
+                  <X className="h-4 w-4" />
+                </button>
+              </DialogClose>
             </div>
           </div>
-        )}
 
-        {/* Main Content Area: 4 States */}
-        <div className={cn('flex flex-1 flex-col gap-1 overflow-y-auto p-2', isCollapsed && 'items-center')}>
-          {/* 1. Loading State */}
-          {isLoading && !isCollapsed && (
-            <div className="space-y-2 p-1">
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-            </div>
-          )}
-
-          {/* 2. Error State */}
-          {!isLoading && error && !isCollapsed && (
-            <div className="flex flex-col items-center justify-center p-4 text-center text-red-500 dark:text-red-400 gap-2 my-auto">
-              <AlertCircle className="h-6 w-6 stroke-1.5" />
-              <p className="text-xs">{error}</p>
-              <button
-                type="button"
-                onClick={loadSessions}
-                className="mt-1 text-xs px-2.5 py-1 rounded-md bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors flex items-center gap-1.5"
-              >
-                <RefreshCw className="h-3 w-3" /> Retry
-              </button>
-            </div>
-          )}
-
-          {/* 3. Empty State */}
-          {!isLoading && !error && sessions.length === 0 && !isCollapsed && (
-            <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400 dark:text-slate-500 gap-2 my-auto">
-              <MessageSquare className="h-8 w-8 stroke-1 opacity-40" />
-              <p className="text-xs">No conversations yet</p>
-            </div>
-          )}
-
-          {/* 4. Success State — Sessions list ordered newest first (AC-06) */}
-          {!isCollapsed && !isLoading &&
-            !error &&
-            sessions.map((session) => {
-              const isActive = activeSessionId === session.id;
-
-              return (
-                <button
-                  key={session.id}
-                  type="button"
-                  onClick={() => onSelectSession(session.id)}
-                  className={cn(
-                    'group relative flex flex-col w-full text-left p-2.5 rounded-lg transition-colors border',
-                    isActive
-                      ? 'bg-slate-200/80 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium'
-                      : 'bg-transparent border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300'
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-1 w-full">
-                    <div className="flex items-center gap-2 truncate flex-1 min-w-0">
-                      <MessageSquare
-                        className={cn(
-                          'h-4 w-4 shrink-0',
-                          isActive ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'
-                        )}
-                      />
-                      <span className="truncate text-xs">
-                        {session.title || 'Conversation'}
-                      </span>
-                    </div>
-
-                    {/* Session actions stay beside each other and never select the row. */}
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openRenameDialog(session);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openRenameDialog(session);
-                          }
-                        }}
-                        title="Rename conversation"
-                        aria-label={`Rename ${session.title || 'conversation'}`}
-                        className={cn(
-                          'p-1 rounded text-slate-400 hover:text-[#2563EB] hover:bg-slate-200 dark:hover:bg-slate-700 transition-opacity',
-                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                        )}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </div>
-
-                      {/* Delete Trigger Button (Opens Confirmation Modal) */}
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        data-testid={`delete-session-btn-${session.id}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSessionToDelete(session);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSessionToDelete(session);
-                          }
-                        }}
-                        title="Delete conversation"
-                        aria-label={`Delete ${session.title || 'conversation'}`}
-                        className={cn(
-                          'p-1 rounded text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-opacity',
-                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                        )}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Relative Timestamp */}
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 pl-6 mt-0.5">
-                    {formatRelativeTime(session.updated_at)}
-                  </span>
-                </button>
-              );
-            })}
-        </div>
-      </aside>
+          <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2">{states(false)}</div>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation Dialog before Deletion */}
       <Dialog
@@ -397,7 +488,7 @@ export function ChatHistorySidebar({
             <DialogTitle>Delete conversation</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete{' '}
-              <span className="font-semibold text-slate-900 dark:text-slate-100">
+              <span className="font-semibold text-[#111111]">
                 &ldquo;{sessionToDelete?.title || 'Conversation'}&rdquo;
               </span>
               ? This removes all messages and cannot be undone.
@@ -456,7 +547,7 @@ export function ChatHistorySidebar({
             <div className="space-y-2">
               <label
                 htmlFor="rename-session-title"
-                className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                className="text-[12.5px] font-medium text-[#111111]"
               >
                 Conversation title
               </label>
@@ -469,9 +560,7 @@ export function ChatHistorySidebar({
                 disabled={isRenaming}
                 placeholder="e.g. Chapter 3 review"
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {renameTitle.trim().length}/255 characters
-              </p>
+              <p className="text-[12px] text-[#6F6F6F]">{renameTitle.trim().length}/255 characters</p>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-2">

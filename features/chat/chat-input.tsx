@@ -48,7 +48,7 @@ export function ChatInput({ onSend, disabled, chatLayout = false }: ChatInputPro
   };
 
   return (
-    <div className={`p-4 ${chatLayout ? 'bg-[#F7F7F7]' : 'border-t border-[#F0F0F0] bg-white'}`}>
+    <div className={`p-4 ${chatLayout ? 'border-t border-[#DADADA] bg-white' : 'border-t border-[#F0F0F0] bg-white'}`}>
       <div className={`${chatLayout ? 'w-full bg-[#F0F0F0]' : 'max-w-4xl mx-auto bg-[#F7F7F7]'} relative flex items-end gap-2 rounded-2xl border border-[#DADADA] p-2 focus-within:ring-2 focus-within:ring-[#CFCFCF] focus-within:ring-offset-2 transition-all`}>
         <textarea
           ref={textareaRef}

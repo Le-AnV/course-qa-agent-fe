@@ -25,6 +25,8 @@ describe("createSseParser", () => {
           snippet: "Evidence",
           documentId: "doc-1",
           page: 2,
+          indexes: [],
+          highlights: [],
         },
       },
       {
@@ -142,8 +144,25 @@ describe("createSseParser", () => {
           snippet: "Text",
           documentId: null,
           page: null,
+          indexes: [],
+          highlights: [],
         },
       },
+    ]);
+  });
+
+  it("parses progress events with optional message", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push(
+      'event: progress\ndata: {"stage":"searching","message":"Searching class materials"}\n\n' +
+        'event: progress\ndata: {"stage":"drafting"}\n\n',
+    );
+
+    expect(events).toEqual([
+      { type: "progress", stage: "searching", message: "Searching class materials" },
+      { type: "progress", stage: "drafting", message: undefined },
     ]);
   });
 });
