@@ -17,6 +17,16 @@ const SEMESTER_OPTIONS: AppSelectOption[] = ["Fall", "Spring", "Summer"].map((se
   label: semester,
 }));
 
+type PendingTrainerChange = {
+  cls: ClassSection;
+  trainerId: string;
+  trainerName: string;
+};
+
+type ManageAction =
+  | { kind: "remove"; trainerId: string; trainerName: string }
+  | { kind: "save-prereqs" };
+
 function trainerInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   return parts
@@ -109,6 +119,9 @@ export default function AdminClassesPage() {
   const [creating, setCreating] = React.useState(false);
   const [pendingDelete, setPendingDelete] = React.useState<ClassSection | null>(null);
   const [pendingArchive, setPendingArchive] = React.useState<ClassSection | null>(null);
+  const [pendingTrainerChange, setPendingTrainerChange] = React.useState<PendingTrainerChange | null>(null);
+  const [pendingManageAction, setPendingManageAction] = React.useState<ManageAction | null>(null);
+  const [openTrainerSelectId, setOpenTrainerSelectId] = React.useState<string | null>(null);
   // Extra trainers chosen while creating (applied right after the class exists).
   const [extraTrainers, setExtraTrainers] = React.useState<string[]>([]);
   // Co-trainer management for an existing class.
@@ -190,10 +203,28 @@ export default function AdminClassesPage() {
     }
   };
 
-  const handleAssign = async (classId: string, trainerId: string) => {
+  const requestTrainerChange = (cls: ClassSection, trainerId: string) => {
+    setOpenTrainerSelectId(null);
+    if (trainerId === (cls.trainer_id ?? "")) return;
+    if (!trainerId) {
+      toast.error("A class must have a primary trainer.");
+      return;
+    }
+    const nextTrainer = trainers.find((trainer) => String(trainer.id) === trainerId);
+    setPendingTrainerChange({
+      cls,
+      trainerId,
+      trainerName: nextTrainer?.username ?? "the selected trainer",
+    });
+  };
+
+  const runTrainerChange = async () => {
+    if (!pendingTrainerChange) return;
+    const { cls, trainerId, trainerName } = pendingTrainerChange;
     try {
-      await adminApi.assignStaff(classId, trainerId || null);
-      setNotice("Primary trainer updated.");
+      await adminApi.assignStaff(String(cls.id), trainerId || null);
+      setNotice(`Primary trainer for ${cls.code} updated to ${trainerName}.`);
+      setPendingTrainerChange(null);
       await loadData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to assign trainer");
@@ -201,6 +232,9 @@ export default function AdminClassesPage() {
   };
 
   const isArchived = (cls: ClassSection) => (cls.status ?? "ACTIVE") === "ARCHIVED";
+
+  const isTrainerSelectLocked = (cls: ClassSection) =>
+    pendingTrainerChange !== null && String(pendingTrainerChange.cls.id) === String(cls.id);
 
   const classTrainers = (cls: ClassSection) =>
     cls.trainers && cls.trainers.length > 0
@@ -230,6 +264,7 @@ export default function AdminClassesPage() {
     try {
       const updated = await adminApi.removeTrainer(String(manageClass.id), trainerId);
       setManageClass(updated);
+      setPendingManageAction(null);
       await loadData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to remove co-trainer");
@@ -244,6 +279,7 @@ export default function AdminClassesPage() {
     try {
       const updated = await adminApi.setPrerequisites(String(manageClass.id), managePrereqs);
       setManageClass(updated);
+      setPendingManageAction(null);
       setManagePrereqs((updated.prerequisites ?? []).map((p) => p.id));
       setNotice(`Prerequisites updated for ${updated.code}.`);
       await loadData();
@@ -411,7 +447,10 @@ export default function AdminClassesPage() {
                     <td className="px-5 py-3.5">
                       <AppSelect
                         value={cls.trainer_id ?? ""}
-                        onValueChange={(value) => void handleAssign(String(cls.id), value)}
+                        hideContent={isTrainerSelectLocked(cls)}
+                        open={openTrainerSelectId === String(cls.id)}
+                        onOpenChange={(open) => setOpenTrainerSelectId(open ? String(cls.id) : null)}
+                        onValueChange={(value) => requestTrainerChange(cls, value)}
                         aria-label={`Primary trainer for ${cls.code}`}
                         options={trainerOptions}
                         placeholder="Unassigned"
@@ -580,7 +619,7 @@ export default function AdminClassesPage() {
       </Modal>
 
       <Modal
-        isOpen={manageClass !== null}
+        isOpen={manageClass !== null && pendingManageAction === null}
         onClose={() => setManageClass(null)}
         title={`Trainers — ${manageClass?.code ?? ""}`}
         subtitle="The primary trainer owns the class; co-trainers share access."
@@ -600,7 +639,13 @@ export default function AdminClassesPage() {
                   {!t.is_primary && (
                     <button
                       type="button"
-                      onClick={() => void handleRemoveCoTrainer(t.trainer_id)}
+                      onClick={() =>
+                        setPendingManageAction({
+                          kind: "remove",
+                          trainerId: t.trainer_id,
+                          trainerName: t.name ?? t.email ?? "this co-trainer",
+                        })
+                      }
                       disabled={manageBusy}
                       className="rounded-md border border-[#DFB2A6] bg-white px-2.5 py-1.5 text-[12px] font-semibold text-[#9D4C38] transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
                     >
@@ -666,7 +711,7 @@ export default function AdminClassesPage() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => void handleSavePrereqs()}
+                  onClick={() => setPendingManageAction({ kind: "save-prereqs" })}
                   disabled={manageBusy}
                   className="rounded-md border border-[#CFCFCF] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
                 >
@@ -704,6 +749,50 @@ export default function AdminClassesPage() {
         }
         onConfirm={runDelete}
         onCancel={() => setPendingDelete(null)}
+      />
+      <ConfirmDialog
+        isOpen={pendingTrainerChange !== null}
+        title="Change primary trainer?"
+        confirmLabel="Change trainer"
+        busyLabel="Updating..."
+        description={
+          pendingTrainerChange ? (
+            <>
+              Change the primary trainer for <strong>{pendingTrainerChange.cls.code}</strong> from{" "}
+              <strong>{pendingTrainerChange.cls.trainer_name ?? "Unassigned"}</strong> to{" "}
+              <strong>{pendingTrainerChange.trainerName}</strong>? The new trainer gets owner access;
+              the previous trainer may lose access unless they are also a co-trainer.
+            </>
+          ) : null
+        }
+        onConfirm={runTrainerChange}
+        onCancel={() => setPendingTrainerChange(null)}
+      />
+      <ConfirmDialog
+        isOpen={pendingManageAction !== null}
+        title={
+          pendingManageAction?.kind === "remove"
+            ? "Remove this co-trainer?"
+            : "Save prerequisite changes?"
+        }
+        tone={pendingManageAction?.kind === "remove" ? "danger" : "default"}
+        confirmLabel={
+          pendingManageAction?.kind === "remove" ? "Remove co-trainer" : "Save prerequisites"
+        }
+        busyLabel={pendingManageAction?.kind === "remove" ? "Removing..." : "Saving..."}
+        description={
+          pendingManageAction?.kind === "remove"
+            ? `${pendingManageAction.trainerName} loses access to ${manageClass?.code ?? "this class"}. The class, roster, materials and tickets are unchanged.`
+            : `Replace the prerequisite list for ${manageClass?.code ?? "this class"}? New join requests will use the updated requirements.`
+        }
+        onConfirm={() => {
+          if (!pendingManageAction) return;
+          if (pendingManageAction.kind === "remove") {
+            return handleRemoveCoTrainer(pendingManageAction.trainerId);
+          }
+          return handleSavePrereqs();
+        }}
+        onCancel={() => setPendingManageAction(null)}
       />
     </AdminPageShell>
   );

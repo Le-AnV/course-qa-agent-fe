@@ -36,6 +36,7 @@ type AppSelectProps = Omit<
   id?: string
   "aria-label"?: string
   renderValue?: (selected: AppSelectOption | undefined) => React.ReactNode
+  hideContent?: boolean
 }
 
 function OptionMark({ option }: { option: AppSelectOption }) {
@@ -67,6 +68,7 @@ export function AppSelect({
   id,
   "aria-label": ariaLabel,
   renderValue,
+  hideContent = false,
   disabled,
   ...props
 }: AppSelectProps) {
@@ -109,28 +111,30 @@ export function AppSelect({
               : undefined}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className={contentClassName}>
-        {options.map((option) => (
-          <SelectItem
-            key={option.value}
-            value={toRadixValue(option.value)}
-            disabled={option.disabled}
-            className={cn(option.value === "" && "text-[#5A5A5A]")}
-          >
-            <span className="flex min-w-0 items-center gap-2.5">
-              <OptionMark option={option} />
-              <span className="min-w-0">
-                <span className="block truncate">{option.label}</span>
-                {option.description ? (
-                  <span className="mt-0.5 block truncate text-[11px] font-normal text-[#6F6F6F]">
-                    {option.description}
-                  </span>
-                ) : null}
+      {!hideContent && (
+        <SelectContent className={contentClassName}>
+          {options.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={toRadixValue(option.value)}
+              disabled={option.disabled}
+              className={cn(option.value === "" && "text-[#5A5A5A]")}
+            >
+              <span className="flex min-w-0 items-center gap-2.5">
+                <OptionMark option={option} />
+                <span className="min-w-0">
+                  <span className="block truncate">{option.label}</span>
+                  {option.description ? (
+                    <span className="mt-0.5 block truncate text-[11px] font-normal text-[#6F6F6F]">
+                      {option.description}
+                    </span>
+                  ) : null}
+                </span>
               </span>
-            </span>
-          </SelectItem>
-        ))}
-      </SelectContent>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      )}
     </Select>
   )
 }
