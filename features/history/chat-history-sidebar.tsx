@@ -616,6 +616,7 @@ export function ChatHistorySidebar({
                 <div className="my-1 border-t border-[#EDEDED]" />
                 <button
                   type="button"
+                  data-testid={`delete-session-btn-${session.id}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenMenuId(null);
@@ -823,13 +824,13 @@ export function ChatHistorySidebar({
       {/* Confirmation Dialog before Deletion */}
       <Dialog
         open={Boolean(sessionToDelete)}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           if (!open && !isDeleting) {
             setSessionToDelete(null);
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" data-testid="delete-confirm-dialog">
           <DialogHeader>
             <DialogTitle>Delete conversation</DialogTitle>
             <DialogDescription>
@@ -846,6 +847,7 @@ export function ChatHistorySidebar({
               variant="outline"
               disabled={isDeleting}
               onClick={() => setSessionToDelete(null)}
+              data-testid="cancel-delete-btn"
             >
               Cancel
             </Button>
@@ -855,6 +857,7 @@ export function ChatHistorySidebar({
               disabled={isDeleting}
               onClick={handleConfirmDelete}
               className="gap-2"
+              data-testid="confirm-delete-btn"
             >
               {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
               Delete
@@ -866,7 +869,7 @@ export function ChatHistorySidebar({
       {/* Rename dialog: keep the title editable without touching the transcript. */}
       <Dialog
         open={Boolean(sessionToRename)}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           if (!open && !isRenaming) {
             setSessionToRename(null);
             setRenameTitle('');

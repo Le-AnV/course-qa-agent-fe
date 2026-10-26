@@ -5,7 +5,7 @@ function mockFetch(calls: { url: string; init?: RequestInit }[], body: unknown, 
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
     calls.push({ url: String(url), init });
-    return new Response(JSON.stringify(body), {
+    return new Response(status === 204 ? null : JSON.stringify(body), {
       status,
       headers: { "Content-Type": "application/json" },
     });
@@ -121,6 +121,95 @@ describe("retrievalConfig (AI-65 KB vs Internet threshold)", () => {
       await expect(adminApi.updateRetrievalConfig(1.5)).rejects.toThrow(
         "Threshold must be a number between 0 and 1.",
       );
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe("updateGeminiAutoSwitch", () => {
+  it("PATCHes the auto-switch setting", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, { enabled: false });
+    try {
+      const result = await adminApi.updateGeminiAutoSwitch(false);
+      expect(result.enabled).toBe(false);
+      expect(calls[0].url).toContain("/api/admin/llm/auto-switch");
+      expect(calls[0].init?.method).toBe("PATCH");
+      expect(JSON.parse(String(calls[0].init?.body))).toEqual({ enabled: false });
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe("decisions key pool", () => {
+  it("GETs the decisions keys with their status", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, {
+      keys: [{ id: "k1", name: "Decisions", masked_key: "sk-a...1234", status: "active" }],
+      active_count: 1,
+      env_configured: false,
+    });
+    try {
+      const result = await adminApi.decisionsKeys();
+      expect(result.active_count).toBe(1);
+      expect(calls[0].url).toContain("/api/admin/decisions/keys");
+      expect(calls[0].init?.method).toBeUndefined();
+    } finally {
+      restore();
+    }
+  });
+
+  it("POSTs a new decisions key", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, { id: "k1", name: "Decisions", masked_key: "sk-a...1234" });
+    try {
+      await adminApi.createDecisionsKey({ name: "Decisions", api_key: "sk-admin-1234" });
+      expect(calls[0].url).toContain("/api/admin/decisions/keys");
+      expect(calls[0].init?.method).toBe("POST");
+      expect(JSON.parse(String(calls[0].init?.body))).toEqual({
+        name: "Decisions",
+        api_key: "sk-admin-1234",
+      });
+    } finally {
+      restore();
+    }
+  });
+
+  it("PATCHes a decisions key status", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, { id: "k1", status: "paused" });
+    try {
+      await adminApi.updateDecisionsKey("k1", { status: "paused" });
+      expect(calls[0].url).toContain("/api/admin/decisions/keys/k1");
+      expect(calls[0].init?.method).toBe("PATCH");
+      expect(JSON.parse(String(calls[0].init?.body))).toEqual({ status: "paused" });
+    } finally {
+      restore();
+    }
+  });
+
+  it("POSTs a per-key connection test", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, { success: true, message: "OpenAI key is valid" });
+    try {
+      const result = await adminApi.testDecisionsKey("k1");
+      expect(result.success).toBe(true);
+      expect(calls[0].url).toContain("/api/admin/decisions/keys/k1/test");
+      expect(calls[0].init?.method).toBe("POST");
+    } finally {
+      restore();
+    }
+  });
+
+  it("DELETEs a decisions key", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, null, 204);
+    try {
+      await adminApi.deleteDecisionsKey("k1");
+      expect(calls[0].url).toContain("/api/admin/decisions/keys/k1");
+      expect(calls[0].init?.method).toBe("DELETE");
     } finally {
       restore();
     }

@@ -15,7 +15,9 @@ export type ChatProgressStage = "searching" | "reading" | "drafting";
 export type ChatStreamEvent =
   | { type: "progress"; stage: ChatProgressStage; message?: string }
   | { type: "token"; text: string }
+  | { type: "restart"; message?: string }
   | { type: "citation"; citation: ChatCitation }
+  | { type: "suggestions"; questions: string[] }
   | {
       type: "done";
       source: string;
@@ -25,6 +27,7 @@ export type ChatStreamEvent =
       sessionId: string | null;
       userMessageId: string | null;
       assistantMessageId: string | null;
+      suggestedQuestions?: string[];
     }
   | { type: "error"; message: string };
 
@@ -60,6 +63,13 @@ function decodeEvent(eventName: string, rawData: string): ChatStreamEvent | null
     return { type: "token", text: data.text };
   }
 
+  if (eventName === "restart") {
+    return {
+      type: "restart",
+      message: typeof data.message === "string" ? data.message : undefined,
+    };
+  }
+
   if (eventName === "citation") {
     if (
       typeof data.index !== "number" ||
@@ -90,6 +100,17 @@ function decodeEvent(eventName: string, rawData: string): ChatStreamEvent | null
     };
   }
 
+  if (eventName === "suggestions") {
+    const rawList = Array.isArray(data.questions)
+      ? data.questions
+      : Array.isArray(data.suggestions)
+        ? data.suggestions
+        : null;
+    if (!rawList) return invalidData();
+    const questions = rawList.filter((q): q is string => typeof q === "string");
+    return { type: "suggestions", questions };
+  }
+
   if (eventName === "done") {
     if (
       typeof data.source !== "string" ||
@@ -99,6 +120,15 @@ function decodeEvent(eventName: string, rawData: string): ChatStreamEvent | null
     ) {
       return invalidData();
     }
+    const suggestionsRaw = Array.isArray(data.suggestions)
+      ? data.suggestions
+      : Array.isArray(data.suggested_questions)
+        ? data.suggested_questions
+        : null;
+    const suggestedQuestions = suggestionsRaw
+      ? suggestionsRaw.filter((q): q is string => typeof q === "string")
+      : undefined;
+
     return {
       type: "done",
       source: data.source,
@@ -112,6 +142,7 @@ function decodeEvent(eventName: string, rawData: string): ChatStreamEvent | null
         typeof data.assistant_message_id === "string"
           ? data.assistant_message_id
           : null,
+      suggestedQuestions,
     };
   }
 

@@ -4,6 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { adminApi, type AdminSettings, type EmailConfig, type RetrievalConfig, type RetrievalTestResult, type ClassSection } from "@/lib/admin-api";
 import { AdminPageShell, ADMIN_CARD } from "@/components/shared/AdminPageShell";
+import { GeminiKeyPool } from "@/components/shared/GeminiKeyPool";
+import { DecisionsKeyPool } from "@/components/shared/DecisionsKeyPool";
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = React.useState<AdminSettings | null>(null);
@@ -16,7 +18,6 @@ export default function AdminSettingsPage() {
   const [notice, setNotice] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [savingRetrieval, setSavingRetrieval] = React.useState(false);
-  const [testingLlm, setTestingLlm] = React.useState(false);
 
   const [host, setHost] = React.useState("");
   const [port, setPort] = React.useState("");
@@ -146,20 +147,6 @@ export default function AdminSettingsPage() {
     }
   }
 
-  async function testLlm() {
-    setTestingLlm(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const r = await adminApi.testLlm();
-      setNotice(r.success ? `LLM OK: ${r.message}` : `LLM check failed: ${r.message}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "LLM test failed.");
-    } finally {
-      setTestingLlm(false);
-    }
-  }
-
   return (
     <AdminPageShell title="Settings" subtitle="Platform rules, AI connection and email sender. Secrets are write-only.">
       {error && (
@@ -174,29 +161,9 @@ export default function AdminSettingsPage() {
         <div className={`${ADMIN_CARD} p-8 text-center text-[#5A5A5A] text-[13px]`}>Loading settings…</div>
       ) : (
         <div className="space-y-6">
-          {/* AI / LLM */}
-          <div className={`${ADMIN_CARD} p-6`}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[16px] font-bold text-[#111111]">AI connection</h2>
-              <span className={`px-2.5 py-1 rounded-full text-[12px] font-semibold border ${settings?.llm.api_key_configured ? "bg-white text-[#111111] border-[#CFCFCF]" : "bg-white text-[#5A5A5A] border-[#CFCFCF]"}`}>
-                {settings?.llm.api_key_configured ? "API key configured" : "No API key"}
-              </span>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[13px] font-semibold text-[#111111] mb-1.5">Model (read-only, from server env)</label>
-                <input value={settings?.llm.model ?? ""} readOnly
-                  className="w-full bg-slate-50 border border-[#DADADA] rounded-md px-3 py-2 text-[13.5px] text-[#111111] outline-none" />
-              </div>
-              <div className="flex items-end">
-                <button onClick={() => void testLlm()} disabled={testingLlm}
-                  className="px-4 py-2 border border-[#DADADA] bg-white text-[13px] font-semibold rounded-md hover:bg-slate-50 shadow-sm disabled:opacity-50">
-                  {testingLlm ? "Checking…" : "Test LLM connection"}
-                </button>
-              </div>
-            </div>
-            <p className="text-[12.5px] text-[#5A5A5A] mt-3">Key rotation happens on the server (.env). UI never displays stored secrets.</p>
-          </div>
+          <GeminiKeyPool />
+
+          <DecisionsKeyPool />
 
           {/* AI-65 / 3-Tier Answer Routing Dual Slider */}
           <div className={`${ADMIN_CARD} p-6`}>

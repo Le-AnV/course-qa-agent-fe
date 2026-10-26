@@ -18,7 +18,9 @@ interface UseChatStreamProps {
   /** elapsedMs: thời gian từ lúc gửi tới chunk này (đo trong hook, không đo ở render). */
   onChunk: (chunk: string, elapsedMs: number) => void;
   onProgress?: (stage: ChatProgressStage, message?: string) => void;
+  onRestart?: (message?: string) => void;
   onCitation?: (citation: ChatCitation) => void;
+  onSuggestions?: (questions: string[]) => void;
   onDone?: (event: ChatDoneEvent) => void;
   onFinish?: () => void;
   onError?: (error: Error) => void;
@@ -29,7 +31,9 @@ export function useChatStream({
   sessionId,
   onChunk,
   onProgress,
+  onRestart,
   onCitation,
+  onSuggestions,
   onDone,
   onFinish,
   onError,
@@ -96,9 +100,16 @@ export function useChatStream({
           onProgress?.(event.stage, event.message);
         } else if (event.type === 'token') {
           onChunk(event.text, Date.now() - startedAt);
+        } else if (event.type === 'restart') {
+          onRestart?.(event.message);
         } else if (event.type === 'citation') {
           onCitation?.(event.citation);
+        } else if (event.type === 'suggestions') {
+          onSuggestions?.(event.questions);
         } else if (event.type === 'done') {
+          if (event.suggestedQuestions && event.suggestedQuestions.length > 0) {
+            onSuggestions?.(event.suggestedQuestions);
+          }
           completed = true;
           onDone?.(event);
         } else {
@@ -135,7 +146,7 @@ export function useChatStream({
         setIsStreaming(false);
       }
     }
-  }, [classId, sessionId, onChunk, onProgress, onCitation, onDone, onFinish, onError]);
+  }, [classId, sessionId, onChunk, onProgress, onRestart, onCitation, onSuggestions, onDone, onFinish, onError]);
 
   return {
     sendMessage,
