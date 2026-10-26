@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { MessageBubble } from './message-bubble';
 import { ChatInput } from './chat-input';
+import { SuggestedQuestions } from './suggested-questions';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { getSessionDetail } from '@/features/history/api';
 import { mergeCitation, uniqueCitations } from '@/lib/citations';
@@ -22,6 +23,7 @@ type Message = {
   traceCompleted?: boolean;
   thinkingMs?: number;
   citations?: ChatCitation[];
+  suggestedQuestions?: string[];
   isError?: boolean;
 };
 
@@ -67,13 +69,6 @@ const INITIAL_MESSAGES: Message[] = [
     role: 'ai',
     content: "Hello! I am your course AI assistant. What can I help you with regarding today's lectures or assignments?",
   },
-];
-
-// Suggested starter questions - prevents empty chat window for new users.
-const SUGGESTED_QUESTIONS = [
-  'What units are covered in this course?',
-  'Explain the A* search algorithm?',
-  'What reading materials are required for unit 1?',
 ];
 
 // Progress stages emitted by the class chat SSE stream.
@@ -217,6 +212,7 @@ export function ChatWindow({
           role: m.role.toLowerCase() === 'user' ? 'user' : 'ai',
           content: m.content,
           citations: uniqueCitations((m.citations ?? []).map(mapHistoryCitation)),
+          suggestedQuestions: Array.isArray(m.suggested_questions) ? m.suggested_questions : undefined,
         }));
 
         setMessages(loaded.length > 0 ? loaded : INITIAL_MESSAGES);
@@ -295,10 +291,24 @@ export function ChatWindow({
         thinkingMs: message.thinkingMs ?? elapsedMs,
       }));
     },
+    onRestart: () => {
+      setIsTyping(true);
+      updateStreamAnswer((message) => ({
+        ...message,
+        content: '',
+        citations: [],
+      }));
+    },
     onCitation: (citation) => {
       updateStreamAnswer((message) => ({
         ...message,
         citations: mergeCitation(message.citations, citation),
+      }));
+    },
+    onSuggestions: (questions) => {
+      updateStreamAnswer((message) => ({
+        ...message,
+        suggestedQuestions: questions,
       }));
     },
     onDone: (event) => {
@@ -317,7 +327,14 @@ export function ChatWindow({
       }
 
       context.completed = true;
-      context.answer = { ...context.answer, traceCompleted: true };
+      const nextAnswer = {
+        ...context.answer,
+        traceCompleted: true,
+        ...(event.suggestedQuestions && event.suggestedQuestions.length > 0
+          ? { suggestedQuestions: event.suggestedQuestions }
+          : {}),
+      };
+      context.answer = nextAnswer;
       setIsTyping(false);
       setStreamSnapshot({
         key: context.key,
@@ -504,19 +521,19 @@ export function ChatWindow({
             })
           )}
 
-          {/* Suggested questions - only visible before user asks anything */}
-          {messages.length <= 1 && !isTyping && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {SUGGESTED_QUESTIONS.map((q) => (
-                <button
-                  key={q}
-                  onClick={() => handleSend(q)}
-                  className="rounded-full border border-[#DADADA] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#5A5A5A] hover:border-[#CFCFCF] hover:text-[#111111] transition-colors"
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
+          {/* Follow-up question suggestions (AI-125) - visible after completed grounded answer */}
+          {messages.length > 1 &&
+            !isTyping &&
+            !isStreaming &&
+            messages[messages.length - 1]?.role === 'ai' &&
+            !messages[messages.length - 1]?.isError &&
+            Boolean(messages[messages.length - 1]?.suggestedQuestions?.length) && (
+              <SuggestedQuestions
+                questions={messages[messages.length - 1].suggestedQuestions!}
+                disabled={isTyping || isStreaming}
+                onSelect={handleSend}
+                label="Suggested follow-ups:"
+              />
           )}
 
           {/* Empty div serving as an anchor for scrollIntoView */}

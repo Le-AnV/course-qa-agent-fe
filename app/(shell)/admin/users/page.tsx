@@ -32,11 +32,12 @@ export default function AdminUsersPage() {
   const [creating, setCreating] = React.useState(false);
   const [generatingCode, setGeneratingCode] = React.useState(false);
   const [form, setForm] = React.useState<AdminUserFormState>({ username: "", email: "", role: "student", code: "" });
-  const [confirmAction, setConfirmAction] = React.useState<{ kind: "reset" | "delete"; userId: string; username: string } | null>(null);
+  const [confirmAction, setConfirmAction] = React.useState<{ kind: "reset" | "delete" | "deactivate"; userId: string; username: string } | null>(null);
   // Row selection + bulk actions + details drawer
   const [selected, setSelected] = React.useState<string[]>([]);
   const [detailsUser, setDetailsUser] = React.useState<AdminUser | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = React.useState(false);
+  const [confirmBulkDeactivate, setConfirmBulkDeactivate] = React.useState(false);
   const [bulkBusy, setBulkBusy] = React.useState(false);
 
   const loadUsers = React.useCallback(async () => {
@@ -73,15 +74,22 @@ export default function AdminUsersPage() {
     setConfirmAction({ kind: "delete", userId, username });
   };
 
+  const handleDeactivate = (userId: string, username: string) => {
+    setConfirmAction({ kind: "deactivate", userId, username });
+  };
+
   const runConfirmedAction = async () => {
     if (!confirmAction) return;
     try {
       if (confirmAction.kind === "reset") {
         const result = await adminApi.resetPassword(confirmAction.userId);
         setNotice(`Password reset. New credentials emailed to: ${result.emailed_to}`);
-      } else {
+      } else if (confirmAction.kind === "delete") {
         await adminApi.deleteUser(confirmAction.userId);
         setNotice(`Account ${confirmAction.username} deleted.`);
+      } else {
+        await adminApi.setActive(confirmAction.userId, false);
+        setNotice(`Account ${confirmAction.username} deactivated.`);
       }
       setConfirmAction(null);
       await loadUsers();
@@ -155,6 +163,7 @@ export default function AdminUsersPage() {
     }
     setBulkBusy(false);
     setConfirmBulkDelete(false);
+    setConfirmBulkDeactivate(false);
     setSelected([]);
     await loadUsers();
     const verb = kind === "delete" ? "deleted" : kind === "activate" ? "activated" : "deactivated";
@@ -337,7 +346,7 @@ export default function AdminUsersPage() {
                 <UserCheck className="w-3.5 h-3.5" /> Activate
               </button>
               <button
-                onClick={() => void runBulkAction("deactivate")}
+                onClick={() => setConfirmBulkDeactivate(true)}
                 disabled={bulkBusy}
                 className="flex items-center gap-1.5 rounded-md border border-[#DADADA] bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[#111111] transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
               >
@@ -431,7 +440,7 @@ export default function AdminUsersPage() {
                         items={[
                           { label: "View details", icon: <Eye className="w-3.5 h-3.5" />, onSelect: () => setDetailsUser(user) },
                           ...(user.is_active
-                            ? [{ label: "Deactivate account", danger: true, onSelect: () => void handleActivate(String(user.id), false) }]
+                            ? [{ label: "Deactivate account", danger: true, onSelect: () => handleDeactivate(String(user.id), user.username) }]
                             : [{ label: "Activate account", onSelect: () => void handleActivate(String(user.id), true) }]),
                           { label: "Reset password", icon: <RefreshCw className="w-3.5 h-3.5" />, onSelect: () => handleResetPassword(String(user.id), user.username) },
                           { label: "Delete account", danger: true, onSelect: () => handleDelete(String(user.id), user.username) },
@@ -631,17 +640,48 @@ export default function AdminUsersPage() {
       )}
       <ConfirmDialog
         isOpen={confirmAction !== null}
-        title={confirmAction?.kind === "delete" ? "Delete this account?" : "Reset this password?"}
-        tone={confirmAction?.kind === "delete" ? "danger" : "default"}
-        confirmLabel={confirmAction?.kind === "delete" ? "Delete account" : "Reset password"}
-        busyLabel={confirmAction?.kind === "delete" ? "Deleting..." : "Resetting..."}
+        title={
+          confirmAction?.kind === "delete"
+            ? "Delete this account?"
+            : confirmAction?.kind === "deactivate"
+              ? "Deactivate this account?"
+              : "Reset this password?"
+        }
+        tone={confirmAction?.kind === "reset" ? "default" : "danger"}
+        confirmLabel={
+          confirmAction?.kind === "delete"
+            ? "Delete account"
+            : confirmAction?.kind === "deactivate"
+              ? "Deactivate account"
+              : "Reset password"
+        }
+        busyLabel={
+          confirmAction?.kind === "delete"
+            ? "Deleting..."
+            : confirmAction?.kind === "deactivate"
+              ? "Deactivating..."
+              : "Resetting..."
+        }
         description={
           confirmAction?.kind === "delete"
             ? `Account ${confirmAction.username} will be removed permanently. The last remaining admin is protected. This cannot be undone.`
-            : `${confirmAction?.username ?? "This user"} will receive a new password by email. This cannot be undone.`
+            : confirmAction?.kind === "deactivate"
+              ? `${confirmAction.username} will no longer be able to sign in. Their classes, tickets and history are kept; you can reactivate the account later.`
+              : `${confirmAction?.username ?? "This user"} will receive a new password by email. This cannot be undone.`
         }
         onConfirm={runConfirmedAction}
         onCancel={() => setConfirmAction(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmBulkDeactivate}
+        title={`Deactivate ${selected.length} account${selected.length === 1 ? "" : "s"}?`}
+        tone="danger"
+        confirmLabel={`Deactivate ${selected.length} account${selected.length === 1 ? "" : "s"}`}
+        busyLabel="Deactivating..."
+        description={`${selected.length} selected account${selected.length === 1 ? "" : "s"} will no longer be able to sign in. Their classes, tickets and history are kept; you can reactivate them later.`}
+        onConfirm={() => void runBulkAction("deactivate")}
+        onCancel={() => setConfirmBulkDeactivate(false)}
       />
 
       <ConfirmDialog

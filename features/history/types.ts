@@ -45,6 +45,7 @@ export interface ChatMessageItem {
   content: string;
   used_web_search: boolean;
   citations?: ChatMessageCitation[] | null;
+  suggested_questions?: string[] | null;
   created_at: string; // ISO 8601 string
 }
 
