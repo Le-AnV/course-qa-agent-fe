@@ -126,3 +126,19 @@ describe("retrievalConfig (AI-65 KB vs Internet threshold)", () => {
     }
   });
 });
+
+describe("updateGeminiAutoSwitch", () => {
+  it("PATCHes the auto-switch setting", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const restore = mockFetch(calls, { enabled: false });
+    try {
+      const result = await adminApi.updateGeminiAutoSwitch(false);
+      expect(result.enabled).toBe(false);
+      expect(calls[0].url).toContain("/api/admin/llm/auto-switch");
+      expect(calls[0].init?.method).toBe("PATCH");
+      expect(JSON.parse(String(calls[0].init?.body))).toEqual({ enabled: false });
+    } finally {
+      restore();
+    }
+  });
+});

@@ -291,6 +291,14 @@ export function ChatWindow({
         thinkingMs: message.thinkingMs ?? elapsedMs,
       }));
     },
+    onRestart: () => {
+      setIsTyping(true);
+      updateStreamAnswer((message) => ({
+        ...message,
+        content: '',
+        citations: [],
+      }));
+    },
     onCitation: (citation) => {
       updateStreamAnswer((message) => ({
         ...message,

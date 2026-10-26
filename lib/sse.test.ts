@@ -191,6 +191,19 @@ describe("createSseParser", () => {
     ]);
   });
 
+  it("parses a restart event so the client can clear partial text", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push(
+      'event: restart\ndata: {"message":"Switching to the next Gemini key."}\n\n',
+    );
+
+    expect(events).toEqual([
+      { type: "restart", message: "Switching to the next Gemini key." },
+    ]);
+  });
+
   it("parses progress events with optional message", () => {
     const events: ChatStreamEvent[] = [];
     const parser = createSseParser((event) => events.push(event));

@@ -15,6 +15,7 @@ export type ChatProgressStage = "searching" | "reading" | "drafting";
 export type ChatStreamEvent =
   | { type: "progress"; stage: ChatProgressStage; message?: string }
   | { type: "token"; text: string }
+  | { type: "restart"; message?: string }
   | { type: "citation"; citation: ChatCitation }
   | { type: "suggestions"; questions: string[] }
   | {
@@ -60,6 +61,13 @@ function decodeEvent(eventName: string, rawData: string): ChatStreamEvent | null
   if (eventName === "token") {
     if (typeof data.text !== "string") return invalidData();
     return { type: "token", text: data.text };
+  }
+
+  if (eventName === "restart") {
+    return {
+      type: "restart",
+      message: typeof data.message === "string" ? data.message : undefined,
+    };
   }
 
   if (eventName === "citation") {
