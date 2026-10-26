@@ -5,6 +5,7 @@ import Link from "next/link";
 import { adminApi, type AdminSettings, type EmailConfig, type RetrievalConfig, type RetrievalTestResult, type ClassSection } from "@/lib/admin-api";
 import { AdminPageShell, ADMIN_CARD } from "@/components/shared/AdminPageShell";
 import { GeminiKeyPool } from "@/components/shared/GeminiKeyPool";
+import { DecisionsKeyPool } from "@/components/shared/DecisionsKeyPool";
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = React.useState<AdminSettings | null>(null);
@@ -161,6 +162,8 @@ export default function AdminSettingsPage() {
       ) : (
         <div className="space-y-6">
           <GeminiKeyPool />
+
+          <DecisionsKeyPool />
 
           {/* AI-65 / 3-Tier Answer Routing Dual Slider */}
           <div className={`${ADMIN_CARD} p-6`}>
