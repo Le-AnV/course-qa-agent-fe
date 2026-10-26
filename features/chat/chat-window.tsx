@@ -191,6 +191,10 @@ export function ChatWindow({
     }
 
     if (!activeSessionId) {
+      if (context && context.key !== NEW_CHAT_KEY) {
+        streamContextRef.current = null;
+        setStreamSnapshot(null);
+      }
       const timer = setTimeout(() => {
         setMessages(INITIAL_MESSAGES);
         setIsLoadingHistory(false);
