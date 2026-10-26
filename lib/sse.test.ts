@@ -60,6 +60,46 @@ describe("createSseParser", () => {
         sessionId: null,
         userMessageId: null,
         assistantMessageId: null,
+        suggestedQuestions: undefined,
+      },
+    ]);
+  });
+
+  it("parses suggestions event (AI-125)", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push(
+      'event: suggestions\ndata: {"questions":["How does backpropagation work?","Why use ReLU?"]}\n\n',
+    );
+
+    expect(events).toEqual([
+      {
+        type: "suggestions",
+        questions: ["How does backpropagation work?", "Why use ReLU?"],
+      },
+    ]);
+  });
+
+  it("parses suggested questions in done event (AI-125)", () => {
+    const events: ChatStreamEvent[] = [];
+    const parser = createSseParser((event) => events.push(event));
+
+    parser.push(
+      'event: done\ndata: {"source":"curriculum","used_web_search":false,"threshold":0.8,"top_score":0.95,"suggested_questions":["What is gradient descent?"]}\n\n',
+    );
+
+    expect(events).toEqual([
+      {
+        type: "done",
+        source: "curriculum",
+        usedWebSearch: false,
+        threshold: 0.8,
+        topScore: 0.95,
+        sessionId: null,
+        userMessageId: null,
+        assistantMessageId: null,
+        suggestedQuestions: ["What is gradient descent?"],
       },
     ]);
   });
