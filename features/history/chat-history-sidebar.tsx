@@ -7,9 +7,13 @@ import {
   ChevronRight,
   Loader2,
   MessageSquare,
+  MoreHorizontal,
   Pencil,
+  Pin,
+  PinOff,
   Plus,
   RefreshCw,
+  Search,
   Trash2,
   X,
 } from 'lucide-react';
@@ -28,9 +32,17 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useIsomorphicLayoutEffect } from '@/hooks/use-isomorphic-layout-effect';
-import { getSessions, deleteSession, renameSession, getHistoryErrorMessage } from './api';
+import {
+  getSessions,
+  deleteSession,
+  renameSession,
+  getHistoryErrorMessage,
+  searchSessions,
+  togglePinSession,
+} from './api';
+import { splitHighlightParts } from './search-highlight';
 import { readHistoryCollapsed, writeHistoryCollapsed } from './history-prefs';
-import type { ChatSessionItem } from './types';
+import type { ChatSessionItem, SearchResultItem } from './types';
 
 /**
  * Format ISO 8601 date string to friendly relative time in English.
@@ -59,6 +71,39 @@ function formatRelativeTime(isoString: string): string {
 function railInitial(session: ChatSessionItem): string {
   const title = session.title?.trim();
   return title ? title[0].toUpperCase() : '';
+}
+
+function HighlightedText({ text, keyword }: { text: string; keyword: string }) {
+  return (
+    <>
+      {splitHighlightParts(text, keyword).map((part, index) =>
+        part.match ? (
+          <mark key={index} className="rounded-sm bg-yellow-100 px-0.5 text-yellow-900">
+            {part.text}
+          </mark>
+        ) : (
+          <React.Fragment key={index}>{part.text}</React.Fragment>
+        ),
+      )}
+    </>
+  );
+}
+
+export function sortSessionsWithPinned(items: ChatSessionItem[]): ChatSessionItem[] {
+  return [...items].sort((a, b) => {
+    const aPinned = Boolean(a.is_pinned);
+    const bPinned = Boolean(b.is_pinned);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    if (aPinned && bPinned) {
+      const aPinTime = a.pinned_at ? new Date(a.pinned_at).getTime() : Number.POSITIVE_INFINITY;
+      const bPinTime = b.pinned_at ? new Date(b.pinned_at).getTime() : Number.POSITIVE_INFINITY;
+      if (aPinTime !== bPinTime) return aPinTime - bPinTime;
+    }
+    const aTime = new Date(a.updated_at).getTime();
+    const bTime = new Date(b.updated_at).getTime();
+    return bTime - aTime;
+  });
 }
 
 export interface ChatHistorySidebarProps {
@@ -104,6 +149,101 @@ export function ChatHistorySidebar({
   const [sessionToRename, setSessionToRename] = React.useState<ChatSessionItem | null>(null);
   const [renameTitle, setRenameTitle] = React.useState('');
   const [isRenaming, setIsRenaming] = React.useState(false);
+
+  // State for 3-dots actions menu
+  const [openMenuId, setOpenMenuId] = React.useState<string | null>(null);
+  const menuRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!openMenuId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openMenuId]);
+
+  const handleTogglePin = async (session: ChatSessionItem) => {
+    const nextPin = !session.is_pinned;
+    setOpenMenuId(null);
+    // Optimistic update
+    setSessions((prev) =>
+      sortSessionsWithPinned(
+        prev.map((s) =>
+          s.id === session.id
+            ? {
+                ...s,
+                is_pinned: nextPin,
+                pinned_at: nextPin ? new Date().toISOString() : null,
+              }
+            : s,
+        ),
+      ),
+    );
+
+    try {
+      const updated = await togglePinSession(session.id, nextPin);
+      setSessions((prev) =>
+        sortSessionsWithPinned(prev.map((s) => (s.id === updated.id ? updated : s))),
+      );
+      toast.success(nextPin ? 'Pinned conversation to top.' : 'Unpinned conversation.');
+    } catch (err) {
+      // Rollback
+      setSessions((prev) =>
+        sortSessionsWithPinned(
+          prev.map((s) => (s.id === session.id ? session : s)),
+        ),
+      );
+      toast.error(`Pin action failed: ${getHistoryErrorMessage(err)}`);
+    }
+  };
+
+  // Search state (AI-101 AC-01, AC-02, AC-03, AC-04)
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState<SearchResultItem[] | null>(null);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [searchError, setSearchError] = React.useState<string | null>(null);
+  const [searchRetryKey, setSearchRetryKey] = React.useState(0);
+  const searchRequestId = React.useRef(0);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  React.useEffect(() => {
+    const requestId = ++searchRequestId.current;
+    const trimmed = searchQuery.trim();
+
+    if (!trimmed) {
+      setSearchResults(null);
+      setSearchError(null);
+      setIsSearching(false);
+      return;
+    }
+
+    setSearchError(null);
+    setIsSearching(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await searchSessions(trimmed, classId);
+        if (requestId !== searchRequestId.current) return;
+        setSearchResults(res.items);
+      } catch (err) {
+        if (requestId !== searchRequestId.current) return;
+        setSearchResults(null);
+        setSearchError(getHistoryErrorMessage(err));
+      } finally {
+        if (requestId === searchRequestId.current) setIsSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      // Invalidate any in-flight request when query/class changes or unmounts.
+      searchRequestId.current += 1;
+    };
+  }, [searchQuery, classId, searchRetryKey]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Restore the last shape before paint; the server/first client render is expanded.
   useIsomorphicLayoutEffect(() => {
@@ -205,10 +345,115 @@ export function ChatHistorySidebar({
     }
   };
 
+  const renderSearchBox = () => (
+    <div className="relative px-2 pb-1.5 pt-2" role="search">
+      <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6F6F6F]" />
+      <input
+        type="text"
+        inputMode="search"
+        autoComplete="off"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search conversations..."
+        aria-label="Search conversations"
+        data-testid="search-history-input"
+        className="w-full rounded-md border border-[#DADADA] bg-[#F7F7F7] py-1.5 pl-8 pr-8 text-[12px] text-[#111111] placeholder:text-[#9F9F9F] focus:border-[#111111] focus:outline-none focus:ring-1 focus:ring-[#111111]/20 [&::-webkit-search-cancel-button]:hidden"
+      />
+      {searchQuery && (
+        <button
+          type="button"
+          onClick={() => setSearchQuery('')}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6F6F6F] hover:text-[#111111]"
+          aria-label="Clear search"
+          data-testid="search-history-clear"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+
   const iconButton =
     'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6F6F6F] transition-colors hover:bg-[#EDEDED] hover:text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20 disabled:cursor-not-allowed disabled:opacity-40';
 
   const states = (compact: boolean) => {
+    if (!compact && (isSearching || searchResults !== null || searchError !== null)) {
+      if (isSearching) {
+        return (
+          <div className="space-y-2 p-2" aria-busy="true" aria-live="polite">
+            <Skeleton className="h-12 w-full rounded-lg" />
+            <Skeleton className="h-12 w-full rounded-lg" />
+          </div>
+        );
+      }
+
+      if (searchError) {
+        return (
+          <div
+            className="my-auto flex flex-col items-center justify-center gap-2 p-4 text-center"
+            role="alert"
+          >
+            <AlertCircle className="h-6 w-6 stroke-1.5 text-[#9D4C38]" />
+            <p className="text-[12px] text-[#5A5A5A]">{searchError}</p>
+            <button
+              type="button"
+              onClick={() => setSearchRetryKey((key) => key + 1)}
+              className="mt-1 flex items-center gap-1.5 rounded-md border border-[#DADADA] bg-white px-2.5 py-1 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7]"
+            >
+              <RefreshCw className="h-3 w-3" /> Retry
+            </button>
+          </div>
+        );
+      }
+
+      if (searchResults !== null && searchResults.length === 0) {
+        return (
+          <div
+            className="my-auto flex flex-col items-center justify-center gap-2 p-4 text-center"
+            aria-live="polite"
+          >
+            <Search className="h-7 w-7 stroke-1 text-[#CFCFCF]" />
+            <p className="text-[12px] text-[#6F6F6F]">No results found</p>
+          </div>
+        );
+      }
+
+      if (searchResults !== null) {
+        return (
+          <div aria-live="polite">
+            <p className="px-2 pb-1 text-[11px] text-[#6F6F6F]">
+              {searchResults.length} result{searchResults.length === 1 ? '' : 's'}
+            </p>
+            {searchResults.map((result) => (
+              <button
+                key={result.session_id}
+                type="button"
+                data-testid={`search-result-${result.session_id}`}
+                aria-current={activeSessionId === result.session_id ? 'true' : undefined}
+                onClick={() => {
+                  selectSession(result.session_id);
+                  setSearchQuery('');
+                }}
+                className="w-full rounded-lg border border-transparent px-2 py-2 text-left hover:bg-[#F7F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
+              >
+                <p className="truncate text-[12.5px] font-medium text-[#111111]">
+                  <HighlightedText
+                    text={result.title ?? 'Conversation'}
+                    keyword={searchQuery}
+                  />
+                </p>
+                {result.snippet && result.snippet !== result.title && (
+                  <p className="mt-0.5 line-clamp-2 text-[11px] text-[#6F6F6F]">
+                    <HighlightedText text={result.snippet} keyword={searchQuery} />
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
+        );
+      }
+    }
+
     if (isLoading) {
       return compact ? (
         <div className="flex flex-col items-center gap-2" aria-hidden>
@@ -261,62 +506,41 @@ export function ChatHistorySidebar({
       );
     }
 
-    if (compact) {
-      return (
-        <div className="flex flex-col items-center gap-1.5">
-          {sessions.map((session) => {
-            const isActive = activeSessionId === session.id;
-            const initial = railInitial(session);
-            return (
-              <button
-                key={session.id}
-                type="button"
-                onClick={() => selectSession(session.id)}
-                title={session.title || 'Conversation'}
-                aria-label={`Open ${session.title || 'conversation'}`}
-                aria-current={isActive ? 'true' : undefined}
-                className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
-                  isActive
-                    ? 'border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-ink)]'
-                    : 'border-transparent bg-[#F7F7F7] text-[#5A5A5A] hover:border-[#DADADA] hover:text-[#111111]',
-                )}
-              >
-                {initial ? initial : <MessageSquare className="h-4 w-4" />}
-              </button>
-            );
-          })}
-        </div>
-      );
-    }
-
-    return sessions.map((session) => {
+    const renderSessionItem = (session: ChatSessionItem) => {
       const isActive = activeSessionId === session.id;
       const label = session.title || 'Conversation';
+      const isMenuOpen = openMenuId === session.id;
 
       return (
         <div
           key={session.id}
           className={cn(
-            'group flex items-start gap-1 rounded-lg border px-1 py-1 transition-colors',
+            'group relative flex items-start gap-1 rounded-lg border px-1 py-1 transition-colors',
             isActive
               ? 'border-[var(--brand-line)] bg-[var(--brand-soft)]'
               : 'border-transparent hover:bg-[#F7F7F7]',
+            isMenuOpen && 'bg-[#F7F7F7] z-30',
           )}
         >
-          {/* Real button for selection; the icon actions are siblings, never nested. */}
           <button
             type="button"
-            onClick={() => selectSession(session.id)}
+            onClick={() => {
+              setOpenMenuId(null);
+              selectSession(session.id);
+            }}
             aria-current={isActive ? 'true' : undefined}
             className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
           >
-            <MessageSquare
-              className={cn(
-                'h-3.5 w-3.5 shrink-0',
-                isActive ? 'text-[var(--brand-ink)]' : 'text-[#6F6F6F]',
-              )}
-            />
+            {session.is_pinned ? (
+              <Pin className="h-3.5 w-3.5 shrink-0 text-[#111111] rotate-45" />
+            ) : (
+              <MessageSquare
+                className={cn(
+                  'h-3.5 w-3.5 shrink-0',
+                  isActive ? 'text-[var(--brand-ink)]' : 'text-[#6F6F6F]',
+                )}
+              />
+            )}
             <span className="min-w-0 flex-1">
               <span
                 className={cn(
@@ -332,35 +556,156 @@ export function ChatHistorySidebar({
             </span>
           </button>
 
-          <div
-            className={cn(
-              'flex shrink-0 items-center gap-0.5 transition-opacity focus-within:opacity-100 group-hover:opacity-100',
-              isActive ? 'opacity-100' : 'opacity-0',
+          {/* 3-dots action menu */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenMenuId(isMenuOpen ? null : session.id);
+              }}
+              title="More options"
+              aria-label={`More options for ${label}`}
+              className={cn(
+                'rounded p-1 text-[#6F6F6F] transition-all hover:bg-[#EDEDED] hover:text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
+                isMenuOpen
+                  ? 'opacity-100 bg-[#EDEDED] text-[#111111]'
+                  : isActive
+                  ? 'opacity-100'
+                  : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100',
+              )}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+
+            {isMenuOpen && (
+              <div
+                ref={menuRef}
+                className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-[#DADADA] bg-white p-1 shadow-lg ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-75"
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleTogglePin(session);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7] transition-colors text-left"
+                >
+                  {session.is_pinned ? (
+                    <>
+                      <PinOff className="h-3.5 w-3.5 text-[#6F6F6F]" />
+                      <span>Unpin from top</span>
+                    </>
+                  ) : (
+                    <>
+                      <Pin className="h-3.5 w-3.5 text-[#6F6F6F] rotate-45" />
+                      <span>Pin to top</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenuId(null);
+                    openRenameDialog(session);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7] transition-colors text-left"
+                >
+                  <Pencil className="h-3.5 w-3.5 text-[#6F6F6F]" />
+                  <span>Rename</span>
+                </button>
+                <div className="my-1 border-t border-[#EDEDED]" />
+                <button
+                  type="button"
+                  data-testid={`delete-session-btn-${session.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenuId(null);
+                    setSessionToDelete(session);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#9D4C38] hover:bg-[#FDF2F2] transition-colors text-left"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-[#9D4C38]" />
+                  <span>Delete</span>
+                </button>
+              </div>
             )}
-          >
-            <button
-              type="button"
-              onClick={() => openRenameDialog(session)}
-              title="Rename conversation"
-              aria-label={`Rename ${label}`}
-              className="rounded p-1.5 text-[#6F6F6F] transition-colors hover:bg-[#EDEDED] hover:text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              data-testid={`delete-session-btn-${session.id}`}
-              onClick={() => setSessionToDelete(session)}
-              title="Delete conversation"
-              aria-label={`Delete ${label}`}
-              className="rounded p-1.5 text-[#6F6F6F] transition-colors hover:bg-[#EDEDED] hover:text-[#9D4C38] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
           </div>
         </div>
       );
-    });
+    };
+
+    if (compact) {
+      return (
+        <div className="flex flex-col items-center gap-1.5">
+          {sessions.map((session) => {
+            const isActive = activeSessionId === session.id;
+            const initial = railInitial(session);
+            return (
+              <button
+                key={session.id}
+                type="button"
+                onClick={() => selectSession(session.id)}
+                title={session.title || 'Conversation'}
+                aria-label={`Open ${session.title || 'conversation'}`}
+                aria-current={isActive ? 'true' : undefined}
+                className={cn(
+                  'relative flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
+                  isActive
+                    ? 'border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-ink)]'
+                    : 'border-transparent bg-[#F7F7F7] text-[#5A5A5A] hover:border-[#DADADA] hover:text-[#111111]',
+                )}
+              >
+                {session.is_pinned && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-[#111111]"
+                    title="Pinned conversation"
+                  >
+                    <span className="h-1 w-1 rounded-full bg-white" />
+                  </span>
+                )}
+                {initial ? initial : <MessageSquare className="h-4 w-4" />}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    const pinnedSessions = sessions.filter((s) => s.is_pinned);
+    const recentSessions = sessions.filter((s) => !s.is_pinned);
+
+    if (pinnedSessions.length > 0) {
+      return (
+        <div className="flex flex-col gap-2">
+          <div>
+            <div className="flex items-center gap-1 px-1.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-[#8F8F8F]">
+              <Pin className="h-3 w-3 rotate-45" />
+              <span>Pinned</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              {pinnedSessions.map((session) => renderSessionItem(session))}
+            </div>
+          </div>
+
+          <div>
+            <div className="px-1.5 pb-1 pt-1 text-[10.5px] font-semibold uppercase tracking-wider text-[#8F8F8F]">
+              <span>Recent</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              {recentSessions.map((session) => renderSessionItem(session))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-1">
+        {sessions.map((session) => renderSessionItem(session))}
+      </div>
+    );
   };
 
   return (
@@ -433,6 +778,7 @@ export function ChatHistorySidebar({
               <Plus className="h-4 w-4" />
             </button>
           )}
+          {!isCollapsed && renderSearchBox()}
           {states(isCollapsed)}
         </div>
       </aside>
@@ -470,7 +816,10 @@ export function ChatHistorySidebar({
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2">{states(false)}</div>
+          <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2">
+            {renderSearchBox()}
+            {states(false)}
+          </div>
         </DialogContent>
       </Dialog>
 

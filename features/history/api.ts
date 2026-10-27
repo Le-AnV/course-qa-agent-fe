@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/admin-api";
 import type {
   AppendMessageRequest,
   ChatMessageItem,
+  ChatSearchResponse,
   ChatSessionDetail,
   ChatSessionItem,
   ChatSessionListResponse,
@@ -123,6 +124,47 @@ export async function deleteSession(sessionId: string): Promise<void> {
 }
 
 /**
+ * Search user's chat history across titles and messages (AI-101 AC-01, AC-02, AC-03).
+ *
+ * @param query Search query string (minimum 1 non-whitespace character)
+ * @param classId Optional class filter
+ * @param limit Max results to return (default 20, max 50)
+ * @param offset Pagination offset (default 0)
+ * @returns Search results containing matching sessions with snippets
+ */
+export async function searchSessions(
+  query: string,
+  classId?: string,
+  limit = 20,
+  offset = 0,
+): Promise<ChatSearchResponse> {
+  const params = new URLSearchParams({ q: query });
+  if (classId) params.set("class_id", classId);
+  params.set("limit", String(limit));
+  params.set("offset", String(offset));
+
+  return apiFetch<ChatSearchResponse>(`/api/history/search?${params.toString()}`);
+}
+
+/**
+ * Pin or unpin a chat session to keep it at the top of the history list.
+ *
+ * @param sessionId UUID of the chat session
+ * @param isPinned Optional explicit boolean. If omitted, toggles current state.
+ * @returns Updated session summary with new is_pinned and pinned_at values
+ */
+export async function togglePinSession(
+  sessionId: string,
+  isPinned?: boolean,
+): Promise<ChatSessionItem> {
+  const body = isPinned !== undefined ? JSON.stringify({ is_pinned: isPinned }) : undefined;
+  return await apiFetch<ChatSessionItem>(`/api/history/${encodeURIComponent(sessionId)}/pin`, {
+    method: "PATCH",
+    ...(body ? { body } : {}),
+  });
+}
+
+/**
  * Grouped API object for convenient import.
  */
 export const historyApi = {
@@ -132,5 +174,7 @@ export const historyApi = {
   renameSession,
   appendMessage,
   deleteSession,
+  searchSessions,
+  togglePinSession,
   getErrorMessage: getHistoryErrorMessage,
 };
