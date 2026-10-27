@@ -66,7 +66,7 @@ export function MessageBubble({
             steps={trace}
             activeStep={traceStep}
             completed={traceCompleted}
-            running={isLoading || isStreaming}
+            running={!content && (isLoading || isStreaming)}
             thinkingMs={thinkingMs}
           />
         )}
@@ -81,8 +81,8 @@ export function MessageBubble({
           </div>
         )}
 
-        {/* Citations — rendered once the answer has finished streaming */}
-        {!isUser && !isLoading && !isStreaming && citations.length > 0 && (
+        {/* Citations — shown as soon as the backend emits them */}
+        {!isUser && citations.length > 0 && (
           <div className="mt-3 pt-3 border-t border-[#F0F0F0]">
             <div className="flex flex-wrap gap-2" aria-label="Sources">
               {citations.map((citation, position) => (

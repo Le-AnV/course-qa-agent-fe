@@ -134,6 +134,9 @@ export function ChatWindow({
   const streamContextRef = React.useRef<StreamContext | null>(null);
   // Render mirror of the ref above; keeps ref access out of the render phase.
   const [streamSnapshot, setStreamSnapshot] = React.useState<StreamSnapshot | null>(null);
+  // True until the SSE response is fully closed (suggestions arrive after
+  // `done`, so the live transcript must survive that window).
+  const streamActiveRef = React.useRef(false);
 
   const currentKey = activeSessionId ?? NEW_CHAT_KEY;
   // Stream callbacks are created at send time; this ref always tells them which
@@ -180,7 +183,7 @@ export function ChatWindow({
 
     // A finished background answer is already persisted. Drop the local copy;
     // the next visit can load the canonical transcript from the server.
-    if (context?.completed) {
+    if (context?.completed && !streamActiveRef.current) {
       streamContextRef.current = null;
       setStreamSnapshot(null);
     }
@@ -393,6 +396,13 @@ export function ChatWindow({
     },
   });
 
+  // The stream is fully closed only when the hook drops `isStreaming`.
+  React.useEffect(() => {
+    if (!isStreaming) {
+      streamActiveRef.current = false;
+    }
+  }, [isStreaming]);
+
   // Handler for user sending a message
   const handleSend = (text: string) => {
     // 1. Append the user message and a pending AI message carrying the trace,
@@ -429,6 +439,7 @@ export function ChatWindow({
     setIsTyping(true);
 
     // 3. Trigger the streaming API hook
+    streamActiveRef.current = true;
     sendMessage(text);
   };
 
@@ -524,7 +535,6 @@ export function ChatWindow({
           {/* Follow-up question suggestions (AI-125) - visible after completed grounded answer */}
           {messages.length > 1 &&
             !isTyping &&
-            !isStreaming &&
             messages[messages.length - 1]?.role === 'ai' &&
             !messages[messages.length - 1]?.isError &&
             Boolean(messages[messages.length - 1]?.suggestedQuestions?.length) && (
