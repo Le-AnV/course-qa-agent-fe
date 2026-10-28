@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   ChevronLeft,
@@ -152,22 +153,38 @@ export function ChatHistorySidebar({
 
   // State for 3-dots actions menu
   const [openMenuId, setOpenMenuId] = React.useState<string | null>(null);
+  const [menuCoords, setMenuCoords] = React.useState<{ top: number; left: number } | null>(null);
   const menuRef = React.useRef<HTMLDivElement | null>(null);
+  const activeTriggerRef = React.useRef<HTMLButtonElement | null>(null);
 
   React.useEffect(() => {
     if (!openMenuId) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        (!activeTriggerRef.current || !activeTriggerRef.current.contains(e.target as Node))
+      ) {
         setOpenMenuId(null);
+        setMenuCoords(null);
       }
     };
+    const handleScroll = () => {
+      setOpenMenuId(null);
+      setMenuCoords(null);
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
   }, [openMenuId]);
 
   const handleTogglePin = async (session: ChatSessionItem) => {
     const nextPin = !session.is_pinned;
     setOpenMenuId(null);
+    setMenuCoords(null);
     // Optimistic update
     setSessions((prev) =>
       sortSessionsWithPinned(
@@ -526,6 +543,7 @@ export function ChatHistorySidebar({
             type="button"
             onClick={() => {
               setOpenMenuId(null);
+              setMenuCoords(null);
               selectSession(session.id);
             }}
             aria-current={isActive ? 'true' : undefined}
@@ -562,7 +580,29 @@ export function ChatHistorySidebar({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setOpenMenuId(isMenuOpen ? null : session.id);
+                if (isMenuOpen) {
+                  setOpenMenuId(null);
+                  setMenuCoords(null);
+                } else {
+                  activeTriggerRef.current = e.currentTarget;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const menuWidth = 176;
+                  const menuHeight = 135;
+
+                  // Flyout to the right of the 3-dots button (+6px gap)
+                  let left = rect.right + 6;
+                  if (typeof window !== 'undefined' && left + menuWidth > window.innerWidth - 8) {
+                    left = Math.max(8, rect.left - menuWidth - 6);
+                  }
+
+                  let top = rect.top;
+                  if (typeof window !== 'undefined' && top + menuHeight > window.innerHeight - 8) {
+                    top = Math.max(8, window.innerHeight - menuHeight - 8);
+                  }
+
+                  setMenuCoords({ top, left });
+                  setOpenMenuId(session.id);
+                }
               }}
               title="More options"
               aria-label={`More options for ${label}`}
@@ -578,59 +618,71 @@ export function ChatHistorySidebar({
               <MoreHorizontal className="h-4 w-4" />
             </button>
 
-            {isMenuOpen && (
-              <div
-                ref={menuRef}
-                className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-[#DADADA] bg-white p-1 shadow-lg ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-75"
-              >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void handleTogglePin(session);
+            {isMenuOpen &&
+              menuCoords &&
+              typeof document !== 'undefined' &&
+              createPortal(
+                <div
+                  ref={menuRef}
+                  style={{
+                    position: 'fixed',
+                    top: `${menuCoords.top}px`,
+                    left: `${menuCoords.left}px`,
                   }}
-                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7] transition-colors text-left"
+                  className="z-50 w-44 rounded-lg border border-[#DADADA] bg-white p-1 shadow-lg ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-75"
                 >
-                  {session.is_pinned ? (
-                    <>
-                      <PinOff className="h-3.5 w-3.5 text-[#6F6F6F]" />
-                      <span>Unpin from top</span>
-                    </>
-                  ) : (
-                    <>
-                      <Pin className="h-3.5 w-3.5 text-[#6F6F6F] rotate-45" />
-                      <span>Pin to top</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenMenuId(null);
-                    openRenameDialog(session);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7] transition-colors text-left"
-                >
-                  <Pencil className="h-3.5 w-3.5 text-[#6F6F6F]" />
-                  <span>Rename</span>
-                </button>
-                <div className="my-1 border-t border-[#EDEDED]" />
-                <button
-                  type="button"
-                  data-testid={`delete-session-btn-${session.id}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenMenuId(null);
-                    setSessionToDelete(session);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#9D4C38] hover:bg-[#FDF2F2] transition-colors text-left"
-                >
-                  <Trash2 className="h-3.5 w-3.5 text-[#9D4C38]" />
-                  <span>Delete</span>
-                </button>
-              </div>
-            )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuCoords(null);
+                      void handleTogglePin(session);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7] transition-colors text-left"
+                  >
+                    {session.is_pinned ? (
+                      <>
+                        <PinOff className="h-3.5 w-3.5 text-[#6F6F6F]" />
+                        <span>Unpin from top</span>
+                      </>
+                    ) : (
+                      <>
+                        <Pin className="h-3.5 w-3.5 text-[#6F6F6F] rotate-45" />
+                        <span>Pin to top</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(null);
+                      setMenuCoords(null);
+                      openRenameDialog(session);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7] transition-colors text-left"
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-[#6F6F6F]" />
+                    <span>Rename</span>
+                  </button>
+                  <div className="my-1 border-t border-[#EDEDED]" />
+                  <button
+                    type="button"
+                    data-testid={`delete-session-btn-${session.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(null);
+                      setMenuCoords(null);
+                      setSessionToDelete(session);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#9D4C38] hover:bg-[#FDF2F2] transition-colors text-left"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-[#9D4C38]" />
+                    <span>Delete</span>
+                  </button>
+                </div>,
+                document.body,
+              )}
           </div>
         </div>
       );
