@@ -116,8 +116,8 @@ function ShellSkeleton() {
       <div className="flex flex-1">
         <div className="hidden w-56 border-r border-border bg-sidebar lg:block" />
         <div className="flex-1 p-6">
-          <div className="h-8 w-48 animate-pulse rounded-md bg-muted" />
-          <div className="mt-4 h-40 animate-pulse rounded-lg bg-muted" />
+          <div className="h-8 w-48 skeleton-shimmer rounded-md bg-muted" />
+          <div className="mt-4 h-40 skeleton-shimmer rounded-lg bg-muted" />
         </div>
       </div>
     </div>

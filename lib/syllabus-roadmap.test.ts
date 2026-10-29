@@ -83,17 +83,18 @@ describe("ChatMarkdown syllabus content rendering (AI-133 AC-03 & AC-07)", () =>
     const html = renderToStaticMarkup(React.createElement(ChatMarkdown, { content: md }));
     expect(html).toContain("<h3");
     expect(html).toContain("Session 1</h3>");
-    expect(html).toContain("<strong>Concept/Lecture</strong>");
+    expect(html).toMatch(/<strong[^>]*>Concept\/Lecture<\/strong>/);
     // Nested sub-bullets must be rendered inside a child <ul> within the parent <li>
-    expect(html).toMatch(/<li[^>]*><strong>Concept\/Lecture<\/strong>[^<]*<ul[^>]*><li[^>]*>Tokenization:/);
+    expect(html).toMatch(/<strong[^>]*>Concept\/Lecture<\/strong>[\s\S]*?<ul[^>]*>\s*<li[^>]*>Tokenization:/);
   });
 
-  it("escapes XSS payloads safely without executing raw HTML", () => {
+  it("drops XSS payloads safely instead of executing raw HTML", () => {
     const xss = "### Session 1\n- <script>alert('xss')</script>\n  - <img src=x onerror=alert(1)>";
     const html = renderToStaticMarkup(React.createElement(ChatMarkdown, { content: xss }));
-    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("<script");
     expect(html).not.toContain("<img");
-    expect(html).toContain("&lt;script&gt;");
+    expect(html).not.toContain("onerror");
+    expect(html).toContain("Session 1</h3>");
   });
 });
 

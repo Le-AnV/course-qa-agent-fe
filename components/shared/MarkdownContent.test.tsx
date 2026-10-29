@@ -64,6 +64,27 @@ describe("MarkdownContent", () => {
     expect(html).toContain("END");
   });
 
+  it("renders fenced code as a dark card with a copy button", () => {
+    const html = render("```python\nprint('hi')\n```");
+    expect(html).toContain("bg-[#1B1B1B]");
+    expect(html).toContain("python");
+    expect(html).toContain("Copy");
+    expect(html).toContain("print");
+    expect(html).not.toContain("```");
+  });
+
+  it("renders inline code without leaking backticks", () => {
+    const html = render("Run `npm run dev` first");
+    expect(html).toContain("<code");
+    expect(html).not.toContain("`npm run dev`");
+  });
+
+  it("renders fenced code without a language", () => {
+    const html = render("```\nplain text\n```");
+    expect(html).toContain("bg-[#1B1B1B]");
+    expect(html).toContain("plain text");
+  });
+
   it("renders nothing for empty content", () => {
     expect(render("")).toBe("");
     expect(render(null)).toBe("");

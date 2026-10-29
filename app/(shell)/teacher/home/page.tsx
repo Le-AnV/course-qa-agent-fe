@@ -59,7 +59,7 @@ function ActionListSkeleton() {
     <div aria-hidden className="overflow-hidden rounded-xl border border-[#DADADA] bg-white shadow-sm">
       {[0, 1].map((i) => (
         <div key={i} className="flex items-center gap-4 border-b border-[#EDEDED] p-5 last:border-b-0">
-          <div className="h-10 w-10 shrink-0 animate-pulse rounded-lg bg-[#EDEDED]" />
+          <div className="h-10 w-10 shrink-0 skeleton-shimmer rounded-lg bg-[#EDEDED]" />
           <div className="min-w-0 flex-1">
             <SkeletonLine className="h-3.5 w-56" />
             <SkeletonLine className="mt-2 h-3 w-40" />

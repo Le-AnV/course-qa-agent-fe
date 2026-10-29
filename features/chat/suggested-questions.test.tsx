@@ -22,7 +22,7 @@ describe("SuggestedQuestions", () => {
         onSelect: () => {},
       })
     );
-    expect(html).toContain("animate-pulse");
+    expect(html).toContain("skeleton-shimmer");
     expect(html).not.toContain("Question 1");
   });
 

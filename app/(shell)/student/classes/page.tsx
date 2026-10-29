@@ -75,7 +75,7 @@ export default function StudentClassesPage() {
   // Same footprint as a real card (~278px) so the catalog below does not jump
   // when the fetched classes replace the placeholder.
   const renderSkeletonCard = (key: number) => (
-    <div key={key} className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden animate-pulse">
+    <div key={key} className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden skeleton-shimmer [--skeleton-sheen:rgba(17,17,17,0.05)]">
       <div className="h-2 w-full bg-slate-200" />
       <div className="p-5 flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-4">

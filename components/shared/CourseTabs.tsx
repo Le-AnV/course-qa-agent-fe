@@ -64,13 +64,13 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
           }}
           aria-expanded={menuOpen}
           aria-controls="course-tab-menu"
-          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--brand-soft-strong)]"
+          className="flex w-full items-center justify-between gap-3 px-4 py-1.5 text-left transition-colors hover:bg-[var(--brand-soft-strong)]"
         >
           <span className="flex min-w-0 items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[#5A5A5A]">
+            <span className="text-[9.5px] font-semibold uppercase tracking-wide text-[#5A5A5A]">
               Section
             </span>
-            <span className="truncate text-[14px] font-semibold text-[#111111]">
+            <span className="truncate text-[13.5px] font-semibold text-[#111111]">
               {active.label}
             </span>
             <TabBadge count={active.badge ?? 0} />
@@ -102,7 +102,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
                     href={tab.href}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "flex items-center justify-between gap-3 px-4 py-3 text-[13.5px] transition-colors",
+                      "flex items-center justify-between gap-3 px-4 py-2.5 text-[13px] transition-colors",
                       isActive
                         ? "bg-[var(--brand-soft)] font-semibold text-[#111111]"
                         : "text-[#5A5A5A] hover:bg-[#F7F7F7] hover:text-[#111111]",
@@ -134,7 +134,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
                   href={tab.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "relative py-3 text-[13.5px] whitespace-nowrap border-b-2 border-transparent transition-colors",
+                    "relative py-1.5 text-[12px] whitespace-nowrap border-b-2 border-transparent transition-colors",
                     isActive
                       ? "text-[#111111] font-semibold"
                       : "text-[#5A5A5A] hover:text-[#111111] font-medium",

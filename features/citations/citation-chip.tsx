@@ -65,42 +65,34 @@ type CardPosition = {
   originX: number;
 };
 
-const CLOSE_DELAY_MS = 90;
-const EXIT_MS = 170;
-
-/**
- * Only one citation card may be visible at a time: the chips sit a few pixels
- * apart, so crossing two of them would otherwise show two overlapping cards.
- */
+/** Only one citation card may be open at a time. */
 let activeCard: { token: string; close: () => void } | null = null;
 
 export function CitationChip({ citation }: { citation: ChatCitation }) {
   const [isOpen, setIsOpen] = React.useState(false);
-  // Stays true through the exit animation so the card can animate out before unmount.
-  const [isRendered, setIsRendered] = React.useState(false);
   const [position, setPosition] = React.useState<CardPosition | null>(null);
-  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const unmountRef = React.useRef<NodeJS.Timeout | null>(null);
   const anchorRef = React.useRef<HTMLSpanElement | null>(null);
   const cardRef = React.useRef<HTMLDivElement | null>(null);
 
   // Stable per-chip identity, so the shared registry can tell cards apart.
   const token = React.useId();
 
-  // Superseded cards disappear at once (no grace, no fade) so they never stack.
-  const closeNow = React.useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (unmountRef.current) {
-      clearTimeout(unmountRef.current);
-      unmountRef.current = null;
-    }
+  const close = React.useCallback(() => {
     if (activeCard?.token === token) activeCard = null;
     setIsOpen(false);
-    setIsRendered(false);
+    setPosition(null);
   }, [token]);
+
+  const toggle = () => {
+    if (isOpen) {
+      close();
+      return;
+    }
+    if (activeCard && activeCard.token !== token) activeCard.close();
+    activeCard = { token, close };
+    setPosition(null);
+    setIsOpen(true);
+  };
 
   // The card floats above the transcript and overflows the chat card when the chip
   // sits near an edge, so it is positioned against the viewport instead of the chip.
@@ -155,19 +147,35 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
     if (!isOpen) return;
 
     const reposition = () => placeCard();
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (
+        target &&
+        (anchorRef.current?.contains(target) || cardRef.current?.contains(target))
+      ) {
+        return;
+      }
+      close();
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    document.addEventListener('keydown', handleKeyDown);
     window.addEventListener('resize', reposition);
     // Capture phase so scrolling inside the transcript also moves the card.
     window.addEventListener('scroll', reposition, true);
     return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', reposition);
       window.removeEventListener('scroll', reposition, true);
     };
-  }, [isOpen, placeCard]);
+  }, [close, isOpen, placeCard]);
 
   React.useEffect(
     () => () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (unmountRef.current) clearTimeout(unmountRef.current);
       if (activeCard?.token === token) activeCard = null;
     },
     [token],
@@ -182,43 +190,9 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
       }`
     : `${markerLabel} ${citation.title}`;
 
-  const handleMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (unmountRef.current) {
-      clearTimeout(unmountRef.current);
-      unmountRef.current = null;
-    }
-    // Take over from any other open card before this one appears.
-    if (activeCard && activeCard.token !== token) activeCard.close();
-    activeCard = { token, close: closeNow };
-    // A fresh card is measured from scratch; a card kept alive during the close
-    // delay is reused and only re-placed (the transcript may have scrolled).
-    if (!isRendered) setPosition(null);
-    setIsRendered(true);
-    setIsOpen(true);
-    placeCard();
-  };
-
-  // Leaving keeps the card on screen briefly, so a diagonal trip from the chip into
-  // the card (or a hesitant mouse) does not make it flicker away.
-  const handleMouseLeave = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      timeoutRef.current = null;
-      if (activeCard?.token === token) activeCard = null;
-      setIsOpen(false);
-      unmountRef.current = setTimeout(() => {
-        unmountRef.current = null;
-        setIsRendered(false);
-      }, EXIT_MS);
-    }, CLOSE_DELAY_MS);
-  };
-
-  const handleActionClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleActionClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    close();
     if (citation.url) {
       window.open(citation.url, '_blank', 'noopener,noreferrer');
     } else {
@@ -227,21 +201,18 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
   };
 
   return (
-    <span
-      ref={anchorRef}
-      className="relative inline-block align-baseline"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onFocus={handleMouseEnter}
-      onBlur={handleMouseLeave}
-    >
-      {citation.url ? (
-        <a
-          href={citation.url}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-md bg-[#F7F7F7] px-2 py-0.5 text-xs font-medium text-[#5A5A5A] ring-1 ring-inset ring-[#DADADA] hover:bg-slate-100 hover:text-blue-600 transition-colors"
-        >
+    <span ref={anchorRef} className="relative inline-block align-baseline">
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-md bg-[#F7F7F7] px-2 py-0.5 text-xs font-medium text-[#5A5A5A] ring-1 ring-inset ring-[#DADADA] transition-colors hover:bg-slate-100',
+          isOpen ? 'text-[#111111] ring-[#B8B8B8]' : 'hover:text-[#111111]',
+        )}
+        onClick={toggle}
+      >
+        {citation.url ? (
           <svg
             className="w-3 h-3 text-slate-400 shrink-0"
             fill="none"
@@ -255,14 +226,7 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
               d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
             />
           </svg>
-          <span className="truncate max-w-[240px]">{label}</span>
-        </a>
-      ) : (
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-md bg-[#F7F7F7] px-2 py-0.5 text-xs font-medium text-[#5A5A5A] ring-1 ring-inset ring-[#DADADA] hover:bg-slate-100 hover:text-[#111111] transition-colors"
-          onClick={() => void openClassSource(citation)}
-        >
+        ) : (
           <svg
             className="w-3 h-3 text-blue-500 shrink-0"
             fill="none"
@@ -276,17 +240,16 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
               d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
             />
           </svg>
-          <span className="truncate max-w-[240px]">{label}</span>
-        </button>
-      )}
+        )}
+        <span className="truncate max-w-[240px]">{label}</span>
+      </button>
 
-      {/* Rich Hover Popover Card: portalled so the chat card can never clip it */}
-      {isRendered && typeof document !== 'undefined'
+      {isOpen && typeof document !== 'undefined'
         ? createPortal(
             <div
               ref={attachCard}
-              role="tooltip"
-              data-state={isOpen ? 'open' : 'closed'}
+              role="dialog"
+              aria-label={`${markerLabel} ${citation.title}`}
               style={{
                 top: position?.top ?? 0,
                 left: position?.left ?? 0,
@@ -298,17 +261,10 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
               }}
               className={cn(
                 'fixed z-[80] rounded-xl border border-slate-200 bg-white p-3.5 text-left shadow-xl',
-                // Place the card instantly. Any inherited `transition: all` would animate
-                // left/top from 0,0 and read as the card flying in from the corner.
                 'transition-none motion-reduce:animate-none',
-
-                isOpen
-                  ? position && 'animate-in fade-in-0 duration-150 ease-out'
-                  : 'pointer-events-none animate-out fade-out-0 duration-150 ease-in',
-                isOpen && (position?.above ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1'),
+                'animate-in fade-in-0 duration-150 ease-out',
+                position?.above ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1',
               )}
-              onMouseEnter={handleMouseEnter}
-              onMouseLeave={handleMouseLeave}
             >
               {position ? (
                 <span

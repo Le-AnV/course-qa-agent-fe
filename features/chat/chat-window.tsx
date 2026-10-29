@@ -3,9 +3,11 @@
 import * as React from 'react';
 import { MessageBubble } from './message-bubble';
 import { ChatInput } from './chat-input';
+import { ChatScrollArea } from './chat-scroll-area';
 import { SuggestedQuestions } from './suggested-questions';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { getSessionDetail } from '@/features/history/api';
+import { getChatQuota, type ChatQuota } from './api';
 import { mergeCitation, uniqueCitations } from '@/lib/citations';
 import type { ChatMessageCitation, ChatMessageItem } from '@/features/history/types';
 import { History, Loader2 } from 'lucide-react';
@@ -120,8 +122,21 @@ export function ChatWindow({
   onOpenHistory?: () => void;
 }) {
   const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
+  const [quota, setQuota] = React.useState<ChatQuota | null>(null);
   const [isTyping, setIsTyping] = React.useState(false); // Waiting state for the first chunk (to show typing indicator)
   const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
+
+  const refreshQuota = React.useCallback(() => {
+    getChatQuota()
+      .then(setQuota)
+      .catch(() => {
+        // The quota strip is optional; a failed read must never block chat.
+      });
+  }, []);
+
+  React.useEffect(() => {
+    refreshQuota();
+  }, [refreshQuota]);
 
   // Message ID counter (stable IDs, avoid calling impure fn during render).
   const msgIdRef = React.useRef(0);
@@ -216,6 +231,9 @@ export function ChatWindow({
           content: m.content,
           citations: uniqueCitations((m.citations ?? []).map(mapHistoryCitation)),
           suggestedQuestions: Array.isArray(m.suggested_questions) ? m.suggested_questions : undefined,
+          thinkingMs: typeof m.thinking_ms === 'number' ? m.thinking_ms : undefined,
+          trace: Array.isArray(m.trace) && m.trace.length > 0 ? m.trace : undefined,
+          traceCompleted: true,
         }));
 
         setMessages(loaded.length > 0 ? loaded : INITIAL_MESSAGES);
@@ -315,6 +333,7 @@ export function ChatWindow({
       }));
     },
     onDone: (event) => {
+      void refreshQuota();
       const context = streamContextRef.current;
       if (!context) return;
 
@@ -366,6 +385,7 @@ export function ChatWindow({
       }
     },
     onError: (error) => {
+      void refreshQuota();
       const context = streamContextRef.current;
       if (!context) return;
 
@@ -405,6 +425,11 @@ export function ChatWindow({
 
   // Handler for user sending a message
   const handleSend = (text: string) => {
+    if (quota?.limit != null && (quota.remaining ?? 0) <= 0) {
+      toast.error('Daily question limit reached. Come back tomorrow.');
+      return;
+    }
+
     // 1. Append the user message and a pending AI message carrying the trace,
     //    so the reasoning steps are visible while the answer is produced.
     const key = activeSessionId ?? NEW_CHAT_KEY;
@@ -461,7 +486,7 @@ export function ChatWindow({
   return (
     <div className="flex flex-col h-full relative bg-white">
       {/* Same surface tokens as the history panel next to it: one neutral bar, not two palettes. */}
-      <header className="flex h-14 shrink-0 items-center gap-1 border-b border-[#DADADA] bg-[#F7F7F7] px-3 md:px-4">
+      <header className="flex h-9 shrink-0 items-center gap-1 border-b border-[#DADADA] bg-[#F7F7F7] px-3 md:px-4">
         {onOpenHistory && (
           <button
             type="button"
@@ -474,6 +499,23 @@ export function ChatWindow({
           </button>
         )}
         <h1 className="truncate text-[13px] font-semibold text-[#111111]">Course AI Assistant</h1>
+        {quota?.limit != null && (
+          <span
+            className={`ml-auto shrink-0 whitespace-nowrap text-[11px] font-bold ${
+              quota.remaining === 0 ? 'text-[#9D4C38]' : 'text-[#111111]'
+            }`}
+            title={`${quota.remaining ?? 0} of ${quota.limit} questions left today`}
+          >
+            <span className="sm:hidden">
+              {quota.remaining ?? 0}/{quota.limit} left
+            </span>
+            <span className="hidden sm:inline">
+              {quota.remaining === 0
+                ? 'Daily question limit reached'
+                : `${quota.remaining ?? 0} of ${quota.limit} questions left today`}
+            </span>
+          </span>
+        )}
       </header>
 
       {backgroundStream && (
@@ -500,7 +542,7 @@ export function ChatWindow({
       )}
 
       {/* Top area: Message list container (auto-scrolls if long) */}
-      <div className="flex-1 overflow-y-auto bg-white p-4 md:p-6 pb-8">
+      <ChatScrollArea className="bg-white px-4 md:px-6 pt-3 pb-4">
         <div className="w-full">
           {isLoadingHistory ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#6F6F6F]">
@@ -547,13 +589,20 @@ export function ChatWindow({
           )}
 
           {/* Empty div serving as an anchor for scrollIntoView */}
+          <div className="h-20" aria-hidden="true" />
           <div ref={messagesEndRef} />
         </div>
-      </div>
+      </ChatScrollArea>
 
-      {/* Bottom area: Message input container (sticky to bottom) */}
-      <div className="w-full shrink-0">
-        <ChatInput onSend={handleSend} disabled={isTyping || isStreaming} chatLayout />
+      {/* Soft fade so messages dissolve before passing under the composer */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-20 bg-gradient-to-t from-white via-white/80 to-transparent"
+        aria-hidden="true"
+      />
+
+      {/* Floating composer: only the input box itself overlaps the message list */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20">
+        <ChatInput onSend={handleSend} disabled={isTyping || isStreaming} chatLayout quota={quota} />
       </div>
     </div>
   );

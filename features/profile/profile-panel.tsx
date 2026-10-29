@@ -18,13 +18,13 @@ import {
 export function ProfileLoadingSkeleton() {
   return (
     <div className={PAGE_COLUMN} aria-busy="true">
-      <div className="h-7 w-32 animate-pulse rounded bg-[#F7F7F7]" />
-      <div className="mt-2 h-4 w-64 animate-pulse rounded bg-[#F7F7F7]" />
+      <div className="h-7 w-32 skeleton-shimmer rounded bg-[#EDEDED]" />
+      <div className="mt-2 h-4 w-64 skeleton-shimmer rounded bg-[#EDEDED]" />
       <div className="mt-10 flex flex-col gap-6">
-        <div className="h-[92px] animate-pulse rounded-lg border border-[#DADADA] bg-white shadow-sm" />
+        <div className="h-[92px] skeleton-shimmer rounded-lg border border-[#DADADA] bg-white shadow-sm [--skeleton-sheen:rgba(17,17,17,0.05)]" />
         <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
-          <div className="h-[232px] animate-pulse rounded-lg border border-[#DADADA] bg-white shadow-sm" />
-          <div className="h-[232px] animate-pulse rounded-lg border border-[#DADADA] bg-white shadow-sm" />
+          <div className="h-[232px] skeleton-shimmer rounded-lg border border-[#DADADA] bg-white shadow-sm [--skeleton-sheen:rgba(17,17,17,0.05)]" />
+          <div className="h-[232px] skeleton-shimmer rounded-lg border border-[#DADADA] bg-white shadow-sm [--skeleton-sheen:rgba(17,17,17,0.05)]" />
         </div>
       </div>
     </div>
