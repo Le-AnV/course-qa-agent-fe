@@ -18,7 +18,7 @@ export function InternetSourceBadge({ citation }: InternetSourceBadgeProps) {
       type="button"
       onClick={handleClick}
       className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer bg-amber-50/80 text-amber-900 ring-1 ring-inset ring-amber-300 hover:bg-amber-100 hover:ring-amber-400"
-      title={`Mở nguồn web và tự động cuộn đến đoạn trích: ${citation.document_name}`}
+      title={`Open web source and jump to excerpt: ${citation.document_name}`}
     >
       <span className="font-semibold text-amber-950">[{citation.citation_id}]</span>
       <Globe className="w-3.5 h-3.5 text-amber-700" />

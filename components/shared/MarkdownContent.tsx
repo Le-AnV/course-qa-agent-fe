@@ -23,6 +23,21 @@ export function safeUrl(url: string): string {
 const LINK_CLASS =
   "font-semibold text-[#111111] underline decoration-[#CFCFCF] underline-offset-2 hover:decoration-[#111111] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111111]";
 
+function cleanMathDelimiters(text: string): string {
+  // Convert any unparsed LaTeX $...$, $$...$$, \(...\), \[...\] to clean inline code so raw dollar signs never leak
+  return text
+    .split(/(```[\s\S]*?```|`[^`\n]*`)/g)
+    .map((segment, index) => {
+      if (index % 2 === 1) return segment;
+      return segment
+        .replace(/\$\$([\s\S]*?)\$\$/g, '`$1`')
+        .replace(/\$([^\$\n]+)\$/g, '`$1`')
+        .replace(/\\\(([\s\S]*?)\\\)/g, '`$1`')
+        .replace(/\\\[([\s\S]*?)\\\]/g, '`$1`');
+    })
+    .join('');
+}
+
 /**
  * One Markdown renderer for every rich-text class field, so Schedule,
  * Description and More information cannot drift into different styles.
@@ -38,6 +53,7 @@ export function MarkdownContent({
   className?: string;
 }) {
   if (!content || !content.trim()) return null;
+  const sanitized = cleanMathDelimiters(content);
 
   return (
     <div
@@ -139,7 +155,7 @@ export function MarkdownContent({
           ),
         }}
       >
-        {content}
+        {sanitized}
       </ReactMarkdown>
     </div>
   );

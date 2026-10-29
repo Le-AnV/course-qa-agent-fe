@@ -95,7 +95,9 @@ function mapHistoryCitation(citation: ChatMessageCitation): ChatCitation {
     documentId: citation.document_id ?? null,
     page: citation.page ?? null,
     indexes: citation.index ? [citation.index] : [],
-    highlights: [],
+    highlights: Array.isArray(citation.highlights) && citation.highlights.length > 0
+      ? citation.highlights
+      : (citation.snippet ? [citation.snippet] : []),
   };
 }
 

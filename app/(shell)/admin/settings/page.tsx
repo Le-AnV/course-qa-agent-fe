@@ -5,7 +5,6 @@ import Link from "next/link";
 import { adminApi, type AdminSettings, type EmailConfig, type RetrievalConfig, type RetrievalTestResult, type ClassSection } from "@/lib/admin-api";
 import { AdminPageShell, ADMIN_CARD } from "@/components/shared/AdminPageShell";
 import { GeminiKeyPool } from "@/components/shared/GeminiKeyPool";
-import { DecisionsKeyPool } from "@/components/shared/DecisionsKeyPool";
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = React.useState<AdminSettings | null>(null);
@@ -98,7 +97,7 @@ export default function AdminSettingsPage() {
       return;
     }
     if (!Number.isFinite(low) || low < 0 || low > 1) {
-      setError("Lower threshold (unrelated/out of scope) must be a number between 0.0 and 1.0.");
+      setError("Lower threshold (content gap) must be a number between 0.0 and 1.0.");
       return;
     }
     if (low > high) {
@@ -114,7 +113,7 @@ export default function AdminSettingsPage() {
       setThreshold(String(updated.threshold ?? high));
       setUnrelatedThreshold(String(updated.unrelated_threshold ?? low));
       setNotice(
-        `Routing thresholds saved: Out of scope [0.00 - ${(updated.unrelated_threshold ?? low).toFixed(2)}] · Web Search [${(updated.unrelated_threshold ?? low).toFixed(2)} - ${(updated.threshold ?? high).toFixed(2)}] · Course materials [${(updated.threshold ?? high).toFixed(2)} - 1.00]. Applies to the next question.`,
+        `Routing thresholds saved: Content Gap [0.00 - ${(updated.unrelated_threshold ?? low).toFixed(2)}] · Web Search [${(updated.unrelated_threshold ?? low).toFixed(2)} - ${(updated.threshold ?? high).toFixed(2)}] · Course materials [${(updated.threshold ?? high).toFixed(2)} - 1.00]. Applies to the next question.`,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save routing thresholds.");
@@ -163,7 +162,6 @@ export default function AdminSettingsPage() {
         <div className="space-y-6">
           <GeminiKeyPool />
 
-          <DecisionsKeyPool />
 
           {/* AI-65 / 3-Tier Answer Routing Dual Slider */}
           <div className={`${ADMIN_CARD} p-6`}>
@@ -257,7 +255,7 @@ export default function AdminSettingsPage() {
                           Knowledge Routing Thresholds
                         </h2>
                         <p className="text-[13px] text-slate-500">
-                          Route student questions between course materials, web search, or out-of-scope rejection.
+                          Configure similarity thresholds between Course Materials and Web Search fallback (Out-of-scope queries are filtered by Course Scope Gatekeeper).
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -362,16 +360,19 @@ export default function AdminSettingsPage() {
                       {/* 3 Zone Labels under Slider */}
                       <div className="grid grid-cols-3 gap-2 text-center text-[11.5px] mt-1">
                         <div className="p-1.5 rounded bg-rose-50 border border-rose-200 text-rose-800">
-                          <span className="font-semibold block">Out of Scope</span>
+                          <span className="font-semibold block">Content Gap</span>
                           <span className="font-mono text-[11px]">0.00 – {lowNum.toFixed(2)}</span>
+                          <span className="text-[10px] text-rose-600 block mt-0.5">Missing from slides → Web Search</span>
                         </div>
                         <div className="p-1.5 rounded bg-amber-50 border border-amber-200 text-amber-800">
                           <span className="font-semibold block">Web Search</span>
                           <span className="font-mono text-[11px]">{lowNum.toFixed(2)} – {highNum.toFixed(2)}</span>
+                          <span className="text-[10px] text-amber-600 block mt-0.5">Partial match → Web Search</span>
                         </div>
                         <div className="p-1.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800">
                           <span className="font-semibold block">Course Materials</span>
                           <span className="font-mono text-[11px]">{highNum.toFixed(2)} – 1.00</span>
+                          <span className="text-[10px] text-emerald-600 block mt-0.5">High confidence → Slides</span>
                         </div>
                       </div>
                     </div>
@@ -535,21 +536,28 @@ export default function AdminSettingsPage() {
                             <span className="text-slate-500">Routing Zone:</span>
                             {predictedZone === "curriculum" && (
                               <span className="px-2.5 py-0.5 rounded-full text-[11.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                Course Materials (Curriculum)
+                                Course Materials (Slide)
                               </span>
                             )}
                             {predictedZone === "internet" && (
                               <span className="px-2.5 py-0.5 rounded-full text-[11.5px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                                Web Search (Tavily)
+                                Web Search (Partial Match)
                               </span>
                             )}
                             {predictedZone === "unrelated" && (
                               <span className="px-2.5 py-0.5 rounded-full text-[11.5px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                                Out of Scope (Refused)
+                                Content Gap → Web Search
                               </span>
                             )}
                           </div>
                         </div>
+
+                        {testResult.search_query_en && (
+                          <div className="flex items-center gap-1.5 text-[11.5px] text-sky-800 bg-sky-50 px-2 py-1 rounded border border-sky-200 mb-2">
+                            <span className="font-semibold">Cross-Lingual Query Expansion:</span>
+                            <span className="font-mono font-medium">{testResult.search_query_en}</span>
+                          </div>
+                        )}
 
                         {testResult.matched_document && (
                           <div className="space-y-1">

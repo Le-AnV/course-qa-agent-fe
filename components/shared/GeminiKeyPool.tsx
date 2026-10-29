@@ -164,7 +164,10 @@ export function GeminiKeyPool() {
 
   function openEdit(key: GeminiKey) {
     setEditing(key);
-    setForm({ name: key.name, apiKey: "" });
+    setForm({
+      name: key.name,
+      apiKey: "",
+    });
     setFormError(null);
     setModalOpen(true);
   }
@@ -202,7 +205,9 @@ export function GeminiKeyPool() {
     setFeedback(null);
     try {
       if (editing) {
-        await adminApi.updateGeminiKey(editing.id, { name });
+        await adminApi.updateGeminiKey(editing.id, {
+          name,
+        });
         setFeedback({ tone: "success", text: `Updated ${name}.` });
       } else {
         const created = await adminApi.createGeminiKey({
@@ -551,6 +556,7 @@ export function GeminiKeyPool() {
                         {key.masked_key}
                       </span>
                     </span>
+
                     <ChevronDown
                       className={`h-4 w-4 shrink-0 text-[#8A8A8A] transition-transform ${
                         expanded ? "rotate-180" : ""
