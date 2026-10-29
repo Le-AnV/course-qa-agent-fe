@@ -48,6 +48,8 @@ export interface ChatMessageItem {
   used_web_search: boolean;
   citations?: ChatMessageCitation[] | null;
   suggested_questions?: string[] | null;
+  thinking_ms?: number | null;
+  trace?: string[] | null;
   created_at: string; // ISO 8601 string
 }
 

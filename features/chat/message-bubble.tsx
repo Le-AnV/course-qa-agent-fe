@@ -51,13 +51,13 @@ export function MessageBubble({
       initial={!hydrated || reduceMotion ? false : { opacity: 0, scale: 0.99 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
-      className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
+      className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-3`}
     >
       <div
-        className={`min-w-0 max-w-[92%] break-words rounded-2xl px-4 py-3 ${
+        className={`min-w-0 break-words rounded-2xl px-4 py-2.5 ${
           isUser
-            ? 'bg-[#F7F7F7] text-[#111111] rounded-tr-sm'
-            : `bg-white border border-[#DADADA] text-[#111111] rounded-tl-sm ${chatSurface ? '' : 'shadow-xs'}`
+            ? 'max-w-[92%] bg-[#F7F7F7] text-[#111111] rounded-tr-sm'
+            : `max-w-[96%] bg-white border border-[#DADADA] text-[#111111] rounded-tl-sm ${chatSurface ? '' : 'shadow-xs'}`
         }`}
       >
         {/* Reasoning trace: live while thinking, collapsed summary afterwards */}
@@ -75,9 +75,15 @@ export function MessageBubble({
         {isLoading && !trace?.length ? null : (
           <div
             role={isError ? 'alert' : undefined}
-            className={`whitespace-pre-wrap text-sm leading-relaxed ${isError ? 'text-red-700' : ''}`}
+            className={`text-[11.5px] leading-relaxed ${
+              renderMarkdown ? '' : 'whitespace-pre-wrap '
+            }${isError ? 'text-red-700' : ''}`}
           >
-            {renderMarkdown ? <ChatMarkdown content={content} /> : content}
+            {renderMarkdown ? (
+              <ChatMarkdown content={content} citations={citations} />
+            ) : (
+              content
+            )}
           </div>
         )}
 

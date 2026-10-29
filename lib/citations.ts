@@ -36,3 +36,61 @@ export function uniqueCitations(citations: ChatCitation[] | undefined): ChatCita
     return true;
   });
 }
+
+/** Human-readable source label used inside the answer text. */
+export function citationInlineLabel(citation: ChatCitation): string {
+  const title = citation.title.trim() || 'Source';
+  const page =
+    citation.kind === 'curriculum' && citation.page !== null ? ` - Page ${citation.page}` : '';
+  return `${title}${page}`;
+}
+
+function escapeInlineLabel(value: string): string {
+  return value.replace(/([\\*_~`[\]()#])/g, '\\$&');
+}
+
+const MARKER_GROUP = /(?:\[\d+(?:\s*,\s*\d+)*\])+/g;
+
+/**
+ * Replace LLM citation markers (`[1]`, `[1][2]`) with readable italic source
+ * labels, e.g. `(Git Lab Guide.pdf - Page 8)`. Fenced/inline code is left
+ * untouched, and markers without a matching citation keep their raw form.
+ */
+export function formatInlineCitations(content: string, citations: ChatCitation[]): string {
+  if (citations.length === 0 || !content.includes('[')) return content;
+
+  const byMarker = new Map<number, ChatCitation>();
+  for (const citation of citations) {
+    const markers = citation.indexes.length > 0 ? citation.indexes : [citation.index];
+    for (const marker of markers) {
+      if (!byMarker.has(marker)) byMarker.set(marker, citation);
+    }
+  }
+  if (byMarker.size === 0) return content;
+
+  return content
+    .split(/(```[\s\S]*?```|`[^`\n]*`)/g)
+    .map((segment, index) => {
+      if (index % 2 === 1) return segment;
+
+      return segment.replace(MARKER_GROUP, (match) => {
+        const labels: string[] = [];
+        const missing: number[] = [];
+
+        for (const raw of match.match(/\d+/g) ?? []) {
+          const marker = Number(raw);
+          const citation = byMarker.get(marker);
+          if (citation) labels.push(citationInlineLabel(citation));
+          else missing.push(marker);
+        }
+
+        if (labels.length === 0) return match;
+
+        const uniqueLabels = [...new Set(labels)].map(escapeInlineLabel);
+        const label = `*(${uniqueLabels.join('; ')})*`;
+        const leftovers = missing.map((marker) => `[${marker}]`).join('');
+        return `${label}${leftovers}`;
+      });
+    })
+    .join('');
+}

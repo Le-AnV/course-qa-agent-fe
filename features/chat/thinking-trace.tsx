@@ -19,7 +19,9 @@ export function ThinkingTrace({
 }) {
   if (steps.length === 0) return null;
 
-  const lastVisibleStep = Math.min(activeStep, steps.length - 1);
+  const lastVisibleStep = completed
+    ? steps.length - 1
+    : Math.min(activeStep, steps.length - 1);
   const visibleSteps = steps.slice(0, lastVisibleStep + 1);
 
   if (!running) {

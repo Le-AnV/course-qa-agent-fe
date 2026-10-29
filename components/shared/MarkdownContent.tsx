@@ -3,6 +3,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import { CodeBlock } from "./CodeBlock";
 
 const SAFE_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
 
@@ -48,31 +49,31 @@ export function MarkdownContent({
         urlTransform={safeUrl}
         components={{
           p: ({ children }) => (
-            <p className="text-[13.5px] leading-relaxed text-[#111111] [&:not(:first-child)]:mt-2.5">
+            <p className="text-[11.5px] leading-relaxed text-[#111111] [&:not(:first-child)]:mt-2.5">
               {children}
             </p>
           ),
           h1: ({ children }) => (
-            <h1 className="mt-4 text-[17px] font-bold leading-snug text-[#111111]">{children}</h1>
+            <h1 className="mt-4 text-[15px] font-bold leading-snug text-[#111111]">{children}</h1>
           ),
           h2: ({ children }) => (
-            <h2 className="mt-4 text-[15.5px] font-bold leading-snug text-[#111111]">{children}</h2>
+            <h2 className="mt-4 text-[13.5px] font-bold leading-snug text-[#111111]">{children}</h2>
           ),
           h3: ({ children }) => (
-            <h3 className="mt-3 text-[14.5px] font-bold leading-snug text-[#111111]">{children}</h3>
+            <h3 className="mt-3 text-[12.5px] font-bold leading-snug text-[#111111]">{children}</h3>
           ),
           h4: ({ children }) => (
-            <h4 className="mt-3 text-[13.5px] font-bold leading-snug text-[#111111]">{children}</h4>
+            <h4 className="mt-3 text-[11.5px] font-bold leading-snug text-[#111111]">{children}</h4>
           ),
           strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,
           ul: ({ children }) => (
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-[13.5px] leading-relaxed text-[#111111]">
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-[11.5px] leading-relaxed text-[#111111]">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-[13.5px] leading-relaxed text-[#111111]">
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-[11.5px] leading-relaxed text-[#111111]">
               {children}
             </ol>
           ),
@@ -82,16 +83,21 @@ export function MarkdownContent({
               {children}
             </blockquote>
           ),
-          code: ({ children }) => (
-            <code className="rounded bg-[#F2F2F2] px-1 py-0.5 font-mono text-[12px] text-[#111111]">
-              {children}
-            </code>
-          ),
-          pre: ({ children }) => (
-            <pre className="mt-3 overflow-x-auto rounded-lg bg-[#F7F7F7] p-3 text-[12px] [&_code]:bg-transparent [&_code]:p-0">
-              {children}
-            </pre>
-          ),
+          code: ({ className, children }) => {
+            const text = String(children ?? "");
+            const language = className?.match(/language-([\w+-]+)/)?.[1];
+            // A fenced block always carries a language class or a newline;
+            // everything else is inline code and stays in the text flow.
+            if (language || text.includes("\n")) {
+              return <CodeBlock code={text.replace(/\n$/, "")} language={language} />;
+            }
+            return (
+              <code className="rounded-md border border-[#E8E8E8] bg-[#F4F4F4] px-1.5 py-0.5 font-mono text-[10.5px] text-[#9D4C38]">
+                {children}
+              </code>
+            );
+          },
+          pre: ({ children }) => <>{children}</>,
           hr: () => <hr className="my-4 border-[#E5E5E5]" />,
           a: ({ href, children }) => {
             if (!href) return <span className={LINK_CLASS}>{children}</span>;
@@ -118,7 +124,7 @@ export function MarkdownContent({
             ) : null,
           table: ({ children }) => (
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full border-collapse text-left text-[12.5px] text-[#111111]">
+              <table className="w-full border-collapse text-left text-[10.5px] text-[#111111]">
                 {children}
               </table>
             </div>
