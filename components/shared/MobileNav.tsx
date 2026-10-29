@@ -30,6 +30,7 @@ export function MobileNav({ role }: { role: Role }) {
   const { profile, loading } = useProfile();
   const displayName = profile?.username ?? (loading ? "Loading…" : "Account");
   const roleLabel = roleBadgeLabel(profile?.role ?? role);
+  const homeHref = role === "admin" ? "/admin/home" : role === "student" ? "/student/home" : "/teacher/home";
 
   const close = React.useCallback(() => {
     setOpen(false);
@@ -103,10 +104,12 @@ export function MobileNav({ role }: { role: Role }) {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-[#CFCFCF] bg-white text-[#111111] shadow-xs">
-          <GraduationCap className="h-4 w-4" />
-        </div>
-        <span className="font-heading text-[14px] font-bold text-[#111111]">Course Q&amp;A</span>
+        <Link href={homeHref} aria-label="Go to Home" className="flex min-w-0 items-center gap-2.5">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-[#CFCFCF] bg-white text-[#111111] shadow-xs">
+            <GraduationCap className="h-4 w-4" />
+          </div>
+          <span className="truncate font-heading text-[14px] font-bold text-[#111111]">Course Q&amp;A</span>
+        </Link>
         <Link
           href="/account"
           aria-label="Account"
@@ -140,17 +143,24 @@ export function MobileNav({ role }: { role: Role }) {
             }
           >
             <div className="flex items-center gap-2.5 border-b border-[#DADADA] px-4 py-4">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#CFCFCF] bg-white text-[#111111] shadow-xs">
-                <GraduationCap className="h-5 w-5" />
-              </div>
-              <div className="flex flex-1 flex-col justify-center overflow-hidden">
-                <span className="font-heading text-[15px] font-bold leading-none text-[#111111] mb-1">
-                  Course Q&amp;A
-                </span>
-                <span className="text-[11px] font-medium leading-none text-[#5A5A5A]">
-                  Syllabus Agent
-                </span>
-              </div>
+              <Link
+                href={homeHref}
+                onClick={close}
+                aria-label="Go to Home"
+                className="flex min-w-0 flex-1 items-center gap-2.5"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#CFCFCF] bg-white text-[#111111] shadow-xs">
+                  <GraduationCap className="h-5 w-5" />
+                </div>
+                <div className="flex flex-1 flex-col justify-center overflow-hidden">
+                  <span className="font-heading text-[15px] font-bold leading-none text-[#111111] mb-1">
+                    Course Q&amp;A
+                  </span>
+                  <span className="text-[11px] font-medium leading-none text-[#5A5A5A]">
+                    Syllabus Agent
+                  </span>
+                </div>
+              </Link>
               <button
                 type="button"
                 onClick={close}

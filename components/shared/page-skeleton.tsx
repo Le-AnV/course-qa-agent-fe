@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 /** A single placeholder line, sized like the text it stands in for. */
 export function SkeletonLine({ className }: { className?: string }) {
-  return <div aria-hidden className={cn("animate-pulse rounded bg-[#EDEDED]", className)} />;
+  return <div aria-hidden className={cn("skeleton-shimmer rounded bg-[#EDEDED]", className)} />;
 }
 
 /** Card-shaped placeholder: same border, radius and padding as a real panel. */
@@ -30,7 +30,10 @@ export function SkeletonCard({
   return (
     <div
       aria-hidden
-      className={cn("animate-pulse rounded-xl border border-[#DADADA] bg-white p-5 shadow-sm", className)}
+      className={cn(
+        "skeleton-shimmer rounded-xl border border-[#DADADA] bg-white p-5 shadow-sm [--skeleton-sheen:rgba(17,17,17,0.05)]",
+        className,
+      )}
     >
       {children}
     </div>

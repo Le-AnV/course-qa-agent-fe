@@ -34,49 +34,54 @@ export function CourseBanner({
       className="relative w-full border-b border-[#DADADA] overflow-hidden select-none shrink-0"
       style={{ backgroundColor: accentColor }}
     >
-      <div className="relative z-10 grid grid-cols-[112px_minmax(0,1fr)_112px] items-center gap-2 px-4 py-2.5 md:px-6">
+      <div className="relative z-10 grid grid-cols-[88px_minmax(0,1fr)_88px] sm:grid-cols-[128px_minmax(0,1fr)_128px] items-center gap-2 px-4 py-1.5 md:px-6">
         {/* Trái: back — rộng cố định để title luôn giữa */}
         <Link
           href={backHref}
-          className="inline-flex items-center gap-1 text-[12.5px] font-medium text-[#111111] hover:underline min-w-0"
+          className="inline-flex items-center gap-1 text-[12px] font-medium text-[#111111] hover:underline min-w-0"
           title={backLabel}
         >
           <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
           <span className="hidden sm:inline truncate">{backLabel}</span>
         </Link>
 
-        {/* Giữa: tên lớp to, căn giữa; mã lớp nhỏ bên dưới */}
-        <div className="min-w-0 text-center">
+        {/* Giữa: tên lớp + mã lớp/kỳ trên MỘT dòng để banner thấp nhất */}
+        <div className="flex min-w-0 items-baseline justify-center gap-2 text-center">
           {/* A skeleton instead of a generic "Class workspace" label: the class
               name arrives a beat after mount and a text swap reads as a flash. */}
           {title ? (
-            <h1 className="text-[18px] md:text-[20px] font-bold tracking-tight text-[#111111] truncate leading-snug">
+            <h1 className="min-w-0 truncate text-[15px] md:text-[16px] font-bold tracking-tight text-[#111111] leading-snug">
               {title}
             </h1>
           ) : (
             <div
               aria-hidden
-              className="mx-auto h-[25px] w-40 animate-pulse rounded bg-black/5 md:h-[28px]"
+              className="h-[20px] w-40 skeleton-shimmer rounded bg-black/5 md:h-[21px]"
             />
           )}
-          {/* Always reserve the meta line: the class detail arrives a beat after
-              the layout mounts, and adding this line later pushed the tabs and
-              the whole page down by ~18px (visible jump on class entry). */}
-          <p
-            className="text-[11px] font-medium text-[#5A5A5A] truncate mt-0.5"
-            aria-hidden={!meta}
-          >
-            {meta ?? "\u00A0"}
-          </p>
+          {meta && (
+            <>
+              <span
+                aria-hidden
+                className="hidden lg:inline text-[14px] md:text-[15px] font-normal text-[#BDBDBD]"
+              >
+                |
+              </span>
+              <span className="hidden lg:inline max-w-[240px] truncate text-[14px] md:text-[15px] font-bold tracking-tight text-[#111111]">
+                {meta}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Phải: giáo viên góc phải, rộng cố định; mobile giữ chỗ để không lệch giữa */}
         <div className="min-w-0 text-right">
-          <p className="hidden sm:block text-[10px] font-medium text-[#94a3b8] leading-none mb-1">
-            Teacher
-          </p>
-          <p className="hidden sm:block truncate text-[12.5px] font-semibold text-[#111111] leading-none">
-            {teacherName ?? "—"}
+          <p
+            className="hidden sm:block truncate text-[10.5px] leading-none"
+            title={teacherName ? `Teacher: ${teacherName}` : undefined}
+          >
+            <span className="font-medium text-[#94a3b8]">Teacher: </span>
+            <span className="font-semibold text-[#111111]">{teacherName ?? "—"}</span>
           </p>
         </div>
       </div>

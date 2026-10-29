@@ -124,7 +124,7 @@ export interface ChatHistorySidebarProps {
  * - desktop: a 256 px panel that collapses to a 64 px rail (state persisted).
  * - mobile (< md): a left drawer opened from the chat header.
  *
- * Both shapes share one 56 px header row, so switching states never reflows the
+ * Both shapes share one 36 px header row, so switching states never reflows the
  * panel's contents vertically — the bug that made collapsing feel unstable.
  */
 export function ChatHistorySidebar({
@@ -374,7 +374,7 @@ export function ChatHistorySidebar({
         placeholder="Search conversations..."
         aria-label="Search conversations"
         data-testid="search-history-input"
-        className="w-full rounded-md border border-[#DADADA] bg-[#F7F7F7] py-1.5 pl-8 pr-8 text-[12px] text-[#111111] placeholder:text-[#9F9F9F] focus:border-[#111111] focus:outline-none focus:ring-1 focus:ring-[#111111]/20 [&::-webkit-search-cancel-button]:hidden"
+        className="w-full rounded-md border border-[#DADADA] bg-[#F7F7F7] py-1.5 pl-8 pr-8 text-[11.5px] text-[#111111] placeholder:text-[#9F9F9F] focus:border-[#111111] focus:outline-none focus:ring-1 focus:ring-[#111111]/20 [&::-webkit-search-cancel-button]:hidden"
       />
       {searchQuery && (
         <button
@@ -411,11 +411,11 @@ export function ChatHistorySidebar({
             role="alert"
           >
             <AlertCircle className="h-6 w-6 stroke-1.5 text-[#9D4C38]" />
-            <p className="text-[12px] text-[#5A5A5A]">{searchError}</p>
+            <p className="text-[11.5px] text-[#5A5A5A]">{searchError}</p>
             <button
               type="button"
               onClick={() => setSearchRetryKey((key) => key + 1)}
-              className="mt-1 flex items-center gap-1.5 rounded-md border border-[#DADADA] bg-white px-2.5 py-1 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7]"
+              className="mt-1 flex items-center gap-1.5 rounded-md border border-[#DADADA] bg-white px-2.5 py-1 text-[11.5px] font-medium text-[#111111] hover:bg-[#F7F7F7]"
             >
               <RefreshCw className="h-3 w-3" /> Retry
             </button>
@@ -430,7 +430,7 @@ export function ChatHistorySidebar({
             aria-live="polite"
           >
             <Search className="h-7 w-7 stroke-1 text-[#CFCFCF]" />
-            <p className="text-[12px] text-[#6F6F6F]">No results found</p>
+            <p className="text-[11.5px] text-[#6F6F6F]">No results found</p>
           </div>
         );
       }
@@ -438,7 +438,7 @@ export function ChatHistorySidebar({
       if (searchResults !== null) {
         return (
           <div aria-live="polite">
-            <p className="px-2 pb-1 text-[11px] text-[#6F6F6F]">
+            <p className="px-2 pb-1 text-[10.5px] text-[#6F6F6F]">
               {searchResults.length} result{searchResults.length === 1 ? '' : 's'}
             </p>
             {searchResults.map((result) => (
@@ -453,14 +453,14 @@ export function ChatHistorySidebar({
                 }}
                 className="w-full rounded-lg border border-transparent px-2 py-2 text-left hover:bg-[#F7F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
               >
-                <p className="truncate text-[12.5px] font-medium text-[#111111]">
+                <p className="truncate text-[11.5px] font-medium text-[#111111]">
                   <HighlightedText
                     text={result.title ?? 'Conversation'}
                     keyword={searchQuery}
                   />
                 </p>
                 {result.snippet && result.snippet !== result.title && (
-                  <p className="mt-0.5 line-clamp-2 text-[11px] text-[#6F6F6F]">
+                  <p className="mt-0.5 line-clamp-2 text-[10.5px] text-[#6F6F6F]">
                     <HighlightedText text={result.snippet} keyword={searchQuery} />
                   </p>
                 )}
@@ -501,11 +501,11 @@ export function ChatHistorySidebar({
       ) : (
         <div className="my-auto flex flex-col items-center justify-center gap-2 p-3 text-center">
           <AlertCircle className="h-6 w-6 stroke-1.5 text-[#9D4C38]" />
-          <p className="text-[12px] text-[#5A5A5A]">{error}</p>
+          <p className="text-[11.5px] text-[#5A5A5A]">{error}</p>
           <button
             type="button"
             onClick={loadSessions}
-            className="mt-1 flex items-center gap-1.5 rounded-md border border-[#DADADA] bg-white px-2.5 py-1 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7]"
+            className="mt-1 flex items-center gap-1.5 rounded-md border border-[#DADADA] bg-white px-2.5 py-1 text-[11.5px] font-medium text-[#111111] hover:bg-[#F7F7F7]"
           >
             <RefreshCw className="h-3 w-3" /> Retry
           </button>
@@ -518,7 +518,7 @@ export function ChatHistorySidebar({
       return (
         <div className="my-auto flex flex-col items-center justify-center gap-2 p-4 text-center">
           <MessageSquare className="h-7 w-7 stroke-1 text-[#CFCFCF]" />
-          <p className="text-[12px] text-[#6F6F6F]">No conversations yet</p>
+          <p className="text-[11.5px] text-[#6F6F6F]">No conversations yet</p>
         </div>
       );
     }
@@ -562,13 +562,13 @@ export function ChatHistorySidebar({
             <span className="min-w-0 flex-1">
               <span
                 className={cn(
-                  'block truncate text-[12.5px]',
+                  'block truncate text-[11.5px]',
                   isActive ? 'font-semibold text-[#111111]' : 'font-medium text-[#111111]',
                 )}
               >
                 {label}
               </span>
-              <span className="mt-0.5 block truncate text-[11px] text-[#6F6F6F]">
+              <span className="mt-0.5 block truncate text-[10.5px] text-[#6F6F6F]">
                 {formatRelativeTime(session.updated_at)}
               </span>
             </span>
@@ -638,7 +638,7 @@ export function ChatHistorySidebar({
                       setMenuCoords(null);
                       void handleTogglePin(session);
                     }}
-                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7] transition-colors text-left"
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium text-[#111111] hover:bg-[#F7F7F7] transition-colors text-left"
                   >
                     {session.is_pinned ? (
                       <>
@@ -660,7 +660,7 @@ export function ChatHistorySidebar({
                       setMenuCoords(null);
                       openRenameDialog(session);
                     }}
-                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#111111] hover:bg-[#F7F7F7] transition-colors text-left"
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium text-[#111111] hover:bg-[#F7F7F7] transition-colors text-left"
                   >
                     <Pencil className="h-3.5 w-3.5 text-[#6F6F6F]" />
                     <span>Rename</span>
@@ -675,7 +675,7 @@ export function ChatHistorySidebar({
                       setMenuCoords(null);
                       setSessionToDelete(session);
                     }}
-                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-[#9D4C38] hover:bg-[#FDF2F2] transition-colors text-left"
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium text-[#9D4C38] hover:bg-[#FDF2F2] transition-colors text-left"
                   >
                     <Trash2 className="h-3.5 w-3.5 text-[#9D4C38]" />
                     <span>Delete</span>
@@ -732,7 +732,7 @@ export function ChatHistorySidebar({
       return (
         <div className="flex flex-col gap-2">
           <div>
-            <div className="flex items-center gap-1 px-1.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-[#8F8F8F]">
+            <div className="flex items-center gap-1 px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#8F8F8F]">
               <Pin className="h-3 w-3 rotate-45" />
               <span>Pinned</span>
             </div>
@@ -742,7 +742,7 @@ export function ChatHistorySidebar({
           </div>
 
           <div>
-            <div className="px-1.5 pb-1 pt-1 text-[10.5px] font-semibold uppercase tracking-wider text-[#8F8F8F]">
+            <div className="px-1.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-[#8F8F8F]">
               <span>Recent</span>
             </div>
             <div className="flex flex-col gap-1">
@@ -774,12 +774,12 @@ export function ChatHistorySidebar({
       >
         <div
           className={cn(
-            'flex h-14 shrink-0 items-center border-b border-[#DADADA] bg-[#F7F7F7]',
+            'flex h-9 shrink-0 items-center border-b border-[#DADADA] bg-[#F7F7F7]',
             isCollapsed ? 'justify-center' : 'justify-between pl-3 pr-1.5',
           )}
         >
           {!isCollapsed && (
-            <span className="truncate text-[13px] font-semibold text-[#111111]">Chat History</span>
+            <span className="truncate text-[11.5px] font-semibold text-[#111111]">Chat History</span>
           )}
           <div className="flex items-center gap-0.5">
             {!isCollapsed && onNewChat && (
@@ -846,8 +846,8 @@ export function ChatHistorySidebar({
             Choose a past conversation from this class or start a new one.
           </DialogDescription>
 
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#DADADA] bg-[#F7F7F7] pl-3 pr-1.5">
-            <span className="truncate text-[13px] font-semibold text-[#111111]">Chat History</span>
+          <div className="flex h-9 shrink-0 items-center justify-between border-b border-[#DADADA] bg-[#F7F7F7] pl-3 pr-1.5">
+            <span className="truncate text-[11.5px] font-semibold text-[#111111]">Chat History</span>
             <div className="flex items-center gap-0.5">
               {onNewChat && (
                 <button
@@ -948,7 +948,7 @@ export function ChatHistorySidebar({
             <div className="space-y-2">
               <label
                 htmlFor="rename-session-title"
-                className="text-[12.5px] font-medium text-[#111111]"
+                className="text-[11.5px] font-medium text-[#111111]"
               >
                 Conversation title
               </label>
@@ -961,7 +961,7 @@ export function ChatHistorySidebar({
                 disabled={isRenaming}
                 placeholder="e.g. Chapter 3 review"
               />
-              <p className="text-[12px] text-[#6F6F6F]">{renameTitle.trim().length}/255 characters</p>
+              <p className="text-[11px] text-[#6F6F6F]">{renameTitle.trim().length}/255 characters</p>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-2">

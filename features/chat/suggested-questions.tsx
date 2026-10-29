@@ -26,9 +26,9 @@ export function SuggestedQuestions({
           <span className="text-[11.5px] font-medium text-[#6F6F6F]">{label}</span>
         )}
         <div className="flex flex-wrap gap-2" aria-label="Loading suggestions">
-          <div className="h-[31px] w-48 rounded-full border border-[#DADADA] bg-[#F7F7F7] animate-pulse" />
-          <div className="h-[31px] w-56 rounded-full border border-[#DADADA] bg-[#F7F7F7] animate-pulse" />
-          <div className="h-[31px] w-40 rounded-full border border-[#DADADA] bg-[#F7F7F7] animate-pulse" />
+          <div className="h-[31px] w-48 rounded-full border border-[#DADADA] bg-[#F7F7F7] skeleton-shimmer" />
+          <div className="h-[31px] w-56 rounded-full border border-[#DADADA] bg-[#F7F7F7] skeleton-shimmer" />
+          <div className="h-[31px] w-40 rounded-full border border-[#DADADA] bg-[#F7F7F7] skeleton-shimmer" />
         </div>
       </div>
     );

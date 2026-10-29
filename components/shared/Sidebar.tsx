@@ -227,7 +227,7 @@ export function SidebarNavBody({
               {!collapsed && open && (
                 <div id="sidebar-classes" className="mt-0.5 space-y-0.5 border-l-2 border-[#DADADA] ml-[22px] pl-2">
                   {myClasses === null ? (
-                    <div className="animate-pulse space-y-2 px-2 py-1.5" aria-hidden>
+                    <div className="skeleton-shimmer space-y-2 px-2 py-1.5" aria-hidden>
                       <div className="h-3.5 w-3/4 rounded bg-[#EDEDED]" />
                       <div className="h-3.5 w-2/3 rounded bg-[#EDEDED]" />
                       <div className="h-3.5 w-1/2 rounded bg-[#EDEDED]" />
@@ -312,6 +312,7 @@ export function AppSidebar({ role }: { role: Role }) {
   const { profile, loading: profileLoading } = useProfile();
   const displayName = profile?.username ?? (profileLoading ? "Loading…" : "Account");
   const roleLabel = roleBadgeLabel(profile?.role ?? role);
+  const homeHref = role === "admin" ? "/admin/home" : role === "student" ? "/student/home" : "/teacher/home";
 
   return (
     <aside
@@ -320,8 +321,16 @@ export function AppSidebar({ role }: { role: Role }) {
         collapsed ? "w-[68px]" : "w-[240px]",
       )}
     >
-      {/* Logo Area */}
-      <div className={cn("flex items-center gap-2.5 px-5 py-5", collapsed && "justify-center px-2")}>
+      {/* Logo Area — clicking the mark or the wordmark returns to Home */}
+      <Link
+        href={homeHref}
+        title="Home"
+        aria-label="Go to Home"
+        className={cn(
+          "flex items-center gap-2.5 px-5 py-5 transition-colors hover:bg-[#F7F7F7]",
+          collapsed && "justify-center px-2",
+        )}
+      >
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-ink)] shadow-xs">
           <GraduationCap className="h-5 w-5" />
         </div>
@@ -335,7 +344,7 @@ export function AppSidebar({ role }: { role: Role }) {
             </span>
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Nút thu/phóng: dải full-width riêng dưới logo — không tranh mép với icon web. */}
       <div className={cn("px-3 pb-1", collapsed && "px-2")}>
