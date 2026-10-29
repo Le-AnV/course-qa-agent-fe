@@ -561,7 +561,7 @@ export default function ClassSettingsPage() {
             <div>
               <h3 className="text-[14px] font-bold text-[#111111]">Class configuration</h3>
               <p className="mt-0.5 max-w-lg text-[12.5px] text-[#5A5A5A]">
-                Delivery mode, language, answer rules and session length for this class. Copy them
+                Delivery mode, language, answer rules and duration for this class. Copy them
                 onto another class to reuse the same setup. Student capacity is managed by admin.
               </p>
             </div>
@@ -607,7 +607,7 @@ export default function ClassSettingsPage() {
 
             <div>
               <label htmlFor="cfg-session" className="mb-1.5 block text-[13px] font-medium text-[#111111]">
-                Session length (minutes)
+                Duration (minutes)
               </label>
               <input
                 id="cfg-session"
@@ -731,7 +731,7 @@ export default function ClassSettingsPage() {
                     Teaching configuration
                   </span>
                   <span className="mt-0.5 block text-[11.5px] leading-relaxed text-[#6F6F6F]">
-                    Delivery mode, language, answer rules and session length.
+                    Delivery mode, language, answer rules and duration.
                   </span>
                 </span>
               </label>

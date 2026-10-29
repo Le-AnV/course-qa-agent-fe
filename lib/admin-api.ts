@@ -109,6 +109,8 @@ export type GeminiKey = {
   masked_key: string;
   status: GeminiKeyStatus;
   priority: number;
+  daily_requests?: number;
+  max_daily_requests?: number;
   available_models: string[];
   cooldown_until: string | null;
   last_error: string;
@@ -121,6 +123,7 @@ export type GeminiKeys = {
   active_count: number;
   env_configured: boolean;
   auto_switch: boolean;
+  next_reset_at?: string | null;
 };
 export type GeminiAutoSwitch = {
   enabled: boolean;
@@ -132,38 +135,14 @@ export type GeminiModelConfig = {
 export type GeminiKeyCreate = {
   name: string;
   api_key: string;
+  max_daily_requests?: number;
 };
 export type GeminiKeyUpdate = {
   name?: string;
   status?: "active" | "paused";
+  max_daily_requests?: number;
 };
 export type ConnectionTest = { success: boolean; message: string };
-export type DecisionsKeyStatus = "active" | "paused" | "invalid" | "cooldown";
-export type DecisionsKey = {
-  id: string;
-  name: string;
-  masked_key: string;
-  status: DecisionsKeyStatus;
-  priority: number;
-  cooldown_until: string | null;
-  last_error: string;
-  last_used_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-export type DecisionsKeys = {
-  keys: DecisionsKey[];
-  active_count: number;
-  env_configured: boolean;
-};
-export type DecisionsKeyCreate = {
-  name: string;
-  api_key: string;
-};
-export type DecisionsKeyUpdate = {
-  name?: string;
-  status?: "active" | "paused";
-};
 export type RetrievalConfig = {
   // AI-65: best similarity score needed to answer from class materials.
   // Below it, the question is handed to the Internet source agent.
@@ -182,6 +161,7 @@ export type RetrievalTestResult = {
   matched_document: string | null;
   matched_snippet: string | null;
   source: string;
+  search_query_en?: string | null;
 };
 export type HealthComponent = {
   name: string;
@@ -386,22 +366,6 @@ export const adminApi = {
       body: JSON.stringify({ model }),
     }),
   testLlm: () => apiFetch<ConnectionTest>("/api/admin/llm/test-connection", { method: "POST" }),
-  // OpenAI keys for the Decisions scope gate (separate from the Gemini pool).
-  decisionsKeys: () => apiFetch<DecisionsKeys>("/api/admin/decisions/keys"),
-  createDecisionsKey: (payload: DecisionsKeyCreate) =>
-    apiFetch<DecisionsKey>("/api/admin/decisions/keys", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
-  updateDecisionsKey: (keyId: string, payload: DecisionsKeyUpdate) =>
-    apiFetch<DecisionsKey>(`/api/admin/decisions/keys/${keyId}`, {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    }),
-  deleteDecisionsKey: (keyId: string) =>
-    apiFetch<void>(`/api/admin/decisions/keys/${keyId}`, { method: "DELETE" }),
-  testDecisionsKey: (keyId: string) =>
-    apiFetch<ConnectionTest>(`/api/admin/decisions/keys/${keyId}/test`, { method: "POST" }),
   // AI-65: KB-vs-Internet routing threshold (T35, admin-configurable).
   retrievalConfig: () => apiFetch<RetrievalConfig>("/api/admin/retrieval-config"),
   updateRetrievalConfig: (threshold: number, unrelated_threshold?: number) =>

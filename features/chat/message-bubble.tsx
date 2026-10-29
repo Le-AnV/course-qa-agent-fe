@@ -46,6 +46,15 @@ export function MessageBubble({
   // as-is; only messages that mount later animate in.
   const hydrated = React.useSyncExternalStore(subscribeNoop, () => true, () => false);
 
+  const curriculumCitations = React.useMemo(
+    () => citations.filter((c) => c.kind !== 'internet'),
+    [citations]
+  );
+  const internetCitations = React.useMemo(
+    () => citations.filter((c) => c.kind === 'internet'),
+    [citations]
+  );
+
   return (
     <motion.div
       initial={!hydrated || reduceMotion ? false : { opacity: 0, scale: 0.99 }}
@@ -87,17 +96,40 @@ export function MessageBubble({
           </div>
         )}
 
-        {/* Citations — shown as soon as the backend emits them */}
+        {/* Citations - grouped into Course Materials and Web Sources */}
         {!isUser && citations.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-[#F0F0F0]">
-            <div className="flex flex-wrap gap-2" aria-label="Sources">
-              {citations.map((citation, position) => (
-                <CitationChip
-                  key={`${citationKey(citation)}-${position}`}
-                  citation={citation}
-                />
-              ))}
-            </div>
+          <div className="mt-3 pt-3 border-t border-[#F0F0F0] space-y-2.5">
+            {curriculumCitations.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-[11.5px] font-medium text-[#6F6F6F] select-none">
+                  Course Materials
+                </div>
+                <div className="flex flex-wrap gap-2" aria-label="Course Materials">
+                  {curriculumCitations.map((citation, position) => (
+                    <CitationChip
+                      key={`${citationKey(citation)}-${position}`}
+                      citation={citation}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {internetCitations.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-[11.5px] font-medium text-[#6F6F6F] select-none">
+                  Web Sources
+                </div>
+                <div className="flex flex-wrap gap-2" aria-label="Web Sources">
+                  {internetCitations.map((citation, position) => (
+                    <CitationChip
+                      key={`${citationKey(citation)}-${position}`}
+                      citation={citation}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
