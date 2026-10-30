@@ -43,6 +43,7 @@ export default function AgentPage() {
         */}
         <ChatWindow
           classId={classId}
+          canOpenTicket
           activeSessionId={activeSessionId}
           onTurnComplete={handleTurnComplete}
           onBackgroundTurnComplete={handleBackgroundTurnComplete}

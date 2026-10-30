@@ -5,6 +5,7 @@ import * as React from 'react';
 type ChatScrollAreaProps = {
   children: React.ReactNode;
   className?: string;
+  onContentScroll?: () => void;
 };
 
 /**
@@ -12,7 +13,7 @@ type ChatScrollAreaProps = {
  * arrows/track, a single charcoal pill that appears on hover or while
  * scrolling, and drag support. Native scrollbar is hidden.
  */
-export function ChatScrollArea({ children, className = '' }: ChatScrollAreaProps) {
+export function ChatScrollArea({ children, className = '', onContentScroll }: ChatScrollAreaProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const trackRef = React.useRef<HTMLDivElement>(null);
   const hideTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,7 +122,11 @@ export function ChatScrollArea({ children, className = '' }: ChatScrollAreaProps
         scheduleHide();
       }}
     >
-      <div ref={scrollRef} className={`h-full overflow-y-auto scrollbar-none ${className}`}>
+      <div
+        ref={scrollRef}
+        className={`h-full overflow-y-auto scrollbar-none ${className}`}
+        onScroll={onContentScroll}
+      >
         {children}
       </div>
 

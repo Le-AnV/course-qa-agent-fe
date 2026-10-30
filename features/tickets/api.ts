@@ -1,0 +1,66 @@
+import { apiFetch } from "@/lib/admin-api";
+
+export type Ticket = {
+  id: string;
+  class_id: string;
+  student_id: string;
+  question: string;
+  agent_answer?: string | null;
+  status: "OPEN" | "ANSWERED" | "RESOLVED";
+  created_at: string;
+};
+
+export type TicketReply = {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  message: string;
+  created_at: string;
+};
+
+export type TicketInboxItem = Ticket & {
+  student_name: string;
+  class_name: string;
+  class_code: string;
+};
+
+export type TicketList = {
+  items: TicketInboxItem[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export function listTickets(input: {
+  class_id?: string;
+  status?: Ticket["status"];
+  page?: number;
+  page_size?: number;
+}): Promise<TicketList> {
+  const query = new URLSearchParams({
+    page: String(input.page ?? 1),
+    page_size: String(input.page_size ?? 20),
+  });
+  if (input.class_id) query.set("class_id", input.class_id);
+  if (input.status) query.set("status", input.status);
+  return apiFetch<TicketList>(`/api/tickets?${query}`);
+}
+
+export function createTicket(input: {
+  class_id: string;
+  question: string;
+  agent_answer?: string;
+  details?: string;
+}): Promise<Ticket> {
+  return apiFetch<Ticket>("/api/tickets", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function addTicketReply(ticketId: string, message: string): Promise<TicketReply> {
+  return apiFetch<TicketReply>(`/api/tickets/${ticketId}/replies`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}

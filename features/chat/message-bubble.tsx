@@ -11,6 +11,7 @@ import type { ChatCitation } from '@/lib/sse';
 const subscribeNoop = () => () => {};
 
 interface MessageBubbleProps {
+  messageId?: string;
   role: 'user' | 'ai';
   content: string;
   isLoading?: boolean;
@@ -26,7 +27,9 @@ interface MessageBubbleProps {
   chatSurface?: boolean;
 }
 
-export function MessageBubble({
+// Keep answer DOM stable while the selection toolbar updates around it.
+export const MessageBubble = React.memo(function MessageBubble({
+  messageId,
   role,
   content,
   isLoading,
@@ -61,6 +64,7 @@ export function MessageBubble({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
       className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-3`}
+      data-chat-message-id={messageId}
     >
       <div
         className={`min-w-0 break-words rounded-2xl px-4 py-2.5 ${
@@ -84,6 +88,7 @@ export function MessageBubble({
         {isLoading && !trace?.length ? null : (
           <div
             role={isError ? 'alert' : undefined}
+            data-chat-answer-content={!isUser ? 'true' : undefined}
             className={`text-[11.5px] leading-relaxed ${
               renderMarkdown ? '' : 'whitespace-pre-wrap '
             }${isError ? 'text-red-700' : ''}`}
@@ -135,4 +140,4 @@ export function MessageBubble({
       </div>
     </motion.div>
   );
-}
+});
