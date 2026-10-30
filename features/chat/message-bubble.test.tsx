@@ -36,4 +36,16 @@ describe("MessageBubble error retry", () => {
 
     expect(html).not.toContain('aria-label="Retry question"');
   });
+
+  it("hides the reasoning trace on an error bubble", () => {
+    const html = render({
+      isError: true,
+      onRetry: vi.fn(),
+      trace: ["Searching class materials", "Synthesizing answer"],
+      traceCompleted: false,
+    });
+
+    expect(html).not.toContain("Thought process");
+    expect(html).toContain('aria-label="Retry question"');
+  });
 });

@@ -73,8 +73,9 @@ export function MessageBubble({
             : `max-w-[96%] bg-white border border-[#DADADA] text-[#111111] rounded-tl-sm ${chatSurface ? '' : 'shadow-xs'}`
         }`}
       >
-        {/* Reasoning trace: live while thinking, collapsed summary afterwards */}
-        {!isUser && trace && trace.length > 0 && (
+        {/* Reasoning trace: live while thinking, collapsed summary afterwards.
+            A failed answer never finished its steps, so it is hidden on errors. */}
+        {!isUser && !isError && trace && trace.length > 0 && (
           <ThinkingTrace
             steps={trace}
             activeStep={traceStep}

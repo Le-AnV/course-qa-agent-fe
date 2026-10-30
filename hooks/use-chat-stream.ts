@@ -9,6 +9,17 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const CLIENT_TIMEOUT_MS = 305_000;
+const NETWORK_ERROR_MESSAGE =
+  'Cannot reach the server. Check your internet connection and try again.';
+
+/** fetch() rejects with a TypeError (or the browser's own wording) when the
+ * network is down; surface a human message instead of "Failed to fetch". */
+function isNetworkFailure(error: unknown): boolean {
+  if (error instanceof TypeError) return true;
+  return (
+    error instanceof Error && /failed to fetch|network ?error|load failed/i.test(error.message)
+  );
+}
 
 interface UseChatStreamProps {
   /** Class scope — BE dùng để lọc syllabus/tài liệu của đúng lớp, tránh lẫn dữ liệu giữa các lớp. */
@@ -136,9 +147,11 @@ export function useChatStream({
       const error =
         err instanceof DOMException && err.name === 'AbortError'
           ? new Error('The answer timed out. Please try again.')
-          : err instanceof Error
-            ? err
-            : new Error('The answer could not be generated. Please try again.');
+          : isNetworkFailure(err)
+            ? new Error(NETWORK_ERROR_MESSAGE)
+            : err instanceof Error
+              ? err
+              : new Error('The answer could not be generated. Please try again.');
       onError?.(error);
     } finally {
       window.clearTimeout(timeout);
