@@ -84,8 +84,9 @@ export function useChatStream({
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => null) as { detail?: string } | null;
-        throw new Error(body?.detail || `Chat request failed (${response.status}).`);
+        const body = await response.json().catch(() => null) as { detail?: unknown } | null;
+        const detail = typeof body?.detail === 'string' ? body.detail : null;
+        throw new Error(detail || `Chat request failed (${response.status}).`);
       }
 
       if (!response.body) {

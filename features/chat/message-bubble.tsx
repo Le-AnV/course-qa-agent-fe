@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { motion, useReducedMotion } from 'motion/react';
+import { RotateCcw } from 'lucide-react';
 import { ThinkingTrace } from './thinking-trace';
 import { ChatMarkdown } from './chat-markdown';
 import { CitationChip } from '@/features/citations/citation-chip';
@@ -22,6 +23,8 @@ interface MessageBubbleProps {
   thinkingMs?: number;
   citations?: ChatCitation[];
   isError?: boolean;
+  /** Re-sends the question that produced this error bubble (AC-02). */
+  onRetry?: () => void;
   renderMarkdown?: boolean;
   chatSurface?: boolean;
 }
@@ -37,6 +40,7 @@ export function MessageBubble({
   thinkingMs,
   citations = [],
   isError = false,
+  onRetry,
   renderMarkdown = false,
   chatSurface = false,
 }: MessageBubbleProps) {
@@ -94,6 +98,18 @@ export function MessageBubble({
               content
             )}
           </div>
+        )}
+
+        {isError && onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            aria-label="Retry question"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-[#DADADA] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[#111111] transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
+          >
+            <RotateCcw className="h-3 w-3" aria-hidden="true" />
+            Retry
+          </button>
         )}
 
         {/* Citations - grouped into Course Materials and Web Sources */}
