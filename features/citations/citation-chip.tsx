@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 
 import { AUTH_TOKEN_KEY } from '@/components/ui/nav-config';
+import { normalizeCitationUrl } from '@/lib/citations';
 import { cn } from '@/lib/utils';
 import type { ChatCitation } from '@/lib/sse';
 import { useRouter, usePathname, useParams } from 'next/navigation';
@@ -188,6 +189,7 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
   );
 
   const isCurriculum = citation.kind === 'curriculum';
+  const url = normalizeCitationUrl(citation.url);
   const markers = citation.indexes.length > 0 ? citation.indexes : [citation.index];
   const markerLabel = markers.map((marker) => `[${marker}]`).join('');
   const label = isCurriculum
@@ -219,8 +221,8 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
   const handleActionClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     close();
-    if (citation.url) {
-      window.open(citation.url, '_blank', 'noopener,noreferrer');
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
     } else if (isSpreadsheetOrSyllabus && syllabusPath) {
       router.push(syllabusPath);
     } else {
@@ -240,7 +242,7 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
         )}
         onClick={toggle}
       >
-        {citation.url ? (
+        {url ? (
           <svg
             className="w-3 h-3 text-slate-400 shrink-0"
             fill="none"
@@ -256,7 +258,7 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
           </svg>
         ) : (
           <svg
-            className="w-3 h-3 text-blue-500 shrink-0"
+            className="w-3 h-3 text-[var(--brand)] shrink-0"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
@@ -309,7 +311,7 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
               {/* Header */}
               <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-100">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 shrink-0">
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-[var(--brand-soft)] text-[var(--brand-ink)] shrink-0">
                     {markerLabel}
                   </span>
                   <span className="text-xs font-semibold text-slate-800 truncate" title={citation.title}>
@@ -322,7 +324,7 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
                       Page {citation.page}
                     </span>
                   ) : (
-                    <span className="text-[11px] font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded shrink-0">
+                    <span className="text-[11px] font-medium text-[var(--brand-ink)] bg-[var(--brand-soft)] px-1.5 py-0.5 rounded shrink-0">
                       {isSpreadsheetOrSyllabus ? 'Syllabus' : 'Document'}
                     </span>
                   )
@@ -352,10 +354,10 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
                 <button
                   type="button"
                   onClick={handleActionClick}
-                  className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                  className="inline-flex items-center gap-1 font-semibold text-[var(--brand-ink)] hover:text-[var(--brand-ink-hover)] hover:underline transition-colors"
                 >
                   <span>
-                    {citation.url
+                    {url
                       ? 'Visit Website'
                       : isSpreadsheetOrSyllabus && syllabusPath
                       ? 'View in Syllabus'

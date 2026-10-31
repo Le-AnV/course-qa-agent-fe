@@ -71,6 +71,8 @@ export default function ClassTicketsPage() {
   });
 
   const selected = visible.find((t) => t.id === selectedId) ?? visible[0] ?? null;
+  const openCount = TICKETS.filter((t) => t.status === "open").length;
+  const resolvedCount = TICKETS.length - openCount;
 
   const leftContent = (
     <div className="flex flex-col">
@@ -184,11 +186,27 @@ export default function ClassTicketsPage() {
   );
 
   return (
-    <div className="h-[calc(100vh-160px)]">
+    <div className="h-[calc(100vh_-_124px)] min-h-[600px]">
       <TicketsInboxLayout
         title="Class Tickets"
         subtitle="Student questions and support requests for this class."
-        titleBadge={<MockBadge title="Preview data — the tickets backend is not connected yet" />}
+        titleBadge={
+          <MockBadge
+            label="Ticket"
+            title="Ticket preview — the tickets backend is not connected yet"
+          />
+        }
+        headerActions={
+          <div className="flex items-center gap-3 rounded-md border border-[var(--brand-line)] bg-white/70 px-3 py-1.5 text-[11.5px] text-[#5A5A5A]">
+            <span>
+              <strong className="font-semibold text-[#111111]">{openCount}</strong> open
+            </span>
+            <span className="h-3 w-px bg-[var(--brand-line)]" />
+            <span>
+              <strong className="font-semibold text-[#111111]">{resolvedCount}</strong> resolved
+            </span>
+          </div>
+        }
         searchValue={search}
         searchPlaceholder="Search tickets"
         onSearchChange={setSearch}

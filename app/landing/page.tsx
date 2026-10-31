@@ -49,22 +49,10 @@ export default function LandingPage() {
       <LandingHeader />
 
       <main id="main-content">
-        <section className="relative overflow-hidden border-b border-[var(--brand-line)] bg-gradient-to-b from-[var(--brand-soft)]/80 via-white to-white">
-          <div
-            className="pointer-events-none absolute left-0 top-0 size-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--brand)]/25 blur-3xl"
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute right-0 top-1/3 size-96 translate-x-1/2 rounded-full bg-[#F0F0F0]/60 blur-3xl"
-            aria-hidden="true"
-          />
+        <section className="relative overflow-hidden border-b border-[var(--brand-line)] bg-[var(--brand-soft)]">
           <div
             className="pointer-events-none absolute right-[-8rem] top-48 hidden aspect-[3/2] w-[min(68vw,920px)] bg-contain bg-right-top bg-no-repeat opacity-25 grayscale lg:block"
             style={{ backgroundImage: "url('/image/landing-learning-illustration.webp')" }}
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute inset-0 opacity-45 [background-image:linear-gradient(to_right,#DADADA_1px,transparent_1px),linear-gradient(to_bottom,#DADADA_1px,transparent_1px)] [background-size:44px_44px] [mask-image:linear-gradient(to_bottom,black,transparent_70%)]"
             aria-hidden="true"
           />
           <div className="relative mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20 lg:px-10 lg:py-24">
@@ -80,7 +68,7 @@ export default function LandingPage() {
                 Course Q&amp;A Agent helps students find answers in their own syllabus and lecture notes, with citations they can open and verify.
               </p>
               <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                <Button asChild size="lg" className="h-12 border border-[var(--brand-pressed)]/30 bg-[var(--brand)] px-6 text-[#111111] shadow-xs hover:bg-[var(--brand-hover)]">
+                <Button asChild size="lg" className="h-12 border border-[var(--brand-pressed)]/30 bg-[var(--brand)] px-6 text-white shadow-xs hover:bg-[var(--brand-hover)]">
                   <Link href="/login">
                     Start with your class
                     <ArrowRight className="size-4" aria-hidden="true" />
@@ -125,7 +113,7 @@ export default function LandingPage() {
             </div>
             <div className="mt-12 grid gap-5 md:grid-cols-3">
               {workflow.map((item) => (
-                <article key={item.number} className="rounded-xl border border-[var(--brand-line)] bg-white p-5 shadow-sm shadow-[#1e56c8]/[0.05] sm:p-6">
+                <article key={item.number} className="rounded-xl border border-[var(--brand-line)] bg-white p-5 shadow-sm shadow-black/5 sm:p-6">
                   <div className="flex items-center justify-between">
                     <span className="flex size-9 items-center justify-center rounded-lg bg-[var(--brand-soft)] text-xs font-semibold text-[var(--brand-ink)]">{item.number}</span>
                     <span className="flex size-9 items-center justify-center rounded-lg border border-[var(--brand-line)] text-[var(--brand-ink)]">
@@ -140,15 +128,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="workspace" className="relative scroll-mt-24 overflow-hidden border-y border-[var(--brand-line)] bg-gradient-to-br from-[var(--brand-soft)] via-white to-[var(--brand-soft)] py-20 sm:py-24">
-          <div
-            className="pointer-events-none absolute -left-32 top-0 size-96 rounded-full bg-[var(--brand)]/20 blur-3xl"
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute -right-24 bottom-0 size-80 rounded-full bg-[#F0F0F0]/60 blur-3xl"
-            aria-hidden="true"
-          />
+        <section id="workspace" className="relative scroll-mt-24 overflow-hidden border-y border-[var(--brand-line)] bg-[var(--brand-soft)] py-20 sm:py-24">
           <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-10">
             <div className="max-w-xl">
               <p className="text-sm font-medium text-[var(--brand-ink)]">A calmer way to study</p>
@@ -158,7 +138,7 @@ export default function LandingPage() {
               <p className="mt-5 text-base leading-7 text-slate-600">
                 Move from course context to conversation without losing your place. Your history and syllabus stay close while the chat remains the focus.
               </p>
-              <Button asChild size="lg" className="mt-8 h-12 border border-[var(--brand-pressed)]/30 bg-[var(--brand)] px-6 text-[#111111] shadow-xs hover:bg-[var(--brand-hover)]">
+              <Button asChild size="lg" className="mt-8 h-12 border border-[var(--brand-pressed)]/30 bg-[var(--brand)] px-6 text-white shadow-xs hover:bg-[var(--brand-hover)]">
                 <Link href="/login">
                   Open your workspace
                   <ArrowRight className="size-4" aria-hidden="true" />
@@ -166,7 +146,7 @@ export default function LandingPage() {
               </Button>
             </div>
 
-            <div className="rounded-2xl border border-[var(--brand-line)] bg-white/90 p-5 shadow-lg shadow-[#1e56c8]/[0.06] backdrop-blur-sm sm:p-7">
+            <div className="rounded-2xl border border-[var(--brand-line)] bg-white p-5 shadow-lg shadow-black/5 sm:p-7">
               <p className="text-sm font-semibold text-slate-950">A focused study flow</p>
               <div className="mt-5 divide-y divide-slate-200">
                 <StudyStep number="01" title="Choose a course" description="Keep every answer inside the class you are studying." />

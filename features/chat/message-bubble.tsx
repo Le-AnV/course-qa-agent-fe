@@ -20,7 +20,6 @@ interface MessageBubbleProps {
   trace?: string[] | null;
   traceStep?: number;
   traceCompleted?: boolean;
-  thinkingMs?: number;
   citations?: ChatCitation[];
   isError?: boolean;
   /** Re-sends the question that produced this error bubble (AC-02). */
@@ -37,7 +36,6 @@ export function MessageBubble({
   trace,
   traceStep,
   traceCompleted,
-  thinkingMs,
   citations = [],
   isError = false,
   onRetry,
@@ -81,7 +79,6 @@ export function MessageBubble({
             activeStep={traceStep}
             completed={traceCompleted}
             running={!content && (isLoading || isStreaming)}
-            thinkingMs={thinkingMs}
           />
         )}
 

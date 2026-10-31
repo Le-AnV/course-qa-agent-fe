@@ -114,6 +114,8 @@ export interface ChatHistorySidebarProps {
   onNewChat?: () => void;
   refreshTrigger?: number;
   className?: string;
+  /** Desktop placement; the mobile drawer follows the same side. */
+  side?: 'left' | 'right';
   /** Mobile drawer (< md). Desktop always renders the persistent panel. */
   mobileOpen?: boolean;
   onMobileOpenChange?: (open: boolean) => void;
@@ -134,9 +136,11 @@ export function ChatHistorySidebar({
   onNewChat,
   refreshTrigger = 0,
   className,
+  side = 'left',
   mobileOpen = false,
   onMobileOpenChange,
 }: ChatHistorySidebarProps) {
+  const isRight = side === 'right';
   const [sessions, setSessions] = React.useState<ChatSessionItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -363,8 +367,8 @@ export function ChatHistorySidebar({
   };
 
   const renderSearchBox = () => (
-    <div className="relative px-2 pb-1.5 pt-2" role="search">
-      <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6F6F6F]" />
+    <div className="relative" role="search">
+      <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6F6F6F]" />
       <input
         type="text"
         inputMode="search"
@@ -374,13 +378,13 @@ export function ChatHistorySidebar({
         placeholder="Search conversations..."
         aria-label="Search conversations"
         data-testid="search-history-input"
-        className="w-full rounded-md border border-[#DADADA] bg-[#F7F7F7] py-1.5 pl-8 pr-8 text-[11.5px] text-[#111111] placeholder:text-[#9F9F9F] focus:border-[#111111] focus:outline-none focus:ring-1 focus:ring-[#111111]/20 [&::-webkit-search-cancel-button]:hidden"
+        className="w-full rounded-md border border-[#DADADA] bg-[#F7F7F7] py-1.5 pl-8 pr-8 text-[12px] text-[#111111] placeholder:text-[#9F9F9F] focus:border-[var(--brand-ink)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-line)] [&::-webkit-search-cancel-button]:hidden"
       />
       {searchQuery && (
         <button
           type="button"
           onClick={() => setSearchQuery('')}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6F6F6F] hover:text-[#111111]"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6F6F6F] hover:text-[#111111]"
           aria-label="Clear search"
           data-testid="search-history-clear"
         >
@@ -391,7 +395,10 @@ export function ChatHistorySidebar({
   );
 
   const iconButton =
-    'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6F6F6F] transition-colors hover:bg-[#EDEDED] hover:text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20 disabled:cursor-not-allowed disabled:opacity-40';
+    'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--brand-ink)] transition-colors hover:bg-white/60 hover:text-[var(--brand-ink-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)] disabled:cursor-not-allowed disabled:opacity-40';
+
+  // A right-hand panel collapses toward the right, so its arrows mirror the left one.
+  const ToggleIcon = isCollapsed === isRight ? ChevronLeft : ChevronRight;
 
   const states = (compact: boolean) => {
     if (!compact && (isSearching || searchResults !== null || searchError !== null)) {
@@ -519,6 +526,16 @@ export function ChatHistorySidebar({
         <div className="my-auto flex flex-col items-center justify-center gap-2 p-4 text-center">
           <MessageSquare className="h-7 w-7 stroke-1 text-[#CFCFCF]" />
           <p className="text-[11.5px] text-[#6F6F6F]">No conversations yet</p>
+          {onNewChat && (
+            <button
+              type="button"
+              onClick={startNewChat}
+              className="mt-1 inline-flex items-center gap-1.5 rounded-md border border-[var(--brand-line)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[11.5px] font-semibold text-[var(--brand-ink)] transition-colors hover:bg-[var(--brand-soft-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Start a new chat
+            </button>
+          )}
         </div>
       );
     }
@@ -532,9 +549,9 @@ export function ChatHistorySidebar({
         <div
           key={session.id}
           className={cn(
-            'group relative flex items-start gap-1 rounded-lg border px-1 py-1 transition-colors',
+            'group relative flex items-start gap-1 rounded-lg border px-1.5 py-1.5 transition-colors',
             isActive
-              ? 'border-[var(--brand-line)] bg-[var(--brand-soft)]'
+              ? 'border-[var(--brand)] bg-[var(--brand-soft)] shadow-sm'
               : 'border-transparent hover:bg-[#F7F7F7]',
             isMenuOpen && 'bg-[#F7F7F7] z-30',
           )}
@@ -562,7 +579,7 @@ export function ChatHistorySidebar({
             <span className="min-w-0 flex-1">
               <span
                 className={cn(
-                  'block truncate text-[11.5px]',
+                  'block truncate text-[12px]',
                   isActive ? 'font-semibold text-[#111111]' : 'font-medium text-[#111111]',
                 )}
               >
@@ -690,7 +707,7 @@ export function ChatHistorySidebar({
 
     if (compact) {
       return (
-        <div className="flex flex-col items-center gap-1.5">
+        <div className="flex flex-col items-center gap-2">
           {sessions.map((session) => {
             const isActive = activeSessionId === session.id;
             const initial = railInitial(session);
@@ -703,18 +720,26 @@ export function ChatHistorySidebar({
                 aria-label={`Open ${session.title || 'conversation'}`}
                 aria-current={isActive ? 'true' : undefined}
                 className={cn(
-                  'relative flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
+                  'relative flex h-9 w-9 items-center justify-center rounded-xl border text-[11.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]',
                   isActive
-                    ? 'border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-ink)]'
-                    : 'border-transparent bg-[#F7F7F7] text-[#5A5A5A] hover:border-[#DADADA] hover:text-[#111111]',
+                    ? 'border-[var(--brand)] bg-[var(--brand)] text-white shadow-sm'
+                    : 'border-transparent text-[#6F6F6F] hover:border-[var(--brand-line)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand-ink)]',
                 )}
               >
                 {session.is_pinned && (
                   <span
-                    className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-[#111111]"
+                    className={cn(
+                      'absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full',
+                      isActive ? 'bg-white' : 'bg-[var(--brand)]',
+                    )}
                     title="Pinned conversation"
                   >
-                    <span className="h-1 w-1 rounded-full bg-white" />
+                    <span
+                      className={cn(
+                        'h-1 w-1 rounded-full',
+                        isActive ? 'bg-[var(--brand)]' : 'bg-white',
+                      )}
+                    />
                   </span>
                 )}
                 {initial ? initial : <MessageSquare className="h-4 w-4" />}
@@ -774,25 +799,26 @@ export function ChatHistorySidebar({
       >
         <div
           className={cn(
-            'flex h-9 shrink-0 items-center border-b border-[#DADADA] bg-[#F7F7F7]',
-            isCollapsed ? 'justify-center' : 'justify-between pl-3 pr-1.5',
+            'flex h-11 shrink-0 items-center border-b border-[var(--brand-line)] bg-[var(--brand-soft-strong)]',
+            isCollapsed ? 'justify-center px-2' : 'justify-between pl-3 pr-1.5',
           )}
         >
           {!isCollapsed && (
-            <span className="truncate text-[11.5px] font-semibold text-[#111111]">Chat History</span>
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate text-[13.5px] font-semibold text-[var(--brand-ink)]">
+                Chat History
+              </span>
+              {sessions.length > 0 && (
+                <span
+                  className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-white/70 px-1 text-[10px] font-semibold leading-none text-[var(--brand-ink)]"
+                  aria-label={`${sessions.length} conversations`}
+                >
+                  {sessions.length > 99 ? '99+' : sessions.length}
+                </span>
+              )}
+            </span>
           )}
           <div className="flex items-center gap-0.5">
-            {!isCollapsed && onNewChat && (
-              <button
-                type="button"
-                onClick={startNewChat}
-                title="Start a new chat"
-                aria-label="Start a new chat"
-                className={iconButton}
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            )}
             <button
               type="button"
               onClick={() => setCollapsed(!isCollapsed)}
@@ -802,36 +828,55 @@ export function ChatHistorySidebar({
               aria-controls="chat-history-panel"
               className={iconButton}
             >
-              {isCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
+              <ToggleIcon className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         <div
           id="chat-history-panel"
-          className={cn(
-            'flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden p-2 scrollbar-none',
-            isCollapsed && 'items-center',
-          )}
+          className={cn('flex min-h-0 flex-1 flex-col', isCollapsed && 'items-center')}
         >
-          {/* In the rail, "new chat" is an item like the conversations. */}
-          {isCollapsed && onNewChat && (
-            <button
-              type="button"
-              onClick={startNewChat}
-              title="New chat"
-              aria-label="Start a new chat"
-              className="mb-1 flex h-9 w-9 items-center justify-center rounded-lg border border-dashed border-[#CFCFCF] text-[#111111] transition-colors hover:border-[#111111] hover:bg-[#F7F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
+          {/* Header, New chat and search stay put; only the list scrolls. */}
+          {isCollapsed ? (
+            onNewChat && (
+              <div className="flex shrink-0 flex-col items-center gap-1.5 px-2 pt-2">
+                <button
+                  type="button"
+                  onClick={startNewChat}
+                  title="New chat"
+                  aria-label="Start a new chat"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-ink)] transition-colors hover:bg-[var(--brand-soft-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+                <span className="h-px w-6 bg-[#E9EDF2]" aria-hidden="true" />
+              </div>
+            )
+          ) : (
+            <div className="shrink-0 space-y-1.5 px-2 pt-2">
+              {onNewChat && (
+                <button
+                  type="button"
+                  onClick={startNewChat}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-md border border-[var(--brand-line)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[11.5px] font-semibold text-[var(--brand-ink)] transition-colors hover:bg-[var(--brand-soft-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  New chat
+                </button>
+              )}
+              {renderSearchBox()}
+            </div>
           )}
-          {!isCollapsed && renderSearchBox()}
-          {states(isCollapsed)}
+
+          <div
+            className={cn(
+              'flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden p-2 pt-1',
+              isCollapsed && 'items-center',
+            )}
+          >
+            {states(isCollapsed)}
+          </div>
         </div>
       </aside>
 
@@ -839,27 +884,23 @@ export function ChatHistorySidebar({
       <Dialog open={mobileOpen} onOpenChange={onMobileOpenChange}>
         <DialogContent
           showCloseButton={false}
-          className="fixed inset-y-0 left-0 top-0 h-full w-[86vw] max-w-[320px] translate-x-0 translate-y-0 gap-0 rounded-none rounded-r-xl border-r border-[#DADADA] bg-white p-0 sm:max-w-[320px]"
+          className={cn(
+            'fixed inset-y-0 top-0 h-full w-[86vw] max-w-[320px] translate-x-0 translate-y-0 gap-0 rounded-none border-[#DADADA] bg-white p-0 sm:max-w-[320px]',
+            isRight
+              ? 'right-0 left-auto rounded-l-xl border-l'
+              : 'left-0 right-auto rounded-r-xl border-r',
+          )}
         >
           <DialogTitle className="sr-only">Chat history</DialogTitle>
           <DialogDescription className="sr-only">
             Choose a past conversation from this class or start a new one.
           </DialogDescription>
 
-          <div className="flex h-9 shrink-0 items-center justify-between border-b border-[#DADADA] bg-[#F7F7F7] pl-3 pr-1.5">
-            <span className="truncate text-[11.5px] font-semibold text-[#111111]">Chat History</span>
+          <div className="flex h-11 shrink-0 items-center justify-between border-b border-[var(--brand-line)] bg-[var(--brand-soft-strong)] pl-3 pr-1.5">
+            <span className="truncate text-[13.5px] font-semibold text-[var(--brand-ink)]">
+              Chat History
+            </span>
             <div className="flex items-center gap-0.5">
-              {onNewChat && (
-                <button
-                  type="button"
-                  onClick={startNewChat}
-                  title="Start a new chat"
-                  aria-label="Start a new chat"
-                  className={iconButton}
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              )}
               <DialogClose asChild>
                 <button type="button" title="Close" aria-label="Close chat history" className={iconButton}>
                   <X className="h-4 w-4" />
@@ -868,9 +909,23 @@ export function ChatHistorySidebar({
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2 scrollbar-none">
-            {renderSearchBox()}
-            {states(false)}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="shrink-0 space-y-1.5 px-2 pt-2">
+              {onNewChat && (
+                <button
+                  type="button"
+                  onClick={startNewChat}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-md border border-[var(--brand-line)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[11.5px] font-semibold text-[var(--brand-ink)] transition-colors hover:bg-[var(--brand-soft-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  New chat
+                </button>
+              )}
+              {renderSearchBox()}
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2 pt-1">
+              {states(false)}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

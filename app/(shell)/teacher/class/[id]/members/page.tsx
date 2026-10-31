@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useParams } from "next/navigation";
+import { ClassPageHeader } from "@/components/shared/ClassPageHeader";
 import { MembersTable } from "@/components/shared/MembersTable";
 import { Search, Check, X } from "lucide-react";
 import { toast } from "sonner";
@@ -109,45 +110,49 @@ export default function ClassMembersPage() {
     return matchesTab && matchesSearch;
   });
 
-  const toolbar = (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-1">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-2">
-        <div>
-          <h2 className="text-xl font-bold text-[#111111]">Members</h2>
-          <p className="text-[13px] text-[#5A5A5A] mt-0.5">Manage people and class access.</p>
-        </div>
+  const headerActions = (
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+      <div className="flex items-center gap-1 rounded-md bg-white/70 p-1">
+        {(["all", "students", "teachers"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-3 py-1 text-[12px] font-medium rounded transition-all capitalize ${
+              tab === t ? "bg-white text-[#111111] shadow-sm" : "text-[#5A5A5A] hover:text-[#111111]"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
       </div>
-
-      <div className="flex items-center justify-between gap-4 w-full">
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-md">
-          {(["all", "students", "teachers"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-3 py-1 text-[12px] font-medium rounded transition-all capitalize ${
-                tab === t ? "bg-white text-[#111111] shadow-sm" : "text-[#5A5A5A] hover:text-[#111111]"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#5A5A5A]" />
-          <input
-            type="text"
-            placeholder="Search members"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-64 bg-white border border-[#DADADA] rounded pl-8 pr-3 py-1.5 text-[12.5px] outline-none focus:border-[#111111]"
-          />
-        </div>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#5A5A5A]" />
+        <input
+          type="text"
+          placeholder="Search members"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full rounded border border-[var(--brand-line)] bg-white py-1.5 pl-8 pr-3 text-[12.5px] outline-none focus:border-[#111111] sm:w-64"
+        />
       </div>
     </div>
   );
 
   return (
     <div className="space-y-6">
+      <ClassPageHeader
+        title="Members"
+        subtitle="Manage people and class access."
+        badge={
+          !loading ? (
+            <span className="inline-flex items-center rounded-full border border-[var(--brand-line)] bg-white/70 px-2 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">
+              {members.length} {members.length === 1 ? "member" : "members"}
+            </span>
+          ) : undefined
+        }
+        actions={headerActions}
+      />
+
       {canReview && (
         <Reveal>
         <div className="bg-white border border-[#DADADA] rounded-lg overflow-hidden">
@@ -205,7 +210,7 @@ export default function ClassMembersPage() {
       )}
 
       {loading ? (
-        <MembersTable toolbar={toolbar}>
+          <MembersTable toolbar={null}>
           {[0, 1, 2, 3, 4].map((i) => (
             <tr key={i}>
               <td className="py-3 px-4">
@@ -235,7 +240,7 @@ export default function ClassMembersPage() {
         </div>
       ) : (
         <Reveal>
-          <MembersTable toolbar={toolbar}>
+        <MembersTable toolbar={null}>
           {filtered.length === 0 ? (
             <tr>
               <td colSpan={4} className="py-8 px-4 text-center text-[13px] text-[#5A5A5A]">
@@ -260,8 +265,8 @@ export default function ClassMembersPage() {
                       m.role === "trainer"
                         ? "bg-[var(--brand-soft-strong)] text-[var(--brand-ink)]"
                         : m.role === "teaching_assistant" || m.role === "teaching assistant"
-                          ? "bg-purple-100 text-purple-700"
-                          : "bg-slate-100 text-[#5A5A5A]"
+                          ? "bg-[var(--brand-soft)] text-[var(--brand-ink)]"
+                          : "bg-[#F7F7F7] text-[#5A5A5A]"
                     }`}
                   >
                     {m.role.replace("_", " ")}

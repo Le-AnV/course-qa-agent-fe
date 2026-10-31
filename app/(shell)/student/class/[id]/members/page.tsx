@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { useParams } from "next/navigation";
 import { studentApi, type ClassMember } from "@/lib/student-api";
 import { useProfile } from "@/features/profile/profile-context";
+import { ClassPageHeader } from "@/components/shared/ClassPageHeader";
 import { Reveal, SkeletonLine } from "@/components/shared/page-skeleton";
 
 export default function StudentMembersPage() {
@@ -46,12 +47,10 @@ export default function StudentMembersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <h2 className="text-xl font-bold font-heading text-[#111111]">Class Members</h2>
-          <p className="text-[13px] text-[#5A5A5A] mt-0.5">View your teachers and classmates.</p>
-        </div>
-      </div>
+      <ClassPageHeader
+        title="Class Members"
+        subtitle="View your teachers and classmates."
+      />
 
       <div className="flex items-center gap-4">
         <div className="relative w-full sm:w-72">

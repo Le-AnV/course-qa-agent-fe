@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useParams } from 'next/navigation';
 import { ChatWindow } from '@/features/chat/chat-window';
 import { ChatHistorySidebar } from '@/features/history/chat-history-sidebar';
+import { usePersistedChatSession } from '@/features/chat/use-persisted-chat-session';
 
 /**
  * Trainer view of the class Q&A chat: same grounded-answer surface students
@@ -12,7 +13,10 @@ import { ChatHistorySidebar } from '@/features/history/chat-history-sidebar';
 export default function TeacherAgentPage() {
   const routeParams = useParams();
   const classId = (routeParams?.id as string) || '';
-  const [activeSessionId, setActiveSessionId] = React.useState<string | null>(null);
+  const { activeSessionId, setActiveSessionId, startNewChat } = usePersistedChatSession(
+    'teacher',
+    classId,
+  );
   const [historyRefresh, setHistoryRefresh] = React.useState(0);
   const [historyOpen, setHistoryOpen] = React.useState(false);
 
@@ -27,31 +31,31 @@ export default function TeacherAgentPage() {
   };
 
   return (
-    <div className="flex h-full w-full gap-4 min-h-0 flex-1">
-        {/* Left column: chat history (AI-95) */}
-        <ChatHistorySidebar
+    <div className="flex h-full w-full min-h-0 flex-1 gap-4">
+      {/* Main column: the chat itself, scoped to this class */}
+      <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl border border-[#DADADA] bg-white">
+        <ChatWindow
           classId={classId}
           activeSessionId={activeSessionId}
-          onSelectSession={(sessionId) => setActiveSessionId(sessionId)}
-          onNewChat={() => setActiveSessionId(null)}
-          refreshTrigger={historyRefresh}
-          mobileOpen={historyOpen}
-          onMobileOpenChange={setHistoryOpen}
+          onTurnComplete={handleTurnComplete}
+          onBackgroundTurnComplete={handleBackgroundTurnComplete}
+          onOpenSession={(sessionId) => setActiveSessionId(sessionId)}
+          onNewChat={startNewChat}
+          onOpenHistory={() => setHistoryOpen(true)}
         />
-
-        {/* Centre column: the chat itself, scoped to this class */}
-        <div className="flex-1 flex flex-col bg-white border border-[#DADADA] rounded-xl overflow-hidden relative">
-          <ChatWindow
-            classId={classId}
-            activeSessionId={activeSessionId}
-            onTurnComplete={handleTurnComplete}
-            onBackgroundTurnComplete={handleBackgroundTurnComplete}
-            onOpenSession={(sessionId) => setActiveSessionId(sessionId)}
-            onNewChat={() => setActiveSessionId(null)}
-            onOpenHistory={() => setHistoryOpen(true)}
-          />
-        </div>
-
       </div>
+
+      {/* Right column: chat history (AI-95) */}
+      <ChatHistorySidebar
+        classId={classId}
+        activeSessionId={activeSessionId}
+        onSelectSession={(sessionId) => setActiveSessionId(sessionId)}
+        onNewChat={startNewChat}
+        refreshTrigger={historyRefresh}
+        side="right"
+        mobileOpen={historyOpen}
+        onMobileOpenChange={setHistoryOpen}
+      />
+    </div>
   );
 }

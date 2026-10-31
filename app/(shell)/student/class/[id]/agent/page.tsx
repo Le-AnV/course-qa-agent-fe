@@ -4,11 +4,15 @@ import * as React from 'react';
 import { useParams } from 'next/navigation';
 import { ChatWindow } from '@/features/chat/chat-window';
 import { ChatHistorySidebar } from '@/features/history/chat-history-sidebar';
+import { usePersistedChatSession } from '@/features/chat/use-persisted-chat-session';
 
 export default function AgentPage() {
   const routeParams = useParams();
   const classId = (routeParams?.id as string) || '';
-  const [activeSessionId, setActiveSessionId] = React.useState<string | null>(null);
+  const { activeSessionId, setActiveSessionId, startNewChat } = usePersistedChatSession(
+    'student',
+    classId,
+  );
   const [historyRefresh, setHistoryRefresh] = React.useState(0);
   const [historyOpen, setHistoryOpen] = React.useState(false);
 
@@ -23,35 +27,31 @@ export default function AgentPage() {
   };
 
   return (
-    <div className="flex h-full w-full gap-4 min-h-0 flex-1">
-      {/* Cột Trái: Lịch sử Chat (AI-95) */}
-      <ChatHistorySidebar
-        classId={classId}
-        activeSessionId={activeSessionId}
-        onSelectSession={(sessionId) => setActiveSessionId(sessionId)}
-        onNewChat={() => setActiveSessionId(null)}
-        refreshTrigger={historyRefresh}
-        mobileOpen={historyOpen}
-        onMobileOpenChange={setHistoryOpen}
-      />
-
-      {/* Cột Giữa: Khung Chat Chính & Tiếp tục phiên hội thoại cũ (AI-97) */}
-      <div className="flex-1 flex flex-col bg-white border border-[#DADADA] rounded-xl overflow-hidden relative">
-        {/*
-          Mỗi lớp 1 scope chat riêng: classId đi kèm mọi request để BE
-          lọc syllabus/tài liệu đúng lớp, tránh lẫn dữ liệu giữa các lớp.
-        */}
+    <div className="flex h-full w-full min-h-0 flex-1 gap-4">
+      {/* Main column: the chat itself, scoped to this class */}
+      <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl border border-[#DADADA] bg-white">
         <ChatWindow
           classId={classId}
           activeSessionId={activeSessionId}
           onTurnComplete={handleTurnComplete}
           onBackgroundTurnComplete={handleBackgroundTurnComplete}
           onOpenSession={(sessionId) => setActiveSessionId(sessionId)}
-          onNewChat={() => setActiveSessionId(null)}
+          onNewChat={startNewChat}
           onOpenHistory={() => setHistoryOpen(true)}
         />
       </div>
 
+      {/* Right column: chat history (AI-95) */}
+      <ChatHistorySidebar
+        classId={classId}
+        activeSessionId={activeSessionId}
+        onSelectSession={(sessionId) => setActiveSessionId(sessionId)}
+        onNewChat={startNewChat}
+        refreshTrigger={historyRefresh}
+        side="right"
+        mobileOpen={historyOpen}
+        onMobileOpenChange={setHistoryOpen}
+      />
     </div>
   );
 }

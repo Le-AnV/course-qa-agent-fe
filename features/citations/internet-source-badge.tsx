@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Globe, ExternalLink } from 'lucide-react';
+import { normalizeCitationUrl } from '@/lib/citations';
 import type { CitationItem } from './types';
 
 interface InternetSourceBadgeProps {
@@ -8,8 +9,9 @@ interface InternetSourceBadgeProps {
 
 export function InternetSourceBadge({ citation }: InternetSourceBadgeProps) {
   const handleClick = () => {
-    if (citation.jump_url) {
-      window.open(citation.jump_url, '_blank', 'noopener,noreferrer');
+    const url = normalizeCitationUrl(citation.jump_url);
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 

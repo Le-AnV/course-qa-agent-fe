@@ -19,7 +19,7 @@ type AdminPageShellProps = {
  */
 export function AdminPageShell({ title, subtitle, actions, children, className }: AdminPageShellProps) {
   return (
-    <div className={cn(PAGE_COLUMN, "space-y-6 bg-[#F5F5F5]", className)}>
+    <div className={cn(PAGE_COLUMN, "space-y-6 bg-[#F4F5F8]", className)}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-[26px] font-semibold text-[#111111] font-heading tracking-tight">{title}</h1>

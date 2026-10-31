@@ -88,8 +88,7 @@ export function ProductPreview() {
 
   return (
     <figure className="relative mx-auto w-full max-w-6xl">
-      <div className="pointer-events-none absolute -inset-4 -z-10 rounded-[2rem] bg-[var(--brand-line)]/60 blur-2xl" />
-      <div className="overflow-hidden rounded-2xl border border-[var(--brand-line)] bg-white shadow-xl shadow-[#1e56c8]/[0.10]">
+      <div className="overflow-hidden rounded-2xl border border-[var(--brand-line)] bg-white shadow-xl shadow-black/10">
         <div className="flex h-12 items-center justify-between border-b border-[var(--brand-line)] bg-white/90 px-4 sm:px-5">
           <div className="flex items-center gap-2" aria-hidden="true">
             <span className="size-2.5 rounded-full bg-slate-200" />
