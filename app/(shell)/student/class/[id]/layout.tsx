@@ -52,7 +52,7 @@ export default function StudentClassWorkspaceLayout({
     { id: "overview", label: "Overview", href: `/student/class/${id}/overview` },
     { id: "syllabus", label: "Syllabus", href: `/student/class/${id}/syllabus` },
     { id: "agent", label: "Q&A Chat", href: `/student/class/${id}/agent` },
-    { id: "proposals", label: "My Proposals", href: `/student/class/${id}/proposals` },
+    { id: "tickets", label: "My Tickets", href: `/student/class/${id}/tickets` },
     { id: "members", label: "Members", href: `/student/class/${id}/members` },
   ];
 

@@ -20,6 +20,13 @@ interface TicketsInboxLayoutProps {
   rightDetailContent: React.ReactNode;
 }
 
+const STATUS_DOT: Record<string, string> = {
+  OPEN: "bg-[#C99A2E]",
+  ANSWERED: "bg-[#2563EB]",
+  RESOLVED: "bg-[#137A4B]",
+  EXPIRED: "bg-[#9A9A9A]",
+};
+
 export function TicketsInboxLayout({
   title,
   subtitle,
@@ -34,8 +41,14 @@ export function TicketsInboxLayout({
   leftListContent,
   rightDetailContent,
 }: TicketsInboxLayoutProps) {
+  const activeIndex = Math.max(
+    0,
+    filters.findIndex((filter) => filter.id === activeFilter),
+  );
+  const columnCount = Math.max(filters.length, 1);
+
   return (
-    <div className="flex flex-col h-full space-y-5">
+    <div className="flex h-full flex-col space-y-5">
       <ClassPageHeader
         title={title}
         subtitle={subtitle}
@@ -43,45 +56,71 @@ export function TicketsInboxLayout({
         actions={headerActions}
       />
 
-      <div className="flex-1 bg-white border border-[#DADADA] rounded-lg overflow-hidden flex flex-col md:flex-row min-h-[520px]">
-        {/* Left Column */}
-        <div className="w-full md:w-[340px] lg:w-[380px] shrink-0 border-r border-[#F0F0F0] flex flex-col bg-white">
-          <div className="p-3 border-b border-[#F0F0F0] space-y-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#6F6F6F]" />
-              <input
-                type="text"
-                placeholder={searchPlaceholder}
-                value={searchValue}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full bg-white border border-[#DADADA] rounded pl-8 pr-3 py-1.5 text-[12.5px] outline-none focus:border-[#111111]"
-              />
-            </div>
-            <div className="flex items-center gap-1 bg-[#F7F7F7] p-0.5 rounded">
-              {filters.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => onFilterChange(f.id)}
-                  className={cn(
-                    "flex-1 text-center py-1 rounded text-[12px] font-medium transition-all",
-                    activeFilter === f.id
-                      ? "bg-white text-[#111111] shadow-sm"
-                      : "text-[#5A5A5A] hover:text-[#111111]"
-                  )}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto">
-            {leftListContent}
-          </div>
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="relative w-full xl:w-[340px] xl:shrink-0">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5A5A5A]" />
+          <input
+            type="text"
+            placeholder={searchPlaceholder}
+            value={searchValue}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="w-full rounded-lg border border-[#DADADA] bg-white py-2 pl-9 pr-4 text-[13.5px] shadow-sm outline-none transition-shadow focus:border-[#111111]"
+          />
         </div>
-        
+
+        <div
+          role="group"
+          aria-label="Filter tickets by status"
+          className="relative grid w-full rounded-lg bg-slate-100 p-1 xl:w-auto xl:max-w-[520px] xl:flex-1"
+          style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}
+        >
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-1 left-1 rounded-md bg-white shadow-sm transition-transform duration-300 ease-out"
+            style={{
+              width: `calc((100% - 0.5rem) / ${columnCount})`,
+              transform: `translateX(${activeIndex * 100}%)`,
+            }}
+          />
+          {filters.map((filter) => {
+            const isActive = activeFilter === filter.id;
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => onFilterChange(filter.id)}
+                className={cn(
+                  "relative z-10 flex items-center justify-center gap-1 rounded-md px-1 py-1.5 text-[11.5px] transition-colors sm:gap-1.5 sm:px-3 sm:text-[13px]",
+                  isActive
+                    ? "font-semibold text-[#111111]"
+                    : "font-medium text-[#5A5A5A] hover:text-[#111111]",
+                )}
+              >
+                {STATUS_DOT[filter.id] && (
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "hidden h-1.5 w-1.5 shrink-0 rounded-full sm:block",
+                      STATUS_DOT[filter.id],
+                    )}
+                  />
+                )}
+                <span className="truncate">{filter.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex min-h-[520px] flex-1 flex-col overflow-hidden rounded-lg border border-[#DADADA] bg-white md:flex-row">
+        {/* Left Column */}
+        <div className="flex w-full shrink-0 flex-col border-r border-[#F0F0F0] bg-white md:w-[340px] lg:w-[380px]">
+          <div className="flex-1 overflow-y-auto">{leftListContent}</div>
+        </div>
+
         {/* Right Column */}
-        <div className="flex-1 flex flex-col bg-white overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden bg-white">
           {rightDetailContent}
         </div>
       </div>
