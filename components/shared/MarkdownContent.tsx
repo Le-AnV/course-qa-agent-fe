@@ -3,18 +3,19 @@
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import { normalizeCitationUrl } from "@/lib/citations";
 import { CodeBlock } from "./CodeBlock";
 
 const SAFE_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
 
 /** Keep links clickable but never emit javascript:/data: URLs. */
 export function safeUrl(url: string): string {
-  const trimmed = url.trim();
-  if (!trimmed) return "";
-  if (trimmed.startsWith("#") || trimmed.startsWith("/")) return trimmed;
+  const normalized = normalizeCitationUrl(url);
+  if (!normalized) return "";
+  if (normalized.startsWith("#") || normalized.startsWith("/")) return normalized;
   try {
-    const parsed = new URL(trimmed, "https://placeholder.invalid");
-    return SAFE_PROTOCOLS.has(parsed.protocol) ? trimmed : "";
+    const parsed = new URL(normalized, "https://placeholder.invalid");
+    return SAFE_PROTOCOLS.has(parsed.protocol) ? normalized : "";
   } catch {
     return "";
   }

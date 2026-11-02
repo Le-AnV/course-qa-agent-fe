@@ -9,7 +9,7 @@ type ChatScrollAreaProps = {
 
 /**
  * Chat transcript scroller with a minimal overlay scrollbar: no native
- * arrows/track, a single charcoal pill that appears on hover or while
+ * arrows/track, a single square charcoal bar that appears on hover or while
  * scrolling, and drag support. Native scrollbar is hidden.
  */
 export function ChatScrollArea({ children, className = '' }: ChatScrollAreaProps) {
@@ -128,7 +128,7 @@ export function ChatScrollArea({ children, className = '' }: ChatScrollAreaProps
       <div ref={trackRef} aria-hidden="true" className="absolute top-2 bottom-2 right-1 z-20 w-1.5">
         <div
           style={{ height: `${thumb.height}px`, transform: `translateY(${thumb.top}px)` }}
-          className={`w-full rounded-full bg-[#111111]/35 transition-opacity duration-200 hover:bg-[#111111]/55 ${
+          className={`w-full rounded-none bg-[var(--scrollbar-thumb)] transition-opacity duration-200 hover:bg-[var(--scrollbar-thumb-hover)] active:bg-[var(--scrollbar-thumb-active)] ${
             hasOverflow && visible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
           }`}
           onPointerDown={onThumbPointerDown}

@@ -8,7 +8,7 @@ import { SuggestedQuestions } from './suggested-questions';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { getSessionDetail } from '@/features/history/api';
 import { getChatQuota, type ChatQuota } from './api';
-import { mergeCitation, uniqueCitations } from '@/lib/citations';
+import { mergeCitation, normalizeCitationUrl, uniqueCitations } from '@/lib/citations';
 import type { ChatMessageCitation, ChatMessageItem } from '@/features/history/types';
 import { History, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -92,7 +92,7 @@ function mapHistoryCitation(citation: ChatMessageCitation): ChatCitation {
     index: citation.index,
     kind: citation.kind === 'internet' ? 'internet' : 'curriculum',
     title: citation.title,
-    url: citation.url ?? null,
+    url: normalizeCitationUrl(citation.url),
     snippet: citation.snippet ?? '',
     documentId: citation.document_id ?? null,
     page: citation.page ?? null,
@@ -528,27 +528,32 @@ export function ChatWindow({
 
   const activeStreamAnswerId =
     streamSnapshot?.key === currentKey ? streamSnapshot.answerId : null;
+  const isNewChat =
+    !activeSessionId &&
+    !isLoadingHistory &&
+    messages.length === 1 &&
+    messages[0]?.id === 'welcome-msg';
 
   return (
     <div className="flex flex-col h-full relative bg-white">
-      {/* Same surface tokens as the history panel next to it: one neutral bar, not two palettes. */}
-      <header className="flex h-9 shrink-0 items-center gap-1 border-b border-[#DADADA] bg-[#F7F7F7] px-3 md:px-4">
+      {/* The transcript and history rail share the same soft header tint as the class tabs. */}
+      <header className="flex h-11 shrink-0 items-center gap-1 border-b border-[var(--brand-line)] bg-[var(--brand-soft-strong)] px-3 md:px-4">
         {onOpenHistory && (
           <button
             type="button"
             onClick={onOpenHistory}
             title="Chat history"
             aria-label="Open chat history"
-            className="-ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6F6F6F] transition-colors hover:bg-[#EDEDED] hover:text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20 md:hidden"
+            className="-ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--brand-ink)] transition-colors hover:bg-white/60 hover:text-[var(--brand-ink-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)] md:hidden"
           >
             <History className="h-4 w-4" />
           </button>
         )}
-        <h1 className="truncate text-[13px] font-semibold text-[#111111]">Course AI Assistant</h1>
+        <h1 className="truncate text-[13.5px] font-semibold text-[var(--brand-ink)]">Course AI Assistant</h1>
         {quota?.limit != null && (
           <span
             className={`ml-auto shrink-0 whitespace-nowrap text-[11px] font-bold ${
-              quota.remaining === 0 ? 'text-[#9D4C38]' : 'text-[#111111]'
+              quota.remaining === 0 ? 'text-[#9D4C38]' : 'text-[#5A5A5A]'
             }`}
             title={`${quota.remaining ?? 0} of ${quota.limit} questions left today`}
           >
@@ -587,70 +592,90 @@ export function ChatWindow({
         </div>
       )}
 
-      {/* Top area: Message list container (auto-scrolls if long) */}
-      <ChatScrollArea className="bg-white px-4 md:px-6 pt-3 pb-4">
-        <div className="w-full">
-          {isLoadingHistory ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#6F6F6F]">
-              <Loader2 className="h-6 w-6 animate-spin text-[#6F6F6F]" />
-              <span className="text-xs">Loading conversation...</span>
-            </div>
-          ) : (
-            messages.map((msg) => {
-              const isMessageStreaming = isStreaming && msg.id === activeStreamAnswerId;
-              const isMessagePending = isTyping && msg.id === activeStreamAnswerId;
-
-              return (
-                <MessageBubble
-                  key={msg.id}
-                  role={msg.role}
-                  content={msg.content}
-                  isStreaming={isMessageStreaming}
-                  isLoading={isMessagePending}
-                  trace={msg.trace}
-                  traceStep={msg.traceStep}
-                  traceCompleted={msg.traceCompleted}
-                  thinkingMs={msg.thinkingMs}
-                  citations={msg.citations}
-                  isError={msg.isError}
-                  onRetry={msg.isError && msg.retryText ? () => handleRetry(msg) : undefined}
-                  renderMarkdown={msg.role === 'ai'}
-                  chatSurface
-                />
-              );
-            })
-          )}
-
-          {/* Follow-up question suggestions (AI-125) - visible after completed grounded answer */}
-          {messages.length > 1 &&
-            !isTyping &&
-            messages[messages.length - 1]?.role === 'ai' &&
-            !messages[messages.length - 1]?.isError &&
-            Boolean(messages[messages.length - 1]?.suggestedQuestions?.length) && (
-              <SuggestedQuestions
-                questions={messages[messages.length - 1].suggestedQuestions!}
+      {isNewChat ? (
+        <div className="flex flex-1 flex-col items-center justify-center px-4 pb-10">
+          <div className="w-full max-w-2xl text-center">
+            <h2 className="text-[20px] font-semibold tracking-tight text-[#111111]">
+              Ask anything about this course
+            </h2>
+            <p className="mt-2 text-[13px] leading-6 text-[#5A5A5A]">
+              Get answers grounded in your course materials, with citations you can verify.
+            </p>
+            <div className="mt-6">
+              <ChatInput
+                onSend={handleSend}
                 disabled={isTyping || isStreaming}
-                onSelect={handleSend}
-                label="Suggested follow-ups:"
+                chatLayout
+                quota={quota}
               />
-          )}
-
-          {/* Empty div serving as an anchor for scrollIntoView */}
-          <div className="h-20" aria-hidden="true" />
-          <div ref={messagesEndRef} />
+            </div>
+          </div>
         </div>
-      </ChatScrollArea>
+      ) : (
+        <>
+          {/* Top area: Message list container (auto-scrolls if long) */}
+          <ChatScrollArea className="bg-white px-4 md:px-6 pt-3 pb-6">
+            <div className="w-full">
+              {isLoadingHistory ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#6F6F6F]">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#6F6F6F]" />
+                  <span className="text-xs">Loading conversation...</span>
+                </div>
+              ) : (
+                messages.map((msg) => {
+                  const isMessageStreaming = isStreaming && msg.id === activeStreamAnswerId;
+                  const isMessagePending = isTyping && msg.id === activeStreamAnswerId;
 
-      {/* Soft fade so messages dissolve before passing under the composer */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-20 bg-gradient-to-t from-white via-white/80 to-transparent"
-        aria-hidden="true"
-      />
+                  return (
+                    <MessageBubble
+                      key={msg.id}
+                      role={msg.role}
+                      content={msg.content}
+                      isStreaming={isMessageStreaming}
+                      isLoading={isMessagePending}
+                      trace={msg.trace}
+                      traceStep={msg.traceStep}
+                      traceCompleted={msg.traceCompleted}
+                      citations={msg.citations}
+                      isError={msg.isError}
+                      onRetry={msg.isError && msg.retryText ? () => handleRetry(msg) : undefined}
+                      renderMarkdown={msg.role === 'ai'}
+                      chatSurface
+                    />
+                  );
+                })
+              )}
 
-      {/* Floating composer: only the input box itself overlaps the message list */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20">
-        <ChatInput onSend={handleSend} disabled={isTyping || isStreaming} chatLayout quota={quota} />
-      </div>
+              {/* Follow-up question suggestions (AI-125) - visible after completed grounded answer */}
+              {messages.length > 1 &&
+                !isTyping &&
+                messages[messages.length - 1]?.role === 'ai' &&
+                !messages[messages.length - 1]?.isError &&
+                Boolean(messages[messages.length - 1]?.suggestedQuestions?.length) && (
+                  <SuggestedQuestions
+                    questions={messages[messages.length - 1].suggestedQuestions!}
+                    disabled={isTyping || isStreaming}
+                    onSelect={handleSend}
+                    label="Suggested follow-ups:"
+                  />
+              )}
+
+              {/* Empty div serving as an anchor for scrollIntoView */}
+              <div className="h-20" aria-hidden="true" />
+              <div ref={messagesEndRef} />
+            </div>
+          </ChatScrollArea>
+
+          {/* Full-width fade from the composer down, no side-edge fade. */}
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-24 bg-gradient-to-t from-white via-white/80 to-transparent"
+            aria-hidden="true"
+          />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20">
+            <ChatInput onSend={handleSend} disabled={isTyping || isStreaming} chatLayout quota={quota} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

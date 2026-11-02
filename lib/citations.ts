@@ -1,5 +1,18 @@
 import type { ChatCitation } from "./sse";
 
+/** Turn provider-relative Google redirects into absolute URLs. */
+export function normalizeCitationUrl(url: string | null | undefined): string | null {
+  const cleaned = url?.trim();
+  if (!cleaned) return null;
+  if (cleaned.startsWith("//")) {
+    return `https:${cleaned}`;
+  }
+  if (cleaned.startsWith("/goto?url=") || cleaned.startsWith("goto?url=")) {
+    return `https://www.google.com/${cleaned.replace(/^\/+/, "")}`;
+  }
+  return cleaned;
+}
+
 /**
  * Stable identity for one citation inside an answer.
  *
