@@ -1,4 +1,28 @@
+import type { ChatMessageCitation } from "@/features/history/types";
 import type { ChatCitation } from "./sse";
+
+/**
+ * Map a persisted history citation to the ChatCitation shape used throughout the UI.
+ *
+ * Preserves backend passage highlights and citation index markers, avoiding
+ * treating snippet previews as PDF highlights when highlights are empty.
+ */
+export function mapHistoryCitation(citation: ChatMessageCitation): ChatCitation {
+  const highlights = Array.isArray(citation.highlights) ? citation.highlights : [];
+  const snippet = citation.snippet?.trim() ? citation.snippet : (highlights[0] ?? citation.snippet ?? "");
+
+  return {
+    index: citation.index,
+    kind: citation.kind === "internet" ? "internet" : "curriculum",
+    title: citation.title,
+    url: normalizeCitationUrl(citation.url),
+    snippet,
+    documentId: citation.document_id ?? null,
+    page: citation.page ?? null,
+    indexes: citation.indexes && citation.indexes.length > 0 ? citation.indexes : [citation.index],
+    highlights,
+  };
+}
 
 /** Turn provider-relative Google redirects into absolute URLs. */
 export function normalizeCitationUrl(url: string | null | undefined): string | null {

@@ -8,8 +8,8 @@ import { SuggestedQuestions } from './suggested-questions';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { getSessionDetail } from '@/features/history/api';
 import { getChatQuota, type ChatQuota } from './api';
-import { mergeCitation, normalizeCitationUrl, uniqueCitations } from '@/lib/citations';
-import type { ChatMessageCitation, ChatMessageItem } from '@/features/history/types';
+import { mapHistoryCitation, mergeCitation, uniqueCitations } from '@/lib/citations';
+import type { ChatMessageItem } from '@/features/history/types';
 import { History, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ChatCitation, ChatProgressStage } from '@/lib/sse';
@@ -86,22 +86,6 @@ const THINKING_STEP_INDEX: Record<ChatProgressStage, number> = {
   reading: 1,
   drafting: 2,
 };
-
-function mapHistoryCitation(citation: ChatMessageCitation): ChatCitation {
-  return {
-    index: citation.index,
-    kind: citation.kind === 'internet' ? 'internet' : 'curriculum',
-    title: citation.title,
-    url: normalizeCitationUrl(citation.url),
-    snippet: citation.snippet ?? '',
-    documentId: citation.document_id ?? null,
-    page: citation.page ?? null,
-    indexes: citation.index ? [citation.index] : [],
-    highlights: Array.isArray(citation.highlights) && citation.highlights.length > 0
-      ? citation.highlights
-      : (citation.snippet ? [citation.snippet] : []),
-  };
-}
 
 export function ChatWindow({
   classId,
