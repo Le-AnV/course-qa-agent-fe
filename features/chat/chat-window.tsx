@@ -29,6 +29,8 @@ type Message = {
   citations?: ChatCitation[];
   suggestedQuestions?: string[];
   isError?: boolean;
+  /** The question to re-send when the user retries a failed answer (AC-02). */
+  retryText?: string;
 };
 
 /**
@@ -501,6 +503,7 @@ export function ChatWindow({
       content: '',
       trace: [...THINKING_STEPS],
       traceStep: 0,
+      retryText: text,
     };
 
     streamContextRef.current = {
@@ -526,6 +529,47 @@ export function ChatWindow({
     // 3. Trigger the streaming API hook
     streamActiveRef.current = true;
     sendMessage(text);
+  };
+
+  // AC-02: re-send the question behind a failed answer, replacing the error
+  // bubble with a fresh pending answer. Older turns are kept untouched.
+  const handleRetry = (failed: Message) => {
+    if (!failed.retryText || isTyping || isStreaming) return;
+
+    const failedIndex = messages.findIndex((message) => message.id === failed.id);
+    const userMessage = failedIndex > 0 ? messages[failedIndex - 1] : undefined;
+    if (!userMessage || userMessage.role !== 'user') return;
+
+    const key = activeSessionId ?? NEW_CHAT_KEY;
+    const baseMessages = messages.slice(0, failedIndex - 1);
+    const retryAnswer: Message = {
+      id: nextMsgId(),
+      role: 'ai',
+      content: '',
+      trace: [...THINKING_STEPS],
+      traceStep: 0,
+      retryText: failed.retryText,
+    };
+
+    streamContextRef.current = {
+      key,
+      sessionId: activeSessionId ?? null,
+      baseMessages,
+      userMessage,
+      answer: retryAnswer,
+      completed: false,
+    };
+    setStreamSnapshot({
+      key,
+      sessionId: activeSessionId ?? null,
+      answerId: retryAnswer.id,
+    });
+    currentKeyRef.current = key;
+
+    setMessages([...baseMessages, userMessage, retryAnswer]);
+    setIsTyping(true);
+    streamActiveRef.current = true;
+    sendMessage(failed.retryText);
   };
 
   const backgroundStream =
@@ -644,6 +688,7 @@ export function ChatWindow({
                     thinkingMs={msg.thinkingMs}
                     citations={msg.citations}
                     isError={msg.isError}
+                    onRetry={msg.isError && msg.retryText ? () => handleRetry(msg) : undefined}
                     renderMarkdown={msg.role === 'ai'}
                     chatSurface
                   />
