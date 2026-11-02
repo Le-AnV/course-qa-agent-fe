@@ -20,6 +20,8 @@ interface MessageBubbleProps {
   trace?: string[] | null;
   traceStep?: number;
   traceCompleted?: boolean;
+  /** Time to the first answer token, kept visible after the answer completes. */
+  thinkingMs?: number;
   citations?: ChatCitation[];
   isError?: boolean;
   /** Re-sends the question that produced this error bubble (AC-02). */
@@ -36,6 +38,7 @@ export function MessageBubble({
   trace,
   traceStep,
   traceCompleted,
+  thinkingMs,
   citations = [],
   isError = false,
   onRetry,
@@ -80,6 +83,13 @@ export function MessageBubble({
             completed={traceCompleted}
             running={!content && (isLoading || isStreaming)}
           />
+        )}
+
+        {/* Keep the response time on the answer after the live trace disappears. */}
+        {!isUser && !isError && typeof thinkingMs === "number" && (
+          <div className="mb-2 text-[11.5px] font-medium text-[#6F6F6F]">
+            Thought for {(thinkingMs / 1000).toFixed(1)}s
+          </div>
         )}
 
         {/* Message content (a waiting answer shows no bubble body yet) */}

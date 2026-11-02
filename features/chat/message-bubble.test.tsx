@@ -48,4 +48,16 @@ describe("MessageBubble error retry", () => {
     expect(html).not.toContain("Thought process");
     expect(html).toContain('aria-label="Retry question"');
   });
+
+  it("keeps the response time visible after the answer completes", () => {
+    const html = render({ content: "Here is the answer.", thinkingMs: 4300 });
+
+    expect(html).toContain("Thought for 4.3s");
+  });
+
+  it("does not show a response time on an error bubble", () => {
+    const html = render({ isError: true, thinkingMs: 4300, onRetry: vi.fn() });
+
+    expect(html).not.toContain("Thought for 4.3s");
+  });
 });

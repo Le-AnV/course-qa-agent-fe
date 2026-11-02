@@ -636,6 +636,7 @@ export function ChatWindow({
                       trace={msg.trace}
                       traceStep={msg.traceStep}
                       traceCompleted={msg.traceCompleted}
+                      thinkingMs={msg.thinkingMs}
                       citations={msg.citations}
                       isError={msg.isError}
                       onRetry={msg.isError && msg.retryText ? () => handleRetry(msg) : undefined}
