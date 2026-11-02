@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { MessageSquarePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AppSelect } from '@/components/ui/app-select';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { studentApi, type StudentClass } from '@/lib/student-api';
-import { addTicketReply, createTicket, getStudentTicket, resolveTicket, type Ticket, type TicketReply } from './api';
+import { addTicketReply, createTicket, getStudentTicket, reopenTicket, resolveTicket, type Ticket, type TicketReply } from './api';
 
 export function AskTeacherButton({
   classId,
@@ -41,10 +42,9 @@ export function AskTeacherButton({
     studentApi.classes()
       .then((result) => {
         if (cancelled) return;
-        setClasses(result);
-        const initial = result.some((item) => item.id === classId)
-          ? classId
-          : result[0]?.id ?? '';
+        const available = result.filter((item) => item.status !== "ARCHIVED");
+        setClasses(available);
+        const initial = available.some((item) => item.id === classId) ? classId : '';
         setSelectedClassId(initial);
       })
       .catch((cause) => {
@@ -107,6 +107,9 @@ export function AskTeacherButton({
     try {
       const saved = await addTicketReply(ticket.id, message);
       setReplies((current) => [...current, saved]);
+      setTicket((current) =>
+        current && current.status === 'ANSWERED' ? { ...current, status: 'OPEN' } : current,
+      );
       setFollowUp('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not add your message.');
@@ -123,6 +126,19 @@ export function AskTeacherButton({
       setTicket(await resolveTicket(ticket.id));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not confirm resolution.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function reopenResolved() {
+    if (!ticket) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      setTicket(await reopenTicket(ticket.id));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not reopen the ticket.');
     } finally {
       setSubmitting(false);
     }
@@ -184,7 +200,8 @@ export function AskTeacherButton({
                   </div>
                 ))}
               </div>
-              {ticket.status === 'OPEN' && <form onSubmit={submitFollowUp} className="space-y-3">
+              {ticket.status === 'ANSWERED' && <p className="text-sm">Your teacher has replied. Ask a follow-up below or confirm that your question is resolved.</p>}
+              {(ticket.status === 'OPEN' || ticket.status === 'ANSWERED') && <form onSubmit={submitFollowUp} className="space-y-3">
                 <label className="block space-y-1.5 text-sm font-medium" htmlFor={`ticket-follow-up-${ticket.id}`}>
                   Add details or a follow-up
                   <textarea
@@ -196,19 +213,26 @@ export function AskTeacherButton({
                     className="w-full rounded-md border border-[#DADADA] bg-white px-3 py-2 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   />
                 </label>
-                {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>Close</Button>
+                  {ticket.status === 'ANSWERED' && (
+                    <Button type="button" variant="outline" disabled={submitting} onClick={confirmResolved}>
+                      {submitting ? 'Saving…' : 'Confirm resolved'}
+                    </Button>
+                  )}
                   <Button type="submit" disabled={submitting || !followUp.trim()}>
                     {submitting ? 'Sending…' : 'Send follow-up'}
                   </Button>
                 </DialogFooter>
               </form>}
-              {ticket.status === 'ANSWERED' && <p className="text-sm">Your teacher has replied. Confirm below if your question is resolved.</p>}
-              {ticket.status === 'EXPIRED' && <p className="text-sm text-[#6F6F6F]">This ticket expired after three days without an answer.</p>}
-              {ticket.status === 'RESOLVED' && <p className="text-sm text-[#6F6F6F]">You confirmed that this ticket is resolved.</p>}
-              {ticket.status === 'ANSWERED' && <Button type="button" disabled={submitting} onClick={confirmResolved}>{submitting ? 'Saving…' : 'Confirm resolved'}</Button>}
-              {error && ticket.status !== 'OPEN' && <p role="alert" className="text-sm text-red-700">{error}</p>}
+              {ticket.status === 'EXPIRED' && <p className="text-sm text-[#6F6F6F]">This ticket expired after seven days without an answer.</p>}
+              {ticket.status === 'RESOLVED' && <>
+                <p className="text-sm text-[#6F6F6F]">This ticket is marked as resolved.</p>
+                <Button type="button" variant="outline" disabled={submitting} onClick={reopenResolved}>
+                  {submitting ? 'Saving…' : 'Reopen ticket'}
+                </Button>
+              </>}
+              {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
             </>
           ) : (
             <form onSubmit={submitTicket} className="space-y-4">
@@ -220,19 +244,25 @@ export function AskTeacherButton({
               </DialogHeader>
               <label className="block space-y-1.5 text-sm font-medium" htmlFor="ticket-class">
                 Class
-                <select
+                <AppSelect
                   id="ticket-class"
                   value={selectedClassId}
-                  onChange={(event) => setSelectedClassId(event.target.value)}
+                  onValueChange={setSelectedClassId}
+                  options={classes.map((item) => ({
+                    value: item.id,
+                    label: `${item.code} · ${item.name}`,
+                  }))}
+                  placeholder={
+                    loadingClasses
+                      ? 'Loading classes…'
+                      : classes.length === 0
+                        ? 'No active classes'
+                        : 'Select a class'
+                  }
                   disabled={loadingClasses || classes.length === 0}
-                  required
-                  className="w-full rounded-md border border-[#DADADA] bg-white px-3 py-2 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                >
-                  {classes.length === 0 && <option value="">{loadingClasses ? 'Loading classes…' : 'No active classes'}</option>}
-                  {classes.map((item) => (
-                    <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
-                  ))}
-                </select>
+                  aria-label="Class"
+                  triggerClassName="w-full"
+                />
               </label>
               <div className="space-y-1.5 text-sm">
                 <p className="font-medium">Original question</p>
