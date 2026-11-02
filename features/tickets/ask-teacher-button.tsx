@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { studentApi, type StudentClass } from '@/lib/student-api';
-import { addTicketReply, createTicket, type Ticket } from './api';
+import { addTicketReply, createTicket, getStudentTicket, resolveTicket, type Ticket, type TicketReply } from './api';
 
 export function AskTeacherButton({
   classId,
@@ -29,7 +29,7 @@ export function AskTeacherButton({
   const [studentQuestion, setStudentQuestion] = React.useState('');
   const [agentAnswer, setAgentAnswer] = React.useState('');
   const [ticket, setTicket] = React.useState<Ticket | null>(null);
-  const [replies, setReplies] = React.useState<string[]>([]);
+  const [replies, setReplies] = React.useState<TicketReply[]>([]);
   const [followUp, setFollowUp] = React.useState('');
   const [loadingClasses, setLoadingClasses] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -58,6 +58,24 @@ export function AskTeacherButton({
     };
   }, [open, classId, ticket]);
 
+  const activeTicketId = ticket?.id;
+  React.useEffect(() => {
+    if (!open || !activeTicketId) return;
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const current = await getStudentTicket(activeTicketId);
+        if (!cancelled) {
+          setTicket(current);
+          setReplies(current.replies);
+        }
+      } catch { /* Keep the last known ticket state visible if refresh is temporarily unavailable. */ }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 8000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [open, activeTicketId]);
+
   async function submitTicket(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedClassId || !studentQuestion.trim()) return;
@@ -67,6 +85,7 @@ export function AskTeacherButton({
       const created = await createTicket({
         class_id: selectedClassId,
         question: studentQuestion.trim(),
+        original_question: question,
         agent_answer: agentAnswer,
       });
       setTicket(created);
@@ -86,11 +105,24 @@ export function AskTeacherButton({
     setSubmitting(true);
     setError(null);
     try {
-      await addTicketReply(ticket.id, message);
-      setReplies((current) => [...current, message]);
+      const saved = await addTicketReply(ticket.id, message);
+      setReplies((current) => [...current, saved]);
       setFollowUp('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not add your message.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function confirmResolved() {
+    if (!ticket) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      setTicket(await resolveTicket(ticket.id));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not confirm resolution.');
     } finally {
       setSubmitting(false);
     }
@@ -145,11 +177,14 @@ export function AskTeacherButton({
                   <p className="whitespace-pre-wrap rounded-md bg-[#F7F7F7] p-2">{ticket.agent_answer}</p>
                 </div>}
                 <p className="font-medium">{ticket.question}</p>
-                {replies.map((message, index) => (
-                  <p key={`${index}-${message}`} className="rounded-md bg-[#F7F7F7] p-2">{message}</p>
+                {replies.map((item) => (
+                  <div key={item.id} className="rounded-md bg-[#F7F7F7] p-2">
+                    <p className="mb-1 text-xs text-[#777]">{item.user_id === ticket.student_id ? 'You' : 'Teacher'}</p>
+                    <p className="whitespace-pre-wrap">{item.message}</p>
+                  </div>
                 ))}
               </div>
-              <form onSubmit={submitFollowUp} className="space-y-3">
+              {ticket.status === 'OPEN' && <form onSubmit={submitFollowUp} className="space-y-3">
                 <label className="block space-y-1.5 text-sm font-medium" htmlFor={`ticket-follow-up-${ticket.id}`}>
                   Add details or a follow-up
                   <textarea
@@ -168,7 +203,12 @@ export function AskTeacherButton({
                     {submitting ? 'Sending…' : 'Send follow-up'}
                   </Button>
                 </DialogFooter>
-              </form>
+              </form>}
+              {ticket.status === 'ANSWERED' && <p className="text-sm">Your teacher has replied. Confirm below if your question is resolved.</p>}
+              {ticket.status === 'EXPIRED' && <p className="text-sm text-[#6F6F6F]">This ticket expired after three days without an answer.</p>}
+              {ticket.status === 'RESOLVED' && <p className="text-sm text-[#6F6F6F]">You confirmed that this ticket is resolved.</p>}
+              {ticket.status === 'ANSWERED' && <Button type="button" disabled={submitting} onClick={confirmResolved}>{submitting ? 'Saving…' : 'Confirm resolved'}</Button>}
+              {error && ticket.status !== 'OPEN' && <p role="alert" className="text-sm text-red-700">{error}</p>}
             </>
           ) : (
             <form onSubmit={submitTicket} className="space-y-4">

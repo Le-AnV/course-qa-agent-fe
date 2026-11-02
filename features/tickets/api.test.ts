@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addTicketReply, createTicket, listTickets } from "./api";
+import { addTicketReply, createTicket, listTickets, resolveTicket } from "./api";
 
 describe("ticket API", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -32,16 +32,27 @@ describe("ticket API", () => {
     });
   });
 
-  it("sends the student's question separately from the selected agent answer", async () => {
+  it("confirms an answered ticket as resolved", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "ticket-1", status: "RESOLVED" })),
+    );
+    await resolveTicket("ticket-1");
+    expect(fetchMock.mock.calls[0][0]).toContain("/api/tickets/ticket-1/resolve");
+    expect(fetchMock.mock.calls[0][1]?.method).toBe("POST");
+  });
+
+  it("sends the original chat question separately from the teacher question and agent answer", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ id: "ticket-1", status: "OPEN" }), { status: 201 }),
     );
     await createTicket({
       class_id: "class-1", question: "Can you explain this condition?",
+      original_question: "What does this condition do?",
       agent_answer: "Only matching items are included.",
     });
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
       class_id: "class-1", question: "Can you explain this condition?",
+      original_question: "What does this condition do?",
       agent_answer: "Only matching items are included.",
     });
   });
@@ -56,6 +67,17 @@ describe("ticket API", () => {
     expect(url.pathname).toBe("/api/tickets");
     expect(Object.fromEntries(url.searchParams)).toEqual({
       class_id: "class-1", status: "ANSWERED", page: "2", page_size: "20",
+    });
+  });
+
+  it("requests the latest unanswered tickets across assigned classes", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ items: [], total: 3, page: 1, page_size: 5 })),
+    );
+    await listTickets({ status: "OPEN", page: 1, page_size: 5 });
+    const url = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      status: "OPEN", page: "1", page_size: "5",
     });
   });
 

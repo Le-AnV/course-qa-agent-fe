@@ -5,8 +5,9 @@ export type Ticket = {
   class_id: string;
   student_id: string;
   question: string;
+  original_question?: string | null;
   agent_answer?: string | null;
-  status: "OPEN" | "ANSWERED" | "RESOLVED";
+  status: "OPEN" | "ANSWERED" | "RESOLVED" | "EXPIRED";
   created_at: string;
 };
 
@@ -18,10 +19,13 @@ export type TicketReply = {
   created_at: string;
 };
 
+export type TicketThread = Ticket & { replies: TicketReply[] };
+
 export type TicketInboxItem = Ticket & {
   student_name: string;
   class_name: string;
   class_code: string;
+  replies: TicketReply[];
 };
 
 export type TicketList = {
@@ -49,6 +53,7 @@ export function listTickets(input: {
 export function createTicket(input: {
   class_id: string;
   question: string;
+  original_question?: string;
   agent_answer?: string;
   details?: string;
 }): Promise<Ticket> {
@@ -63,4 +68,12 @@ export function addTicketReply(ticketId: string, message: string): Promise<Ticke
     method: "POST",
     body: JSON.stringify({ message }),
   });
+}
+
+export function getStudentTicket(ticketId: string): Promise<TicketThread> {
+  return apiFetch<TicketThread>(`/api/tickets/${ticketId}`);
+}
+
+export function resolveTicket(ticketId: string): Promise<Ticket> {
+  return apiFetch<Ticket>(`/api/tickets/${ticketId}/resolve`, { method: "POST" });
 }

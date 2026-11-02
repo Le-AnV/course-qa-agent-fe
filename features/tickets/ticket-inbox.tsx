@@ -5,12 +5,13 @@ import { TicketsInboxLayout } from "@/components/shared/TicketsInboxLayout";
 import { Button } from "@/components/ui/button";
 import { studentApi, type StudentClass } from "@/lib/student-api";
 import { cn } from "@/lib/utils";
-import { listTickets, type Ticket, type TicketList } from "./api";
+import { addTicketReply, listTickets, type Ticket, type TicketList } from "./api";
 
 const FILTERS = [
   { id: "OPEN", label: "Open" },
   { id: "ANSWERED", label: "Answered" },
   { id: "RESOLVED", label: "Resolved" },
+  { id: "EXPIRED", label: "Expired" },
   { id: "all", label: "All" },
 ];
 
@@ -25,7 +26,14 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
   const [classError, setClassError] = React.useState<string | null>(null);
   const [retry, setRetry] = React.useState(0);
   const [search, setSearch] = React.useState("");
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [reply, setReply] = React.useState("");
+  const [replyBusy, setReplyBusy] = React.useState(false);
+  const [replyError, setReplyError] = React.useState<string | null>(null);
+  const [selectedId, setSelectedId] = React.useState<string | null>(() =>
+    typeof window === "undefined"
+      ? null
+      : new URLSearchParams(window.location.search).get("ticket_id"),
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -124,7 +132,14 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
         leftListContent={leftContent}
         rightDetailContent={selected ? (
           <article className="space-y-4 p-4 md:p-6">
-            <h3 className="break-words text-base font-bold text-[#111111]">{selected.question}</h3>
+            {selected.original_question && <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-[#111111]">Student&apos;s original question</h3>
+              <p className="whitespace-pre-wrap break-words rounded-md bg-[#F7F7F7] p-3 text-sm">{selected.original_question}</p>
+            </section>}
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-[#111111]">Question for teacher</h3>
+              <p className="whitespace-pre-wrap break-words text-sm">{selected.question}</p>
+            </section>
             {selected.agent_answer && <div className="space-y-2">
               <p className="text-sm font-medium">Agent answer</p>
               <blockquote className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-[#F7F7F7] p-3 text-sm">{selected.agent_answer}</blockquote>
@@ -136,6 +151,35 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
               <dt>Status</dt><dd>{FILTERS.find((item) => item.id === selected.status)?.label}</dd>
               <dt>Created</dt><dd><time dateTime={selected.created_at}>{new Date(selected.created_at).toLocaleString()}</time></dd>
             </dl>
+            <section className="space-y-3 border-t border-[#E5E5E5] pt-4">
+              <h3 className="text-sm font-semibold">Conversation</h3>
+              {selected.replies.map((item) => (
+                <div key={item.id} className="rounded-md bg-[#F7F7F7] p-3 text-sm">
+                  <p className="mb-1 text-xs text-[#6F6F6F]">{item.user_id === selected.student_id ? "Student" : "Teacher"}</p>
+                  <p className="whitespace-pre-wrap">{item.message}</p>
+                </div>
+              ))}
+              {selected.status === "OPEN" && <form className="space-y-2" onSubmit={async (event) => {
+                event.preventDefault();
+                if (!reply.trim()) return;
+                setReplyBusy(true); setReplyError(null);
+                try {
+                  await addTicketReply(selected.id, reply.trim());
+                  setReply("");
+                  startRequest(); setRetry((value) => value + 1);
+                } catch (cause) {
+                  setReplyError(cause instanceof Error ? cause.message : "Could not send your answer.");
+                } finally { setReplyBusy(false); }
+              }}>
+                <label className="block space-y-1 text-sm font-medium" htmlFor="ticket-teacher-reply">Reply to student
+                  <textarea id="ticket-teacher-reply" rows={4} maxLength={10000} value={reply}
+                    onChange={(event) => setReply(event.target.value)}
+                    className="w-full rounded-md border border-[#DADADA] px-3 py-2 font-normal" />
+                </label>
+                {replyError && <p role="alert" className="text-sm text-red-700">{replyError}</p>}
+                <Button type="submit" disabled={replyBusy || !reply.trim()}>{replyBusy ? "Sending…" : "Send answer"}</Button>
+              </form>}
+            </section>
           </article>
         ) : <p className="p-6 text-sm text-[#6F6F6F]">Select a ticket from the list to read it.</p>}
       />
