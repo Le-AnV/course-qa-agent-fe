@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { AuthGuard } from "@/components/ui/auth-guard";
 import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar } from "@/components/shared/Sidebar";
@@ -22,13 +23,16 @@ function ShellContent({ children }: { children: React.ReactNode }) {
 }
 
 export function AppLayoutShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isClassWorkspace = /^\/(student|teacher)\/class\//.test(pathname ?? "");
+
   return (
     <AuthGuard>
       {({ role }) => (
         <ProfileProvider>
           {/* Column below lg so the mobile header sits above main in flow;
               row from lg up, where the rail takes a fixed width. */}
-          <div className="flex h-screen flex-col bg-[#F5F5F5] overflow-hidden lg:flex-row">
+          <div className="flex h-screen flex-col bg-[#F4F5F8] overflow-hidden lg:flex-row">
             {/* Below lg the rail is hidden, so MobileNav owns the header. */}
             <MobileNav role={role} />
 
@@ -41,7 +45,13 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
                 <select> at the trigger's offset, and without a positioned
                 ancestor here it escapes every inner scroller and stretches the
                 document, giving the whole app a second scrollbar. */}
-            <main className="relative flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto bg-[#F5F5F5] [scrollbar-gutter:stable]">
+            <main
+              className={`relative flex-1 flex flex-col min-w-0 min-h-0 bg-[#F4F5F8] ${
+                isClassWorkspace
+                  ? "overflow-hidden"
+                  : "overflow-y-auto [scrollbar-gutter:stable]"
+              }`}
+            >
               <ShellContent>{children}</ShellContent>
             </main>
             <Toaster position="top-right" closeButton />

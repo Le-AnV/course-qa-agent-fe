@@ -2,12 +2,14 @@
 
 import * as React from "react";
 import { Search } from "lucide-react";
+import { ClassPageHeader } from "@/components/shared/ClassPageHeader";
 import { cn } from "@/lib/utils";
 
 interface TicketsInboxLayoutProps {
   title: string;
   subtitle: string;
   titleBadge?: React.ReactNode;
+  headerActions?: React.ReactNode;
   searchValue: string;
   searchPlaceholder?: string;
   onSearchChange: (val: string) => void;
@@ -22,6 +24,7 @@ export function TicketsInboxLayout({
   title,
   subtitle,
   titleBadge,
+  headerActions,
   searchValue,
   searchPlaceholder = "Search tickets",
   onSearchChange,
@@ -33,15 +36,14 @@ export function TicketsInboxLayout({
 }: TicketsInboxLayoutProps) {
   return (
     <div className="flex flex-col h-full space-y-5">
-      <div>
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl font-bold text-[#111111]">{title}</h2>
-          {titleBadge}
-        </div>
-        <p className="text-[13px] text-[#5A5A5A] mt-0.5">{subtitle}</p>
-      </div>
-      
-      <div className="flex-1 bg-white border border-[#DADADA] rounded-lg overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+      <ClassPageHeader
+        title={title}
+        subtitle={subtitle}
+        badge={titleBadge}
+        actions={headerActions}
+      />
+
+      <div className="flex-1 bg-white border border-[#DADADA] rounded-lg overflow-hidden flex flex-col md:flex-row min-h-[520px]">
         {/* Left Column */}
         <div className="w-full md:w-[340px] lg:w-[380px] shrink-0 border-r border-[#F0F0F0] flex flex-col bg-white">
           <div className="p-3 border-b border-[#F0F0F0] space-y-2">

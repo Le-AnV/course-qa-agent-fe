@@ -46,6 +46,11 @@ describe("MarkdownContent", () => {
     expect(html).toContain('rel="noopener noreferrer"');
   });
 
+  it("normalizes provider-relative Google redirects", () => {
+    const html = render("[source](/goto?url=CAESabc)");
+    expect(html).toContain('href="https://www.google.com/goto?url=CAESabc"');
+  });
+
   it("drops unsafe URLs instead of emitting them", () => {
     const html = render("[click](javascript:alert(1))");
     expect(html).not.toContain("javascript:");

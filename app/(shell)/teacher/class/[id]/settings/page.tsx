@@ -14,6 +14,9 @@ import {
   type TemplateDocument,
 } from "@/lib/student-api";
 import { formatFileSize } from "@/lib/documents";
+import { ClassPageHeader } from "@/components/shared/ClassPageHeader";
+import { FileTypeIcon } from "@/components/shared/FileTypeIcon";
+import { MarkdownEditor } from "@/components/shared/MarkdownEditor";
 import { Modal } from "@/components/shared/Modal";
 import { AppSelect } from "@/components/ui/app-select";
 import { peekClassDetail } from "@/lib/class-cache";
@@ -46,35 +49,6 @@ function ReadOnlyField({
 const SELECT_CLASS =
   "w-full rounded-lg border border-[#DADADA] bg-white px-3 py-2 text-[13px] text-[#111111] outline-none focus:border-[#111111]";
 const INPUT_CLASS = SELECT_CLASS;
-
-function AutoGrowTextarea({
-  value,
-  maxHeight = 320,
-  className,
-  ...props
-}: Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "value"> & {
-  value: string;
-  maxHeight?: number;
-}) {
-  const ref = React.useRef<HTMLTextAreaElement>(null);
-
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
-  }, [value, maxHeight]);
-
-  return (
-    <textarea
-      ref={ref}
-      rows={2}
-      value={value}
-      {...props}
-      className={`${INPUT_CLASS} min-h-[76px] resize-none overflow-y-auto ${className ?? ""}`}
-    />
-  );
-}
 
 // Capacity is admin-owned and shown read-only, so it is not part of the draft.
 type Draft = Omit<ClassConfig, "class_id" | "capacity">;
@@ -373,12 +347,20 @@ export default function ClassSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-[#111111]">Course Settings</h2>
-        <p className="mt-0.5 text-[13px] text-[#5A5A5A]">
-          Class information and the configuration that guides how this class is taught.
-        </p>
-      </div>
+      <ClassPageHeader
+        title="Course Settings"
+        subtitle="Class information and the configuration that guides how this class is taught."
+        actions={
+          <button
+            type="button"
+            onClick={() => void openCopyPicker()}
+            className="flex items-center gap-1.5 rounded-md border border-[var(--brand-line)] bg-white/80 px-3 py-1.5 text-[12.5px] font-semibold text-[var(--brand-ink)] transition-colors hover:bg-white"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Copy from another class
+          </button>
+        }
+      />
 
       <div className="rounded-lg border border-[#DADADA] bg-white p-6">
         <h3 className="mb-4 text-[14px] font-bold text-[#111111]">General</h3>
@@ -430,9 +412,9 @@ export default function ClassSettingsPage() {
               are hidden.
             </p>
             <p className="mt-1 max-w-lg text-[12px] text-[#6F6F6F]">
-              Markdown is supported: <strong>bold</strong>, <em>italic</em>, - bullet lists, 1.
-              numbered lists, [links](https://example.com), and blank lines. Line breaks are kept
-              when the page is displayed.
+              Select text and use the toolbar for headings, <strong>bold</strong>,{" "}
+              <em>italic</em>, lists and links — no need to type Markdown symbols. Preview shows
+              exactly what students see.
             </p>
           </div>
 
@@ -441,14 +423,14 @@ export default function ClassSettingsPage() {
               <label htmlFor="info-description" className="mb-1.5 block text-[13px] font-medium text-[#111111]">
                 Description
               </label>
-              <AutoGrowTextarea
+              <MarkdownEditor
                 id="info-description"
                 maxLength={2000}
                 maxHeight={360}
                 placeholder="What this course covers, prerequisites, how each session runs…"
                 value={infoDraft.description}
-                onChange={(e) => {
-                  setInfoDraft({ ...infoDraft, description: e.target.value });
+                onChange={(value) => {
+                  setInfoDraft({ ...infoDraft, description: value });
                   setInfoSaved(false);
                 }}
               />
@@ -494,14 +476,14 @@ export default function ClassSettingsPage() {
               <label htmlFor="info-schedule" className="mb-1.5 block text-[13px] font-medium text-[#111111]">
                 Schedule
               </label>
-              <AutoGrowTextarea
+              <MarkdownEditor
                 id="info-schedule"
                 maxLength={500}
                 maxHeight={260}
-                placeholder={"**Lecture:** Tue & Thu 19:00-21:00\n**Lab:** Fri 13:30-16:00\n**Location:** Online via Google Meet"}
+                placeholder={"Lecture: Tue & Thu 19:00-21:00\nLab: Fri 13:30-16:00\nLocation: Online via Google Meet"}
                 value={infoDraft.schedule_note}
-                onChange={(e) => {
-                  setInfoDraft({ ...infoDraft, schedule_note: e.target.value });
+                onChange={(value) => {
+                  setInfoDraft({ ...infoDraft, schedule_note: value });
                   setInfoSaved(false);
                 }}
               />
@@ -511,14 +493,14 @@ export default function ClassSettingsPage() {
               <label htmlFor="info-note" className="mb-1.5 block text-[13px] font-medium text-[#111111]">
                 More information
               </label>
-              <AutoGrowTextarea
+              <MarkdownEditor
                 id="info-note"
                 maxLength={2000}
                 maxHeight={360}
                 placeholder="Group registration, report schedule, class rules…"
                 value={infoDraft.note}
-                onChange={(e) => {
-                  setInfoDraft({ ...infoDraft, note: e.target.value });
+                onChange={(value) => {
+                  setInfoDraft({ ...infoDraft, note: value });
                   setInfoSaved(false);
                 }}
               />
@@ -557,22 +539,12 @@ export default function ClassSettingsPage() {
       ) : !error && draft && config ? (
         <Reveal>
         <form onSubmit={(e) => void handleSave(e)} className="rounded-lg border border-[#DADADA] bg-white p-6">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-[14px] font-bold text-[#111111]">Class configuration</h3>
-              <p className="mt-0.5 max-w-lg text-[12.5px] text-[#5A5A5A]">
-                Delivery mode, language, answer rules and duration for this class. Copy them
-                onto another class to reuse the same setup. Student capacity is managed by admin.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void openCopyPicker()}
-              className="flex items-center gap-1.5 rounded-md border border-[#DADADA] bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[#111111] transition-colors hover:bg-[#F7F7F7]"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Copy from another class
-            </button>
+          <div className="mb-4">
+            <h3 className="text-[14px] font-bold text-[#111111]">Class configuration</h3>
+            <p className="mt-0.5 max-w-lg text-[12.5px] text-[#5A5A5A]">
+              Delivery mode, language, answer rules and duration for this class. Copy them
+              onto another class to reuse the same setup. Student capacity is managed by admin.
+            </p>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
@@ -808,12 +780,18 @@ export default function ClassSettingsPage() {
                             checked={selectedDocs.includes(doc.id)}
                             onChange={() => toggleDocument(doc.id)}
                           />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[13px] text-[#111111]">
-                              {doc.file_name}
-                            </span>
-                            <span className="block text-[11.5px] text-[#6F6F6F]">
-                              {doc.file_type} - {formatFileSize(doc.size_bytes)}
+                          <span className="flex min-w-0 flex-1 items-start gap-2">
+                            <FileTypeIcon
+                              fileName={doc.file_name}
+                              className="mt-0.5 h-3.5 w-3.5 text-[var(--brand-ink)]"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[13px] text-[#111111]">
+                                {doc.file_name}
+                              </span>
+                              <span className="block text-[11.5px] text-[#6F6F6F]">
+                                {doc.file_type} - {formatFileSize(doc.size_bytes)}
+                              </span>
                             </span>
                           </span>
                         </label>

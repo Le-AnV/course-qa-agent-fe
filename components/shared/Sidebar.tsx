@@ -23,6 +23,7 @@ import { useAuth } from "@/components/ui/auth-guard";
 import { useProfile } from "@/features/profile/profile-context";
 import { initialsFor, roleBadgeLabel } from "@/features/profile/validation";
 import { peekClasses } from "@/lib/class-cache";
+import { classSectionFromPathname } from "@/lib/class-route";
 import { accentFor, studentApi } from "@/lib/student-api";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
@@ -88,6 +89,7 @@ export function SidebarNavBody({
   const myClasses = useSidebarClasses(role);
 
   const basePath = role === "admin" ? "/admin" : role === "student" ? "/student" : "/teacher";
+  const classSection = classSectionFromPathname(pathname, basePath);
 
   // Settings page exists only for admin/teacher shells — there is no
   // student/settings route, so hide the link for students instead of
@@ -238,7 +240,7 @@ export function SidebarNavBody({
                       return (
                         <Link
                           key={cls.id}
-                          href={`${basePath}/class/${cls.id}/overview`}
+                          href={`${basePath}/class/${cls.id}/${classSection}`}
                           title={cls.title}
                           className={cn(
                             "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[12.5px] font-medium transition-colors",

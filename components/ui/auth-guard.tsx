@@ -10,6 +10,7 @@ import {
   type Role,
 } from "./nav-config";
 import { clearClassCache } from "@/lib/class-cache";
+import { clearChatSessionCache } from "@/lib/chat-session-cache";
 
 export type AuthSession = {
   role: Role;
@@ -95,6 +96,7 @@ export function useAuth():
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(AUTH_ROLE_KEY);
     clearClassCache();
+    clearChatSessionCache();
     // Clear cookies for Next.js Middleware
     document.cookie = `${AUTH_ROLE_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
     document.cookie = `${AUTH_TOKEN_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;

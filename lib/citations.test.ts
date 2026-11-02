@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { citationKey, formatInlineCitations, mergeCitation, uniqueCitations } from "./citations";
+import {
+  citationKey,
+  formatInlineCitations,
+  mergeCitation,
+  normalizeCitationUrl,
+  uniqueCitations,
+} from "./citations";
 import type { ChatCitation } from "./sse";
 
 function citation(overrides: Partial<ChatCitation> = {}): ChatCitation {
@@ -19,6 +25,21 @@ function citation(overrides: Partial<ChatCitation> = {}): ChatCitation {
 }
 
 describe("citation helpers", () => {
+  it("makes provider-relative Google redirects absolute", () => {
+    const token = "/goto?url=CAESabc";
+    expect(normalizeCitationUrl(token)).toBe("https://www.google.com/goto?url=CAESabc");
+    expect(normalizeCitationUrl("goto?url=CAESabc")).toBe(
+      "https://www.google.com/goto?url=CAESabc",
+    );
+    expect(normalizeCitationUrl("//www.google.com/goto?url=CAESabc")).toBe(
+      "https://www.google.com/goto?url=CAESabc",
+    );
+    expect(normalizeCitationUrl("https://example.com/article")).toBe(
+      "https://example.com/article",
+    );
+    expect(normalizeCitationUrl(null)).toBeNull();
+  });
+
   it("keeps the same document and page distinct from another source with the same index", () => {
     const quiz = citation();
     const logistics = citation({ title: "Logistics.pdf", documentId: "doc-logistics" });

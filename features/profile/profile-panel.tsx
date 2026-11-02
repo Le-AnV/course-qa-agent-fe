@@ -42,7 +42,7 @@ const ICON_ACTION_CLASSES =
 /**
  * Shared profile surface for every authenticated role (AI-29).
  * Identity column on the left, the rename task as the page's hero on the
- * right, security a deliberate step below — the product's own blue-and-slate
+ * right, security a deliberate step below — the product's own teal-and-slate
  * grammar, not a stock settings form.
  */
 export function ProfilePanel({ signOut }: { signOut: () => void }) {

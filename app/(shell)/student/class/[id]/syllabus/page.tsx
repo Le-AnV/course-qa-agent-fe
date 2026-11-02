@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Search, FileText, BotMessageSquare } from "lucide-react";
+import { Search, BotMessageSquare } from "lucide-react";
 import { useParams } from "next/navigation";
+import { FileTypeIcon, fileTypeTone } from "@/components/shared/FileTypeIcon";
 import { SyllabusRoadmap } from "@/components/shared/SyllabusTable";
 import { studentApi, type ClassDocument } from "@/lib/student-api";
 
@@ -53,26 +54,29 @@ export default function StudentClassSyllabusPage() {
     <div>
       <SyllabusRoadmap classId={id} />
 
-      <section className="mt-8" aria-labelledby="student-materials-heading">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
-          <div>
-            <h3 id="student-materials-heading" className="text-[15px] font-bold text-[#111111]">
-              Materials
-            </h3>
-            <p className="text-[13px] text-[#5A5A5A] mt-0.5">
-              Approved learning materials for this class.
-            </p>
-          </div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#5A5A5A]" />
-              <input
-                type="text"
-                placeholder="Search materials"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-56 bg-slate-50 border border-[#DADADA] rounded pl-8 pr-3 py-1.5 text-[12.5px] outline-none focus:border-[#111111]"
-              />
+      <section className="mt-8 space-y-3" aria-labelledby="student-materials-heading">
+        <div className="rounded-lg border border-[#DADADA] bg-white px-4 py-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 id="student-materials-heading" className="text-[15px] font-bold text-[#111111]">
+                Materials
+              </h3>
+              <p className="text-[13px] text-[#5A5A5A] mt-0.5">
+                Approved learning materials for this class.
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#5A5A5A]" />
+                <input
+                  type="text"
+                  placeholder="Search materials"
+                  aria-label="Search materials by file name"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-56 bg-white border border-[#DADADA] rounded pl-8 pr-3 py-1.5 text-[12.5px] outline-none focus:border-[#111111]"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -93,7 +97,7 @@ export default function StudentClassSyllabusPage() {
             {q ? `No materials match "${search.trim()}".` : "No approved materials yet — your trainer hasn't published any."}
           </p>
         ) : (
-          <div className="bg-white border border-[#DADADA] rounded-lg overflow-hidden">
+          <div className="bg-white border border-[#DADADA] rounded-lg overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-white border-b border-[#DADADA] text-[12px] font-medium text-[#6F6F6F]">
@@ -109,12 +113,16 @@ export default function StudentClassSyllabusPage() {
                   <tr key={d.id} className="hover:bg-[#FAFAFA] transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        <FileText className="w-4 h-4 text-[#C4644C] shrink-0" />
+                        <span
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border ${fileTypeTone(d.file_name)}`}
+                        >
+                          <FileTypeIcon fileName={d.file_name} className="h-5 w-5" />
+                        </span>
                         <span className="text-[13.5px] font-medium text-[#111111] truncate">{d.file_name}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className="uppercase text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{d.file_type}</span>
+                      <span className="uppercase text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--brand-soft)] text-[var(--brand-ink)]">{d.file_type}</span>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell text-[12.5px] text-[#5A5A5A]">{formatSize(d.size_bytes)}</td>
                     <td className="px-4 py-3 hidden md:table-cell text-[12.5px] text-[#5A5A5A]">{formatDate(d.created_at)}</td>

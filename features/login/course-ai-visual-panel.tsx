@@ -40,8 +40,7 @@ export function CourseAiVisualPanel() {
       style={{
         paddingLeft: "clamp(32px, 4.5vw, 80px)",
         paddingRight: "clamp(32px, 4.5vw, 80px)",
-        background:
-          "linear-gradient(110deg, #F7F7F7 0%, #F7F7F7 60%, #FFFFFF 100%)",
+        background: "var(--brand-soft)",
       }}
     >
       {/* ============================================================== */}

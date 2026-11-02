@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { AppSelect } from "@/components/ui/app-select";
 import { AUTH_TOKEN_KEY } from "@/components/ui/nav-config";
+import { FileTypeIcon, fileTypeTone } from "@/components/shared/FileTypeIcon";
 import { Reveal, SkeletonLine } from "@/components/shared/page-skeleton";
 import {
   Dialog,
@@ -397,63 +398,65 @@ export function ClassMaterials({
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <section className="mt-8" aria-labelledby="class-materials-heading">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h3 id="class-materials-heading" className="text-[15px] font-bold text-[#111111]">
-            Materials
-          </h3>
-          <p className="mt-0.5 text-[13px] text-[#5A5A5A]">
-            Files uploaded for {className ?? "this class"} — indexed into the knowledge base once approved.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search materials"
-              value={filters.search}
-              onChange={(e) => handleFiltersChange({ ...filters, search: e.target.value })}
-              aria-label="Search materials by file name"
-              className="w-52 rounded border border-[#DADADA] bg-white py-1.5 pl-2.5 pr-3 text-[12.5px] text-[#111111] outline-none focus:border-[#111111]"
-            />
+    <section className="mt-8 space-y-3" aria-labelledby="class-materials-heading">
+      <div className="rounded-lg border border-[#DADADA] bg-white px-4 py-3.5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 id="class-materials-heading" className="text-[15px] font-bold text-[#111111]">
+              Materials
+            </h3>
+            <p className="mt-0.5 text-[13px] text-[#5A5A5A]">
+              Files uploaded for {className ?? "this class"} — indexed into the knowledge base once approved.
+            </p>
           </div>
-          <AppSelect
-            value={filters.fileType}
-            onValueChange={(fileType) => handleFiltersChange({ ...filters, fileType })}
-            aria-label="Filter by file type"
-            options={[
-              { value: "all", label: "All types" },
-              ...ACCEPTED_TYPES.map((t) => ({ value: t.extension, label: t.extension })),
-            ]}
-            size="sm"
-            triggerClassName="w-auto"
-          />
-          <AppSelect
-            value={filters.status}
-            onValueChange={(status) => handleFiltersChange({ ...filters, status })}
-            aria-label="Filter by status"
-            options={[
-              { value: "all", label: "All statuses" },
-              { value: "pending", label: "Pending approval" },
-              { value: "processing", label: "Processing" },
-              { value: "indexed", label: "Indexed" },
-              { value: "rejected", label: "Rejected" },
-              { value: "failed", label: "Failed" },
-              { value: "replaced", label: "Replaced" },
-            ]}
-            size="sm"
-            triggerClassName="w-auto"
-          />
-          <button
-            type="button"
-            onClick={() => setUploadOpen((open) => !open)}
-            aria-expanded={uploadOpen}
-            className="flex items-center gap-1.5 rounded border border-[#CFCFCF] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7]"
-          >
-            <Upload className="h-4 w-4" />
-            {uploadOpen ? "Close upload" : "Import materials"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-full sm:w-auto">
+              <input
+                type="text"
+                placeholder="Search materials"
+                value={filters.search}
+                onChange={(e) => handleFiltersChange({ ...filters, search: e.target.value })}
+                aria-label="Search materials by file name"
+                className="w-full rounded border border-[#DADADA] bg-white py-1.5 pl-2.5 pr-3 text-[12.5px] text-[#111111] outline-none focus:border-[#111111] sm:w-52"
+              />
+            </div>
+            <AppSelect
+              value={filters.fileType}
+              onValueChange={(fileType) => handleFiltersChange({ ...filters, fileType })}
+              aria-label="Filter by file type"
+              options={[
+                { value: "all", label: "All types" },
+                ...ACCEPTED_TYPES.map((t) => ({ value: t.extension, label: t.extension })),
+              ]}
+              size="sm"
+              triggerClassName="w-auto"
+            />
+            <AppSelect
+              value={filters.status}
+              onValueChange={(status) => handleFiltersChange({ ...filters, status })}
+              aria-label="Filter by status"
+              options={[
+                { value: "all", label: "All statuses" },
+                { value: "pending", label: "Pending approval" },
+                { value: "processing", label: "Processing" },
+                { value: "indexed", label: "Indexed" },
+                { value: "rejected", label: "Rejected" },
+                { value: "failed", label: "Failed" },
+                { value: "replaced", label: "Replaced" },
+              ]}
+              size="sm"
+              triggerClassName="w-auto"
+            />
+            <button
+              type="button"
+              onClick={() => setUploadOpen((open) => !open)}
+              aria-expanded={uploadOpen}
+              className="flex items-center gap-1.5 rounded border border-[#CFCFCF] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7]"
+            >
+              <Upload className="h-4 w-4" />
+              {uploadOpen ? "Close upload" : "Import materials"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -511,8 +514,11 @@ export function ClassMaterials({
                   key={`${f.name}-${f.size}`}
                   className="flex items-center justify-between gap-2 rounded border border-[#DADADA] px-3 py-1.5"
                 >
-                  <span className="truncate text-[12.5px] text-[#5A5A5A]">
-                    {f.name} ({formatFileSize(f.size)})
+                  <span className="flex min-w-0 items-center gap-2 truncate text-[12.5px] text-[#5A5A5A]">
+                    <FileTypeIcon fileName={f.name} className="h-3.5 w-3.5 text-[var(--brand-ink)]" />
+                    <span className="truncate">
+                      {f.name} ({formatFileSize(f.size)})
+                    </span>
                   </span>
                   <button
                     type="button"
@@ -605,7 +611,7 @@ export function ClassMaterials({
           No materials yet — upload the first file for this class.
         </p>
       ) : (
-        <Reveal className="overflow-hidden rounded-lg border border-[#DADADA] bg-white">
+        <Reveal className="overflow-x-auto rounded-lg border border-[#DADADA] bg-white">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-[#DADADA] bg-white text-[12px] font-medium text-[#6F6F6F]">
@@ -622,14 +628,18 @@ export function ClassMaterials({
                 <tr key={d.id} className="transition-colors hover:bg-[#FAFAFA]">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <FileText className="h-4 w-4 shrink-0 text-[#6F6F6F]" />
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border ${fileTypeTone(d.fileName)}`}
+                      >
+                        <FileTypeIcon fileName={d.fileName} className="h-5 w-5" />
+                      </span>
                       <span className="truncate text-[13.5px] font-medium text-[#111111]">
                         {d.fileName}
                       </span>
                     </div>
                   </td>
                   <td className="hidden px-4 py-3 sm:table-cell">
-                    <span className="rounded bg-[#F7F7F7] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[#5A5A5A]">
+                    <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[var(--brand-ink)]">
                       {d.fileType}
                     </span>
                   </td>
