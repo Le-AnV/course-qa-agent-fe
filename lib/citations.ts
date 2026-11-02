@@ -9,7 +9,7 @@ import type { ChatCitation } from "./sse";
  */
 export function mapHistoryCitation(citation: ChatMessageCitation): ChatCitation {
   const highlights = Array.isArray(citation.highlights) ? citation.highlights : [];
-  const snippet = citation.snippet?.trim() ? citation.snippet : (highlights[0] ?? citation.snippet ?? "");
+  const snippet = (citation.snippet && citation.snippet.trim()) || citation.highlights?.[0] || "";
 
   return {
     index: citation.index,
@@ -19,7 +19,7 @@ export function mapHistoryCitation(citation: ChatMessageCitation): ChatCitation 
     snippet,
     documentId: citation.document_id ?? null,
     page: citation.page ?? null,
-    indexes: citation.indexes && citation.indexes.length > 0 ? citation.indexes : [citation.index],
+    indexes: citation.indexes?.length ? citation.indexes : [citation.index],
     highlights,
   };
 }

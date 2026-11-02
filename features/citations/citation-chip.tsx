@@ -9,6 +9,7 @@ import { normalizeCitationUrl } from '@/lib/citations';
 import { cn } from '@/lib/utils';
 import type { ChatCitation } from '@/lib/sse';
 import { useRouter, usePathname, useParams } from 'next/navigation';
+import { buildUniversalJumpUrl } from './url-helper';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
@@ -221,7 +222,13 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
   const handleActionClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     close();
-    if (url) {
+    if (!isCurriculum && url) {
+      let targetUrl = url;
+      if (!url.includes('#:~:text=') && !url.includes('google.com/goto')) {
+        targetUrl = buildUniversalJumpUrl(url, citation.snippet) || url;
+      }
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    } else if (url) {
       window.open(url, '_blank', 'noopener,noreferrer');
     } else if (isSpreadsheetOrSyllabus && syllabusPath) {
       router.push(syllabusPath);
