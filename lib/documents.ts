@@ -162,9 +162,11 @@ export async function fetchDocuments(
 export async function approveDocument(
   auth: AuthHeaders,
   documentId: string,
+  options?: { force?: boolean },
 ): Promise<DocumentItem> {
+  const query = options?.force ? "?force=true" : "";
   const res = await fetch(
-    `${API_URL}/api/documents/${encodeURIComponent(documentId)}/approve`,
+    `${API_URL}/api/documents/${encodeURIComponent(documentId)}/approve${query}`,
     { method: "POST", headers: headers(auth) },
   );
   if (!res.ok) await throwForStatus(res);
@@ -188,9 +190,11 @@ export async function rejectDocument(
 export async function retryDocument(
   auth: AuthHeaders,
   documentId: string,
+  options?: { force?: boolean },
 ): Promise<DocumentItem> {
+  const query = options?.force ? "?force=true" : "";
   const res = await fetch(
-    `${API_URL}/api/documents/${encodeURIComponent(documentId)}/retry`,
+    `${API_URL}/api/documents/${encodeURIComponent(documentId)}/retry${query}`,
     { method: "POST", headers: headers(auth) },
   );
   if (!res.ok) await throwForStatus(res);
@@ -218,11 +222,13 @@ export async function uploadDocuments(
   auth: AuthHeaders,
   classId: string,
   files: File[],
+  options?: { force?: boolean },
 ): Promise<UploadOutcome[]> {
+  const query = options?.force ? "?force=true" : "";
   const form = new FormData();
   form.set("class_id", classId);
   for (const f of files) form.append("files", f);
-  const res = await fetch(`${API_URL}/api/documents/`, {
+  const res = await fetch(`${API_URL}/api/documents/${query}`, {
     method: "POST",
     headers: headers(auth),
     body: form,
@@ -306,6 +312,7 @@ export function acceptedExtensions(): string[] {
 }
 
 /** Upload AC-01/AC-07 client validation (pure, unit-tested). */
+/** Upload AC-01/AC-07 client validation (pure, unit-tested). */
 export function validationError(file: Pick<File, "name" | "size">): string | null {
   const dot = file.name.lastIndexOf(".");
   const ext = dot === -1 ? "" : file.name.slice(dot).toLowerCase();
@@ -316,4 +323,24 @@ export function validationError(file: Pick<File, "name" | "size">): string | nul
     return `${file.name}: exceeds 100MB per file.`;
   }
   return null;
+}
+
+export function isRelevanceWarning(d: Pick<DocumentItem, "status" | "failureReason">): boolean {
+  if (d.status !== "failed" || !d.failureReason) return false;
+  const reason = d.failureReason.toLowerCase();
+  return (
+    d.failureReason.startsWith("Course relevance:") ||
+    reason.includes("relevance") ||
+    reason.includes("not relevant") ||
+    reason.includes("does not match course") ||
+    reason.includes("unrelated")
+  );
+}
+
+export function formatRelevanceReason(reason: string | null): string {
+  if (!reason) return "Document content does not match course subject.";
+  if (reason.startsWith("Course relevance:")) {
+    return reason.slice("Course relevance:".length).trim();
+  }
+  return reason;
 }
