@@ -1,17 +1,16 @@
-/* Education identity accent — the product's one brand colour.
-   #77AAFF is light, so it owns fills that sit under ink text, never text
-   itself: text, links and wayfinding use the darkened members of the ramp
-   (#1E56C8 = 6.5:1 on white). Layered on top of globals.css, which is not
-   edited (encoding). */
+/* Education identity accent — one deep navy ramp.
+   #1F3A5F is the primary fill (pair it with white text); text, links and
+   wayfinding use #16283F. Soft/line members tint surfaces without gradients.
+   Layered on top of globals.css, which is not edited (encoding). */
 :root {
-  --brand: #77aaff;
-  --brand-hover: #5c93f0;
-  --brand-pressed: #4a84e4;
-  --brand-ink: #1e56c8;
-  --brand-ink-hover: #1746a8;
-  --brand-soft: #edf4ff;
-  --brand-soft-strong: #e2edff;
-  --brand-line: #c9deff;
+  --brand: #1f3a5f;
+  --brand-hover: #172e4d;
+  --brand-pressed: #10223b;
+  --brand-ink: #16283f;
+  --brand-ink-hover: #0e1b2c;
+  --brand-soft: #eef2f7;
+  --brand-soft-strong: #dde6f0;
+  --brand-line: #c5d2e1;
 }
 
 ::selection {

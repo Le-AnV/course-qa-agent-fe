@@ -30,9 +30,11 @@ function TabBadge({ count }: { count: number }) {
 }
 
 /**
- * Class-workspace tabs. Below lg the strip would need horizontal scrolling
- * (5-6 tabs never fit in 390px), so mobile gets a single row showing the
- * active section that expands into a full list. Desktop keeps the strip.
+ * Class-workspace section nav.
+ *
+ * The class identity lives in the Overview card, so the tab row stays a pure
+ * section index. The active section sits on a compact sliding white pill, so
+ * the row stays quiet without adding another bordered surface.
  */
 export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
   const pathname = usePathname();
@@ -51,37 +53,35 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
   }
 
   return (
-    // Tinted with the brand soft/line pair already used by the sidebar's active
-    // state: a white strip here merged into the white header + sidebar above it.
-    <div className="relative w-full bg-[var(--brand-soft)] border-b border-[var(--brand-line)] shrink-0">
-      {/* Below lg: no scrolling, one row + expandable list */}
+    <div
+      className="relative w-full shrink-0 border-b border-[#CDD1D8] bg-[#E3E5E9]"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setMenuOpen(false);
+      }}
+    >
+      {/* Below lg: centered active section. */}
       <div className="lg:hidden">
-        <button
-          type="button"
-          onClick={() => {
-            setOpenedAt(pathname);
-            setMenuOpen((v) => !v);
-          }}
-          aria-expanded={menuOpen}
-          aria-controls="course-tab-menu"
-          className="flex w-full items-center justify-between gap-3 px-4 py-1.5 text-left transition-colors hover:bg-[var(--brand-soft-strong)]"
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="text-[9.5px] font-semibold uppercase tracking-wide text-[#5A5A5A]">
-              Section
-            </span>
-            <span className="truncate text-[13.5px] font-semibold text-[#111111]">
-              {active.label}
-            </span>
+        <div className="flex h-10 items-center justify-center px-4">
+          <button
+            type="button"
+            onClick={() => {
+              setOpenedAt(pathname);
+              setMenuOpen((v) => !v);
+            }}
+            aria-expanded={menuOpen}
+            aria-controls="course-tab-menu"
+            className="flex min-w-0 items-center justify-center gap-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-ink)]"
+          >
+            <span className="truncate text-[13px] font-semibold text-[#111]">{active.label}</span>
             <TabBadge count={active.badge ?? 0} />
-          </span>
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 shrink-0 text-[#5A5A5A] transition-transform motion-reduce:transition-none",
-              menuOpen && "rotate-180",
-            )}
-          />
-        </button>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 text-[#526173] transition-transform motion-reduce:transition-none",
+                menuOpen && "rotate-180",
+              )}
+            />
+          </button>
+        </div>
 
         {menuOpen && (
           <>
@@ -92,7 +92,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
             />
             <div
               id="course-tab-menu"
-              className="absolute inset-x-0 top-full z-20 border-b border-[var(--brand-line)] bg-white shadow-sm"
+              className="absolute inset-x-0 top-full z-20 border-b border-[#DADADA] bg-white shadow-sm"
             >
               {tabs.map((tab) => {
                 const isActive = tab.id === active.id;
@@ -102,17 +102,19 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
                     href={tab.href}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "flex items-center justify-between gap-3 px-4 py-2.5 text-[13px] transition-colors",
+                      "flex items-center justify-between gap-3 px-4 py-2.5 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-ink)]",
                       isActive
-                        ? "bg-[var(--brand-soft)] font-semibold text-[#111111]"
-                        : "text-[#5A5A5A] hover:bg-[#F7F7F7] hover:text-[#111111]",
+                        ? "bg-[var(--brand-soft)] font-semibold text-[#111]"
+                        : "text-[#5A5A5A] hover:bg-[#F7F7F7] hover:text-[#111]",
                     )}
                   >
                     <span className="flex items-center gap-2">
                       {tab.label}
                       <TabBadge count={tab.badge ?? 0} />
                     </span>
-                    {isActive && <Check className="h-4 w-4 shrink-0 text-[var(--brand-ink)]" />}
+                    {isActive && (
+                      <Check className="h-4 w-4 shrink-0 text-[var(--brand-ink)]" />
+                    )}
                   </Link>
                 );
               })}
@@ -121,11 +123,15 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
         )}
       </div>
 
-      {/* lg+: the original strip, in the same column as the page content and
-          centered, so it does not hug the left edge when the sidebar collapses. */}
-      <div className="hidden lg:block px-6 md:px-8">
-        <div className={`mx-auto ${PAGE_MAX_WIDTH}`}>
-          <div className="flex items-center justify-center gap-6 min-w-max">
+      {/* lg+: section row is centered in the content column. */}
+      <div className="hidden lg:block">
+        <div
+          className={`mx-auto flex h-10 w-full ${PAGE_MAX_WIDTH} items-center justify-center px-6`}
+        >
+          <nav
+            aria-label="Class sections"
+            className="flex items-center gap-1"
+          >
             {tabs.map((tab) => {
               const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
               return (
@@ -134,27 +140,27 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
                   href={tab.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "relative py-1.5 text-[12px] whitespace-nowrap border-b-2 border-transparent transition-colors",
+                    "relative flex h-7 items-center whitespace-nowrap rounded-full px-3 text-[12.5px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-ink)]",
                     isActive
-                      ? "text-[#111111] font-semibold"
-                      : "text-[#5A5A5A] hover:text-[#111111] font-medium",
+                      ? "text-[#111]"
+                      : "text-[#526173] hover:bg-white/40 hover:text-[#111]",
                   )}
                 >
-                  <span className="inline-flex items-center gap-1.5">
-                    {tab.label}
-                    <TabBadge count={tab.badge ?? 0} />
-                  </span>
                   {isActive && (
                     <motion.span
-                      layoutId="course-tab-indicator"
-                      className="absolute inset-x-0 bottom-0 h-0.5 bg-[var(--brand-ink)]"
+                      layoutId="course-tab-pill"
+                      className="absolute inset-0 rounded-full bg-white shadow-[0_1px_2px_rgba(16,34,59,0.10)]"
                       transition={indicatorTransition}
                     />
                   )}
+                  <span className="relative z-10 inline-flex items-center gap-1.5">
+                    {tab.label}
+                    <TabBadge count={tab.badge ?? 0} />
+                  </span>
                 </Link>
               );
             })}
-          </div>
+          </nav>
         </div>
       </div>
     </div>

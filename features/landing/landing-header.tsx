@@ -38,7 +38,7 @@ export function LandingHeader() {
         </nav>
 
         <div className="hidden items-center lg:flex">
-          <Button asChild className="h-10 border border-[var(--brand-pressed)]/30 bg-[var(--brand)] px-4 text-[#111111] shadow-xs hover:bg-[var(--brand-hover)]">
+          <Button asChild className="h-10 border border-[var(--brand-pressed)]/30 bg-[var(--brand)] px-4 text-white shadow-xs hover:bg-[var(--brand-hover)]">
             <Link href="/login">
               Open workspace
               <ArrowRight className="size-4" aria-hidden="true" />
@@ -64,7 +64,7 @@ export function LandingHeader() {
                 {item.label}
               </Link>
             ))}
-            <Button asChild className="mt-2 h-10 border border-[var(--brand-pressed)]/30 bg-[var(--brand)] text-[#111111] shadow-xs hover:bg-[var(--brand-hover)]">
+            <Button asChild className="mt-2 h-10 border border-[var(--brand-pressed)]/30 bg-[var(--brand)] text-white shadow-xs hover:bg-[var(--brand-hover)]">
               <Link href="/login">Open workspace</Link>
             </Button>
           </nav>

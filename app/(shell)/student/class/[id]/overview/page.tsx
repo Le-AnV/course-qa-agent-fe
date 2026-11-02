@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, Users, FileText } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { studentApi, type ClassInfo, type StudentClass } from "@/lib/student-api";
 import { ClassInfoCard, hasClassInfo } from "@/components/shared/ClassInfoCard";
+import { ClassRecord } from "@/components/shared/ClassRecord";
 import { peekClassDetail } from "@/lib/class-cache";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
-import { Reveal, SkeletonCard, SkeletonLine } from "@/components/shared/page-skeleton";
+import { Reveal, SkeletonCard } from "@/components/shared/page-skeleton";
 
 export default function StudentClassOverviewPage() {
   const params = useParams();
@@ -49,20 +49,8 @@ export default function StudentClassOverviewPage() {
 
   if (cold) {
     return (
-      <div className="space-y-8">
-        <div>
-          <h2 className="text-[22px] font-bold font-heading text-[#111111]">Class Overview</h2>
-          <SkeletonLine className="mt-2 h-4 w-64" />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {[0, 1, 2].map((i) => (
-            <SkeletonCard key={i}>
-              <SkeletonLine className="h-8 w-8" />
-              <SkeletonLine className="mt-3 h-3 w-20" />
-              <SkeletonLine className="mt-2 h-6 w-12" />
-            </SkeletonCard>
-          ))}
-        </div>
+      <div className="space-y-6">
+        <ClassRecord cls={null} role="student" />
         <SkeletonCard className="h-[180px]" />
       </div>
     );
@@ -82,52 +70,9 @@ export default function StudentClassOverviewPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-[22px] font-bold font-heading text-[#111111]">Class Overview</h2>
-        <p className="text-[14px] text-[#5A5A5A] mt-0.5">
-          {cls.name} · Trainer: {cls.trainer_name ?? "—"}
-        </p>
-      </div>
-
-      {/* Stats Grid — real counts from the backend */}
-      <Reveal className="space-y-8">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-white border border-[#DADADA] rounded-xl p-5 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 rounded-md bg-[#F7F7F7] text-[#111111] flex items-center justify-center shrink-0">
-              <FileText className="w-4 h-4" />
-            </div>
-            <span className="text-[13px] font-semibold text-[#5A5A5A]">Resources</span>
-          </div>
-          <p className="text-2xl font-bold text-[#111111]">{cls.document_count}</p>
-        </div>
-
-        <div className="bg-white border border-[#DADADA] rounded-xl p-5 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 rounded-md bg-[#F7F7F7] text-[#111111] flex items-center justify-center shrink-0">
-              <Users className="w-4 h-4" />
-            </div>
-            <span className="text-[13px] font-semibold text-[#5A5A5A]">Members</span>
-          </div>
-          <p className="text-2xl font-bold text-[#111111]">{cls.member_count}</p>
-        </div>
-
-        <div className="bg-white border border-[#DADADA] rounded-xl p-5 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 rounded-md bg-[#F7F7F7] text-[#111111] flex items-center justify-center shrink-0">
-              <BookOpen className="w-4 h-4" />
-            </div>
-            <span className="text-[13px] font-semibold text-[#5A5A5A]">Credits</span>
-          </div>
-          <p className="text-2xl font-bold text-[#111111]">{cls.credits}</p>
-        </div>
-      </div>
-
-      {/* Class information — written by the trainer on Course Settings */}
+    <Reveal className="space-y-6">
+      <ClassRecord cls={cls} role="student" />
       {hasClassInfo(info) && <ClassInfoCard info={info} />}
-      </Reveal>
-
-    </div>
+    </Reveal>
   );
 }

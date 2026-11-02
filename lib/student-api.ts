@@ -244,7 +244,7 @@ export const studentApi = {
 };
 
 /** Accent color per class, stable by id (UI only). Muted set — class identity, not decoration. */
-const ACCENTS = ["#5B7C99", "#4B9E76", "#B4881F", "#7C6E9E", "#C4644C", "#6F6F6F"];
+const ACCENTS = ["#1F3A5F", "#2B4C73", "#3A5F88", "#4C739B", "#6288AC", "#6F6F6F"];
 
 export function accentFor(id: string): string {
   let h = 0;

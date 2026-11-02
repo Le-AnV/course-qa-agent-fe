@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronRight, FileText, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { ChatMarkdown } from "@/features/chat/chat-markdown";
 import { studentApi, type ClassSyllabusRoadmap } from "@/lib/student-api";
+import { ClassPageHeader } from "@/components/shared/ClassPageHeader";
+import { FileTypeIcon, fileTypeTone } from "@/components/shared/FileTypeIcon";
 import { Reveal, SkeletonLine } from "@/components/shared/page-skeleton";
 
 interface SyllabusTableProps {
@@ -156,62 +158,59 @@ export function SyllabusRoadmap({
 
   return (
     <section aria-labelledby="syllabus-roadmap-heading" className="space-y-4">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h2
-              id="syllabus-roadmap-heading"
-              className="text-xl font-bold font-heading text-[#111111]"
+      <ClassPageHeader
+        id="syllabus-roadmap-heading"
+        title="Syllabus"
+        subtitle={
+          isTeacher
+            ? "Course units parsed from the approved syllabus and the learning materials uploaded for this class."
+            : "Course learning roadmap and approved materials for this class."
+        }
+        badge={
+          roadmap?.file_name ? (
+            <span
+              title={`Parsed from ${roadmap.file_name}`}
+              className="inline-flex min-w-0 items-center gap-2 rounded-md border border-[var(--brand-line)] bg-white/80 py-1 pl-1 pr-2.5 text-[11.5px] font-medium text-[#5A5A5A]"
             >
-              Syllabus
-            </h2>
-            {roadmap?.file_name && (
               <span
-                title={`Parsed from ${roadmap.file_name}`}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[#DADADA] bg-[#FAFAFA] px-2.5 py-0.5 text-[11.5px] font-medium text-[#5A5A5A]"
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border ${fileTypeTone(roadmap.file_name)}`}
               >
-                <FileText className="h-3.5 w-3.5 text-[#C4644C]" />
-                {roadmap.file_name}
+                <FileTypeIcon fileName={roadmap.file_name} className="h-[18px] w-[18px]" />
               </span>
-            )}
-          </div>
-          <p className="mt-0.5 text-[13px] text-[#5A5A5A]">
-            {isTeacher
-              ? "Course units parsed from the approved syllabus and the learning materials uploaded for this class."
-              : "Course learning roadmap and approved materials for this class."}
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="flex flex-wrap items-center gap-2.5">
-            <SkeletonLine className="h-8 w-56" />
-            <SkeletonLine className="h-8 w-24" />
-          </div>
-        ) : (
-          units.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#6F6F6F]" />
-              <input
-                type="text"
-                placeholder="Search units"
-                aria-label="Search syllabus units"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-56 rounded border border-[#DADADA] bg-white py-1.5 pl-8 pr-3 text-[12.5px] text-[#111111] outline-none focus:border-[#111111]"
-              />
+              <span className="max-w-[260px] truncate">{roadmap.file_name}</span>
+            </span>
+          ) : undefined
+        }
+        actions={
+          loading ? (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <SkeletonLine className="h-8 w-56" />
+              <SkeletonLine className="h-8 w-24" />
             </div>
-            <button
-              type="button"
-              onClick={toggleAll}
-              className="rounded border border-[#DADADA] bg-white px-3 py-1.5 text-[12.5px] font-semibold text-[#111111] transition-colors hover:bg-[#F7F7F7]"
-            >
-              {allExpanded ? "Collapse all" : "Expand all"}
-            </button>
-          </div>
-          )
-        )}
-      </div>
+          ) : units.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-[#6F6F6F]" />
+                <input
+                  type="text"
+                  placeholder="Search units"
+                  aria-label="Search syllabus units"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-56 rounded border border-[var(--brand-line)] bg-white py-1.5 pl-8 pr-3 text-[12.5px] text-[#111111] outline-none focus:border-[#111111]"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="inline-flex h-8 w-[104px] shrink-0 items-center justify-center whitespace-nowrap rounded border border-[var(--brand-line)] bg-white px-3 text-[12.5px] font-semibold text-[#111111] transition-colors hover:bg-white/70"
+              >
+                {allExpanded ? "Collapse all" : "Expand all"}
+              </button>
+            </div>
+          ) : undefined
+        }
+      />
 
       {loading ? (
         <div className="divide-y divide-[#DADADA] overflow-hidden rounded-lg border border-[#DADADA] bg-white">

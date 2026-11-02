@@ -19,6 +19,7 @@ import {
   type Role,
 } from "@/components/ui/nav-config";
 import { CourseAiVisualPanel } from "@/features/login/course-ai-visual-panel";
+import { clearChatSessionCache } from "@/lib/chat-session-cache";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -72,6 +73,7 @@ export default function LoginPage() {
       if (role && token) {
         setRedirectNotice("Authentication successful. Redirecting to your dashboard...");
         setTimeout(() => {
+          clearChatSessionCache();
           localStorage.setItem(AUTH_TOKEN_KEY, token as string);
           localStorage.setItem(AUTH_ROLE_KEY, role as string);
           // Set cookies for Next.js Middleware Edge Route Guarding
@@ -213,7 +215,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 py-3 sm:py-3.5 px-5 rounded-[10px] border border-[var(--brand-pressed)]/30 bg-[var(--brand)] text-[#111111] hover:bg-[var(--brand-hover)] shadow-xs hover:shadow-sm font-semibold text-sm sm:text-base transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
+              className="w-full mt-2 py-3 sm:py-3.5 px-5 rounded-[10px] border border-[var(--brand-pressed)]/30 bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)] shadow-xs hover:shadow-sm font-semibold text-sm sm:text-base transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
             >
               {isLoading ? (
                 <>
