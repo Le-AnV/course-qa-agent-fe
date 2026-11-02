@@ -9,6 +9,7 @@ import { useAuth } from "@/components/ui/auth-guard";
 import { useProfile } from "@/features/profile/profile-context";
 import { initialsFor, roleBadgeLabel } from "@/features/profile/validation";
 import { SidebarNavBody } from "@/components/shared/Sidebar";
+import { TicketNotificationBell } from "@/features/tickets/ticket-notifications";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -110,13 +111,26 @@ export function MobileNav({ role }: { role: Role }) {
           </div>
           <span className="truncate font-heading text-[14px] font-bold text-[#111111]">Course Q&amp;A</span>
         </Link>
-        <Link
-          href="/account"
-          aria-label="Account"
-          className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F7F7] text-[11px] font-semibold text-[#111111]"
-        >
-          {initialsFor(displayName)}
-        </Link>
+        {role === "trainer" ? (
+          <div className="ml-auto flex items-center gap-1">
+            <TicketNotificationBell placement="down" />
+            <Link
+              href="/account"
+              aria-label="Account"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F7F7] text-[11px] font-semibold text-[#111111]"
+            >
+              {initialsFor(displayName)}
+            </Link>
+          </div>
+        ) : (
+          <Link
+            href="/account"
+            aria-label="Account"
+            className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F7F7] text-[11px] font-semibold text-[#111111]"
+          >
+            {initialsFor(displayName)}
+          </Link>
+        )}
       </header>
 
       {(open || leaving) && (

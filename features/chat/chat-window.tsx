@@ -5,6 +5,8 @@ import { MessageBubble } from './message-bubble';
 import { ChatInput } from './chat-input';
 import { ChatScrollArea } from './chat-scroll-area';
 import { SuggestedQuestions } from './suggested-questions';
+import { AskTeacherButton } from '@/features/tickets/ask-teacher-button';
+import { associatedQuestion } from '@/features/tickets/associated-question';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { getSessionDetail } from '@/features/history/api';
 import { getChatQuota, type ChatQuota } from './api';
@@ -60,6 +62,13 @@ type StreamSnapshot = {
   answerId: string;
 };
 
+type SelectionAction = {
+  messageId: string;
+  text: string;
+  left: number;
+  top: number;
+};
+
 function transcriptForContext(context: StreamContext): Message[] {
   return [...context.baseMessages, context.userMessage, context.answer];
 }
@@ -111,6 +120,7 @@ export function ChatWindow({
   onOpenSession,
   onNewChat,
   onOpenHistory,
+  canOpenTicket = false,
 }: {
   classId: string;
   activeSessionId?: string | null;
@@ -124,8 +134,11 @@ export function ChatWindow({
   onNewChat?: () => void;
   /** Mobile only: opens the chat-history drawer (the panel is hidden < md). */
   onOpenHistory?: () => void;
+  /** Student chat can open a teacher ticket for a completed answer. */
+  canOpenTicket?: boolean;
 }) {
   const [messages, setMessages] = React.useState<Message[]>(INITIAL_MESSAGES);
+  const [selectionAction, setSelectionAction] = React.useState<SelectionAction | null>(null);
   const [quota, setQuota] = React.useState<ChatQuota | null>(null);
   const [isTyping, setIsTyping] = React.useState(false); // Waiting state for the first chunk (to show typing indicator)
   const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
@@ -167,6 +180,40 @@ export function ChatWindow({
 
   // Anchor to reference the bottom of the message list
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  const updateSelectionAction = React.useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+      setSelectionAction(null);
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const getElement = (node: Node) => node instanceof Element ? node : node.parentElement;
+    const startContent = getElement(range.startContainer)?.closest('[data-chat-answer-content]');
+    const endContent = getElement(range.endContainer)?.closest('[data-chat-answer-content]');
+    const messageElement = startContent?.closest<HTMLElement>('[data-chat-message-id]');
+    const text = selection.toString().trim();
+    if (!startContent || startContent !== endContent || !messageElement || !text) {
+      setSelectionAction(null);
+      return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    if (!rect.width && !rect.height) {
+      setSelectionAction(null);
+      return;
+    }
+    const left = Math.max(12, Math.min(window.innerWidth - 140, rect.left + rect.width / 2 - 60));
+    const top = rect.top > 48 ? rect.top - 40 : Math.min(window.innerHeight - 44, rect.bottom + 8);
+    setSelectionAction({ messageId: messageElement.dataset.chatMessageId ?? '', text, left, top });
+  }, []);
+
+  React.useEffect(() => {
+    if (!canOpenTicket) return;
+    document.addEventListener('selectionchange', updateSelectionAction);
+    return () => document.removeEventListener('selectionchange', updateSelectionAction);
+  }, [canOpenTicket, updateSelectionAction]);
 
   // Keep the typing indicator tied to the conversation that owns the stream.
   React.useEffect(() => {
@@ -615,34 +662,56 @@ export function ChatWindow({
         <>
           {/* Top area: Message list container (auto-scrolls if long) */}
           <ChatScrollArea className="bg-white px-4 md:px-6 pt-3 pb-6">
-            <div className="w-full">
+            <div
+              className="w-full"
+              onMouseDown={(event) => {
+                if (!(event.target instanceof Element) || !event.target.closest('[data-ask-teacher-action]')) {
+                  setSelectionAction(null);
+                }
+              }}
+              onMouseUp={updateSelectionAction}
+              onKeyUp={updateSelectionAction}
+            >
               {isLoadingHistory ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#6F6F6F]">
                   <Loader2 className="h-6 w-6 animate-spin text-[#6F6F6F]" />
                   <span className="text-xs">Loading conversation...</span>
                 </div>
               ) : (
-                messages.map((msg) => {
+                messages.map((msg, index) => {
                   const isMessageStreaming = isStreaming && msg.id === activeStreamAnswerId;
                   const isMessagePending = isTyping && msg.id === activeStreamAnswerId;
+                  const ticketQuestion = canOpenTicket && msg.role === 'ai' && !msg.isError &&
+                    !isMessageStreaming && !isMessagePending
+                    ? associatedQuestion(messages, index)
+                    : null;
 
                   return (
-                    <MessageBubble
-                      key={msg.id}
-                      role={msg.role}
-                      content={msg.content}
-                      isStreaming={isMessageStreaming}
-                      isLoading={isMessagePending}
-                      trace={msg.trace}
-                      traceStep={msg.traceStep}
-                      traceCompleted={msg.traceCompleted}
-                      thinkingMs={msg.thinkingMs}
-                      citations={msg.citations}
-                      isError={msg.isError}
-                      onRetry={msg.isError && msg.retryText ? () => handleRetry(msg) : undefined}
-                      renderMarkdown={msg.role === 'ai'}
-                      chatSurface
-                    />
+                    <React.Fragment key={msg.id}>
+                      <MessageBubble
+                        messageId={msg.id}
+                        role={msg.role}
+                        content={msg.content}
+                        isStreaming={isMessageStreaming}
+                        isLoading={isMessagePending}
+                        trace={msg.trace}
+                        traceStep={msg.traceStep}
+                        traceCompleted={msg.traceCompleted}
+                        thinkingMs={msg.thinkingMs}
+                        citations={msg.citations}
+                        isError={msg.isError}
+                        onRetry={msg.isError && msg.retryText ? () => handleRetry(msg) : undefined}
+                        renderMarkdown={msg.role === 'ai'}
+                        chatSurface
+                      />
+                      {ticketQuestion && (
+                        <AskTeacherButton
+                          classId={classId}
+                          question={ticketQuestion}
+                          selection={selectionAction?.messageId === msg.id ? selectionAction : undefined}
+                        />
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}

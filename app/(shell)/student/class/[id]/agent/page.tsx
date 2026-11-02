@@ -32,6 +32,7 @@ export default function AgentPage() {
       <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl border border-[#DADADA] bg-white">
         <ChatWindow
           classId={classId}
+          canOpenTicket
           activeSessionId={activeSessionId}
           onTurnComplete={handleTurnComplete}
           onBackgroundTurnComplete={handleBackgroundTurnComplete}

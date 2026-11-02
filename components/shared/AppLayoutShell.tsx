@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar } from "@/components/shared/Sidebar";
 import { MobileNav } from "@/components/shared/MobileNav";
 import { ProfileProvider } from "@/features/profile/profile-context";
+import { TicketNotificationsProvider } from "@/features/tickets/ticket-notifications";
 
 /**
  * Plain layout shell for the matched route.
@@ -34,10 +35,14 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
               row from lg up, where the rail takes a fixed width. */}
           <div className="flex h-screen flex-col bg-[#F4F5F8] overflow-hidden lg:flex-row">
             {/* Below lg the rail is hidden, so MobileNav owns the header. */}
-            <MobileNav role={role} />
+            <TicketNotificationsProvider enabled={role === "trainer"}>
+              <>
+                <MobileNav role={role} />
 
-            {/* Left Sidebar takes up space in flow */}
-            <AppSidebar role={role} />
+                {/* Left Sidebar takes up space in flow */}
+                <AppSidebar role={role} />
+              </>
+            </TicketNotificationsProvider>
 
             {/* Main Content Area fills remaining space. Off-white canvas so white
                 cards read as raised surfaces instead of melting into the page.
