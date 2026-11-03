@@ -28,6 +28,7 @@ export type TicketInboxItem = Ticket & {
   student_name: string;
   class_name: string;
   class_code: string;
+  class_status?: "ACTIVE" | "ARCHIVED" | string;
   replies: TicketReply[];
 };
 
@@ -36,6 +37,22 @@ export type TicketList = {
   total: number;
   page: number;
   page_size: number;
+};
+
+export type TicketClassCounts = {
+  class_id: string;
+  class_code: string;
+  class_name: string;
+  class_status?: "ACTIVE" | "ARCHIVED" | string;
+  open_count: number;
+  completed_count: number;
+  expired_count: number;
+};
+
+export type TicketCounts = {
+  items: TicketClassCounts[];
+  open_total: number;
+  completed_total: number;
 };
 
 export function listTickets(input: {
@@ -51,6 +68,21 @@ export function listTickets(input: {
   if (input.class_id) query.set("class_id", input.class_id);
   if (input.status) query.set("status", input.status);
   return apiFetch<TicketList>(`/api/tickets?${query}`);
+}
+
+export function listMyTickets(input: {
+  class_id?: string;
+  status?: Ticket["status"];
+  page?: number;
+  page_size?: number;
+}): Promise<TicketList> {
+  const query = new URLSearchParams({
+    page: String(input.page ?? 1),
+    page_size: String(input.page_size ?? 20),
+  });
+  if (input.class_id) query.set("class_id", input.class_id);
+  if (input.status) query.set("status", input.status);
+  return apiFetch<TicketList>(`/api/tickets/mine?${query}`);
 }
 
 export function createTicket(input: {
@@ -79,4 +111,13 @@ export function getStudentTicket(ticketId: string): Promise<TicketThread> {
 
 export function resolveTicket(ticketId: string): Promise<Ticket> {
   return apiFetch<Ticket>(`/api/tickets/${ticketId}/resolve`, { method: "POST" });
+}
+
+export function reopenTicket(ticketId: string): Promise<Ticket> {
+  return apiFetch<Ticket>(`/api/tickets/${ticketId}/reopen`, { method: "POST" });
+}
+
+export function getTicketCounts(classId?: string): Promise<TicketCounts> {
+  const query = classId ? `?class_id=${encodeURIComponent(classId)}` : "";
+  return apiFetch<TicketCounts>(`/api/tickets/counts${query}`);
 }

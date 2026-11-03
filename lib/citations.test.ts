@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   citationKey,
   formatInlineCitations,
+  mapHistoryCitation,
   mergeCitation,
   normalizeCitationUrl,
   uniqueCitations,
@@ -96,5 +97,89 @@ describe("citation helpers", () => {
     expect(formatInlineCitations(content, [citation()])).toBe(
       "Use `items[1]` in code.\n\n```ts\nconst x = items[1];\n```\n\nFact *(Quiz.pdf - Page 1)*.",
     );
+  });
+});
+
+describe("mapHistoryCitation", () => {
+  it("maps persisted citation fields to ChatCitation", () => {
+    const mapped = mapHistoryCitation({
+      index: 1,
+      kind: "curriculum",
+      title: "Lecture 1.pdf",
+      url: "//cdn.example.com/doc",
+      snippet: "Key definition",
+      document_id: "doc-123",
+      page: 4,
+      indexes: [1, 3],
+      highlights: ["Highlight 1", "Highlight 2"],
+    });
+
+    expect(mapped).toEqual({
+      index: 1,
+      kind: "curriculum",
+      title: "Lecture 1.pdf",
+      url: "https://cdn.example.com/doc",
+      snippet: "Key definition",
+      documentId: "doc-123",
+      page: 4,
+      indexes: [1, 3],
+      highlights: ["Highlight 1", "Highlight 2"],
+    });
+  });
+
+  it("falls back indexes to [index] when indexes array is missing or empty", () => {
+    const withEmpty = mapHistoryCitation({
+      index: 2,
+      kind: "internet",
+      title: "Docs",
+      url: "https://example.com",
+      snippet: "Web snippet",
+      document_id: null,
+      page: null,
+      indexes: [],
+    });
+    expect(withEmpty.indexes).toEqual([2]);
+
+    const withUndefined = mapHistoryCitation({
+      index: 3,
+      kind: "internet",
+      title: "Docs",
+      url: "https://example.com",
+      snippet: "Web snippet",
+      document_id: null,
+      page: null,
+    });
+    expect(withUndefined.indexes).toEqual([3]);
+  });
+
+  it("never converts snippet into highlight when highlights is empty", () => {
+    const mapped = mapHistoryCitation({
+      index: 1,
+      kind: "curriculum",
+      title: "Doc.pdf",
+      url: null,
+      snippet: "Raw snippet preview",
+      document_id: "doc-1",
+      page: 1,
+      highlights: [],
+    });
+
+    expect(mapped.snippet).toBe("Raw snippet preview");
+    expect(mapped.highlights).toEqual([]);
+  });
+
+  it("uses highlights[0] as snippet fallback when snippet is empty", () => {
+    const mapped = mapHistoryCitation({
+      index: 1,
+      kind: "curriculum",
+      title: "Doc.pdf",
+      url: null,
+      snippet: "   ",
+      document_id: "doc-1",
+      page: 1,
+      highlights: ["Primary source passage", "Secondary passage"],
+    });
+
+    expect(mapped.snippet).toBe("Primary source passage");
   });
 });

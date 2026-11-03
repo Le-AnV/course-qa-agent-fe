@@ -88,7 +88,14 @@ export function AppSelect({
   return (
     <Select
       value={toRadixValue(value)}
-      onValueChange={(next) => onValueChange(fromRadixValue(next))}
+      onValueChange={(next) => {
+        // Radix renders a hidden native <select> when the picker lives inside a
+        // form. When options arrive after the controlled value was already
+        // chosen, that native select can emit a spurious "" change before its
+        // <option>s are registered, which would clear a valid selection.
+        if (next === "" && !hasEmptyOption && value !== "") return
+        onValueChange(fromRadixValue(next))
+      }}
       disabled={disabled}
       {...props}
     >

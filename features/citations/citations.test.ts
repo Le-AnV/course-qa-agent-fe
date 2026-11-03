@@ -65,4 +65,29 @@ describe('Citations Schema & Type contracts', () => {
     expect(buildUniversalJumpUrl('https://example.com', null)).toBe('https://example.com');
     expect(buildUniversalJumpUrl('https://example.com', 'Dennis Ritchie')).toBe('https://example.com#:~:text=Dennis%20Ritchie');
   });
+
+  it('determines fallback web target URL when fragment is missing or present', () => {
+    const rawUrl = 'https://example.com/guide';
+    const snippet = 'Install the package with npm install.';
+    
+    // Missing fragment: should augment with snippet
+    const targetUrl = !rawUrl.includes('#:~:text=') && !rawUrl.includes('google.com/goto')
+      ? buildUniversalJumpUrl(rawUrl, snippet) || rawUrl
+      : rawUrl;
+    expect(targetUrl).toContain('#:~:text=');
+
+    // Already has fragment: should keep original
+    const existingFragmentUrl = 'https://example.com/guide#:~:text=custom';
+    const preservedUrl = !existingFragmentUrl.includes('#:~:text=') && !existingFragmentUrl.includes('google.com/goto')
+      ? buildUniversalJumpUrl(existingFragmentUrl, snippet) || existingFragmentUrl
+      : existingFragmentUrl;
+    expect(preservedUrl).toBe(existingFragmentUrl);
+
+    // Google redirect: should keep original
+    const googleGotoUrl = 'https://www.google.com/goto?url=CAESabc';
+    const googleTarget = !googleGotoUrl.includes('#:~:text=') && !googleGotoUrl.includes('google.com/goto')
+      ? buildUniversalJumpUrl(googleGotoUrl, snippet) || googleGotoUrl
+      : googleGotoUrl;
+    expect(googleTarget).toBe(googleGotoUrl);
+  });
 });

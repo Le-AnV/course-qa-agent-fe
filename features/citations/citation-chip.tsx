@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 
 import { AUTH_TOKEN_KEY } from '@/components/ui/nav-config';
@@ -9,6 +8,7 @@ import { normalizeCitationUrl } from '@/lib/citations';
 import { cn } from '@/lib/utils';
 import type { ChatCitation } from '@/lib/sse';
 import { useRouter, usePathname, useParams } from 'next/navigation';
+import { buildUniversalJumpUrl } from './url-helper';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
@@ -57,136 +57,11 @@ async function openClassSource(citation: ChatCitation) {
   }
 }
 
-type CardPosition = {
-  top: number;
-  left: number;
-  width: number;
-  /** Which side of the chip the card sits on, so it can grow out of the chip. */
-  above: boolean;
-  /** Horizontal offset of the chip centre inside the card: the transform origin. */
-  originX: number;
-};
-
-/** Only one citation card may be open at a time. */
-let activeCard: { token: string; close: () => void } | null = null;
-
 export function CitationChip({ citation }: { citation: ChatCitation }) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [position, setPosition] = React.useState<CardPosition | null>(null);
-  const anchorRef = React.useRef<HTMLSpanElement | null>(null);
-  const cardRef = React.useRef<HTMLDivElement | null>(null);
-
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
   const classId = params?.id as string | undefined;
-
-  // Stable per-chip identity, so the shared registry can tell cards apart.
-  const token = React.useId();
-
-  const close = React.useCallback(() => {
-    if (activeCard?.token === token) activeCard = null;
-    setIsOpen(false);
-    setPosition(null);
-  }, [token]);
-
-  const toggle = () => {
-    if (isOpen) {
-      close();
-      return;
-    }
-    if (activeCard && activeCard.token !== token) activeCard.close();
-    activeCard = { token, close };
-    setPosition(null);
-    setIsOpen(true);
-  };
-
-  // The card floats above the transcript and overflows the chat card when the chip
-  // sits near an edge, so it is positioned against the viewport instead of the chip.
-  const placeCard = React.useCallback(() => {
-    const anchor = anchorRef.current;
-    const card = cardRef.current;
-    if (!anchor || !card) return;
-
-    const margin = 12;
-    const gap = 10;
-    const rect = anchor.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const width = Math.min(320, viewportWidth - margin * 2);
-    const height = card.offsetHeight;
-    const left = Math.min(
-      Math.max(rect.left, margin),
-      Math.max(margin, viewportWidth - width - margin),
-    );
-    const aboveEdge = rect.top - height - gap;
-    const belowEdge = rect.bottom + gap;
-    // Keep the card inside the viewport: above the chip when it fits, else below,
-    // and never closer than `margin` to the edges.
-    const isAbove = aboveEdge >= margin;
-    const top = isAbove
-      ? aboveEdge
-      : Math.max(margin, Math.min(belowEdge, viewportHeight - height - margin));
-    const originX = Math.min(Math.max(rect.left + rect.width / 2 - left, 16), width - 16);
-
-    setPosition((previous) =>
-      previous &&
-      previous.top === top &&
-      previous.left === left &&
-      previous.width === width &&
-      previous.above === isAbove &&
-      previous.originX === originX
-        ? previous
-        : { top, left, width, above: isAbove, originX },
-    );
-  }, []);
-
-  // Measure as soon as the portalled card commits; no effect-driven setState needed.
-  const attachCard = React.useCallback(
-    (node: HTMLDivElement | null) => {
-      cardRef.current = node;
-      if (node) placeCard();
-    },
-    [placeCard],
-  );
-
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const reposition = () => placeCard();
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (
-        target &&
-        (anchorRef.current?.contains(target) || cardRef.current?.contains(target))
-      ) {
-        return;
-      }
-      close();
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown, true);
-    document.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('resize', reposition);
-    // Capture phase so scrolling inside the transcript also moves the card.
-    window.addEventListener('scroll', reposition, true);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown, true);
-      document.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', reposition);
-      window.removeEventListener('scroll', reposition, true);
-    };
-  }, [close, isOpen, placeCard]);
-
-  React.useEffect(
-    () => () => {
-      if (activeCard?.token === token) activeCard = null;
-    },
-    [token],
-  );
 
   const isCurriculum = citation.kind === 'curriculum';
   const url = normalizeCitationUrl(citation.url);
@@ -218,10 +93,16 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
     return null;
   }, [pathname, classId]);
 
-  const handleActionClick = (event: React.MouseEvent) => {
+  const handleClick = (event: React.MouseEvent) => {
+    event.preventDefault();
     event.stopPropagation();
-    close();
-    if (url) {
+    if (!isCurriculum && url) {
+      let targetUrl = url;
+      if (!url.includes('#:~:text=') && !url.includes('google.com/goto')) {
+        targetUrl = buildUniversalJumpUrl(url, citation.snippet) || url;
+      }
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    } else if (url) {
       window.open(url, '_blank', 'noopener,noreferrer');
     } else if (isSpreadsheetOrSyllabus && syllabusPath) {
       router.push(syllabusPath);
@@ -230,17 +111,22 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
     }
   };
 
+  const actionTooltip = url
+    ? `Visit website: ${url}`
+    : isSpreadsheetOrSyllabus && syllabusPath
+    ? `View in Syllabus: ${citation.title}`
+    : `Open source file: ${citation.title}${citation.page ? ` (Page ${citation.page})` : ''}`;
+
   return (
-    <span ref={anchorRef} className="relative inline-block align-baseline">
+    <span className="relative inline-block align-baseline">
       <button
         type="button"
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
+        title={actionTooltip}
+        aria-label={actionTooltip}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-md bg-[#F7F7F7] px-2 py-0.5 text-xs font-medium text-[#5A5A5A] ring-1 ring-inset ring-[#DADADA] transition-colors hover:bg-slate-100',
-          isOpen ? 'text-[#111111] ring-[#B8B8B8]' : 'hover:text-[#111111]',
+          'inline-flex items-center gap-1.5 rounded-md bg-[#F7F7F7] px-2 py-0.5 text-xs font-medium text-[#5A5A5A] ring-1 ring-inset ring-[#DADADA] transition-colors hover:bg-slate-100 hover:text-[#111111] hover:ring-[#B8B8B8] cursor-pointer',
         )}
-        onClick={toggle}
+        onClick={handleClick}
       >
         {url ? (
           <svg
@@ -273,105 +159,6 @@ export function CitationChip({ citation }: { citation: ChatCitation }) {
         )}
         <span className="truncate max-w-[240px]">{label}</span>
       </button>
-
-      {isOpen && typeof document !== 'undefined'
-        ? createPortal(
-            <div
-              ref={attachCard}
-              role="dialog"
-              aria-label={`${markerLabel} ${citation.title}`}
-              style={{
-                top: position?.top ?? 0,
-                left: position?.left ?? 0,
-                width: position?.width ?? 320,
-                visibility: position ? 'visible' : 'hidden',
-                transformOrigin: position
-                  ? `${position.originX}px ${position.above ? '100%' : '0'}`
-                  : '50% 100%',
-              }}
-              className={cn(
-                'fixed z-[80] rounded-xl border border-slate-200 bg-white p-3.5 text-left shadow-xl',
-                'transition-none motion-reduce:animate-none',
-                'animate-in fade-in-0 duration-150 ease-out',
-                position?.above ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1',
-              )}
-            >
-              {position ? (
-                <span
-                  aria-hidden
-                  style={{ left: Math.round(position.originX) - 5 }}
-                  className={cn(
-                    'absolute h-2.5 w-2.5 rotate-45 border-slate-200 bg-white',
-                    position.above
-                      ? '-bottom-[5.5px] border-b border-r'
-                      : '-top-[5.5px] border-l border-t',
-                  )}
-                />
-              ) : null}
-              {/* Header */}
-              <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-100">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-[var(--brand-soft)] text-[var(--brand-ink)] shrink-0">
-                    {markerLabel}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-800 truncate" title={citation.title}>
-                    {citation.title}
-                  </span>
-                </div>
-                {isCurriculum ? (
-                  citation.page !== null ? (
-                    <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
-                      Page {citation.page}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] font-medium text-[var(--brand-ink)] bg-[var(--brand-soft)] px-1.5 py-0.5 rounded shrink-0">
-                      {isSpreadsheetOrSyllabus ? 'Syllabus' : 'Document'}
-                    </span>
-                  )
-                ) : (
-                  <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">
-                    Web
-                  </span>
-                )}
-              </div>
-
-              {/* Snippet / Quote Body */}
-              {citation.snippet ? (
-                <div className="rounded-lg bg-slate-50 border border-slate-100 p-2.5 text-xs text-slate-700 leading-relaxed italic line-clamp-4">
-                  “{citation.snippet}”
-                </div>
-              ) : (
-                <div className="text-xs text-slate-400 italic py-1">
-                  Source excerpt used for this answer.
-                </div>
-              )}
-
-              {/* Footer Action */}
-              <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                <span className="text-slate-400 text-[11px]">
-                  {isCurriculum ? 'Course Material' : 'Web Source'}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleActionClick}
-                  className="inline-flex items-center gap-1 font-semibold text-[var(--brand-ink)] hover:text-[var(--brand-ink-hover)] hover:underline transition-colors"
-                >
-                  <span>
-                    {url
-                      ? 'Visit Website'
-                      : isSpreadsheetOrSyllabus && syllabusPath
-                      ? 'View in Syllabus'
-                      : 'Open Document'}
-                  </span>
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                  </svg>
-                </button>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
     </span>
   );
 }
