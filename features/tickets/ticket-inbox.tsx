@@ -96,6 +96,7 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
           <span className="text-xs font-semibold text-[#5A5A5A]">{ticket.student_name} · {ticket.class_code}</span>
           <span className="line-clamp-2 break-words text-sm font-semibold text-[#111111]">{ticket.question}</span>
           <span className="text-xs text-[#5A5A5A]">{FILTERS.find((item) => item.id === ticket.status)?.label} · <time dateTime={ticket.created_at}>{new Date(ticket.created_at).toLocaleString()}</time></span>
+          {ticket.escalated_to_name && <span className="text-xs font-semibold text-amber-700">Escalated to {ticket.escalated_to_name}</span>}
           <span className="break-all font-mono text-[10px] text-[#6F6F6F]">ID: {ticket.id}</span>
         </button>
       ))}
@@ -150,6 +151,10 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
               <dt>Class</dt><dd>{selected.class_code} · {selected.class_name}</dd>
               <dt>Status</dt><dd>{FILTERS.find((item) => item.id === selected.status)?.label}</dd>
               <dt>Created</dt><dd><time dateTime={selected.created_at}>{new Date(selected.created_at).toLocaleString()}</time></dd>
+              {selected.escalated_to_name && <>
+                <dt>Escalated to</dt><dd>{selected.escalated_to_name}</dd>
+                <dt>Escalated at</dt><dd>{selected.escalated_at ? <time dateTime={selected.escalated_at}>{new Date(selected.escalated_at).toLocaleString()}</time> : "—"}</dd>
+              </>}
             </dl>
             <section className="space-y-3 border-t border-[#E5E5E5] pt-4">
               <h3 className="text-sm font-semibold">Conversation</h3>

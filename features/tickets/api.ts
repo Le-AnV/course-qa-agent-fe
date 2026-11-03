@@ -9,6 +9,9 @@ export type Ticket = {
   agent_answer?: string | null;
   status: "OPEN" | "ANSWERED" | "RESOLVED" | "EXPIRED";
   created_at: string;
+  escalated_to_id?: string | null;
+  escalated_at?: string | null;
+  escalated_to_name?: string | null;
 };
 
 export type TicketReply = {
