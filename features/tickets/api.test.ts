@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addTicketReply, createTicket, listTickets, resolveTicket } from "./api";
+import { addTicketReply, createTicket, getTicketCounts, listMyTickets, listTickets, reopenTicket, resolveTicket } from "./api";
 
 describe("ticket API", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -39,6 +39,40 @@ describe("ticket API", () => {
     await resolveTicket("ticket-1");
     expect(fetchMock.mock.calls[0][0]).toContain("/api/tickets/ticket-1/resolve");
     expect(fetchMock.mock.calls[0][1]?.method).toBe("POST");
+  });
+
+  it("reopens a resolved ticket", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "ticket-1", status: "ANSWERED" })),
+    );
+    expect(await reopenTicket("ticket-1")).toMatchObject({ status: "ANSWERED" });
+    expect(fetchMock.mock.calls[0][0]).toContain("/api/tickets/ticket-1/reopen");
+    expect(fetchMock.mock.calls[0][1]?.method).toBe("POST");
+  });
+
+  it("lists the student's own tickets for the My Tickets page", async () => {
+    const response = { items: [], total: 0, page: 1, page_size: 20 };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(response)),
+    );
+    expect(await listMyTickets({ class_id: "class-1", status: "ANSWERED" })).toEqual(response);
+    const url = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(url.pathname).toBe("/api/tickets/mine");
+    expect(url.searchParams.get("class_id")).toBe("class-1");
+    expect(url.searchParams.get("status")).toBe("ANSWERED");
+    expect(fetchMock.mock.calls[0][1]?.method).toBeUndefined();
+  });
+
+  it("loads per-class open and completed ticket counts", async () => {
+    const response = { items: [], open_total: 0, completed_total: 0 };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(response)),
+    );
+    expect(await getTicketCounts("class-1")).toEqual(response);
+    const url = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(url.pathname).toBe("/api/tickets/counts");
+    expect(url.searchParams.get("class_id")).toBe("class-1");
+    expect(fetchMock.mock.calls[0][1]?.method).toBeUndefined();
   });
 
   it("sends the original chat question separately from the teacher question and agent answer", async () => {
