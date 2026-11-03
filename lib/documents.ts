@@ -197,6 +197,54 @@ export async function retryDocument(
   return toItem((await res.json()) as DocumentRow);
 }
 
+/** AI-43 AC-01: only PDFs and images can render inside the dashboard. */
+export function canPreviewDocument(
+  item: Pick<DocumentItem, "mimeType">,
+): boolean {
+  return (
+    item.mimeType === "application/pdf" || item.mimeType.startsWith("image/")
+  );
+}
+
+export type FileAccessKind = "download" | "preview";
+
+/** AI-43: fetch the original bytes with the Bearer token (no public link). */
+export async function fetchDocumentFile(
+  auth: AuthHeaders,
+  documentId: string,
+  kind: FileAccessKind,
+): Promise<Blob> {
+  const res = await fetch(
+    `${API_URL}/api/documents/${encodeURIComponent(documentId)}/${kind}`,
+    { headers: headers(auth) },
+  );
+  if (!res.ok) await throwForStatus(res);
+  return res.blob();
+}
+
+/** Trigger a browser download from an in-memory blob. */
+export function saveDocumentBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** AI-43 AC-02: download the original file for an authorized trainer. */
+export async function downloadDocumentFile(
+  auth: AuthHeaders,
+  item: Pick<DocumentItem, "id" | "fileName">,
+): Promise<void> {
+  saveDocumentBlob(
+    await fetchDocumentFile(auth, item.id, "download"),
+    item.fileName,
+  );
+}
+
 /** One per-file upload result (AI-35 AC-03/AC-04, AI-39 AC-03). */
 export type UploadOutcome = {
   fileName: string;
