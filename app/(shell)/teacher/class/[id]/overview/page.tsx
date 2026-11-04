@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { studentApi, type ClassInfo, type StudentClass } from "@/lib/student-api";
 import { ClassInfoCard, hasClassInfo } from "@/components/shared/ClassInfoCard";
 import { ClassRecord } from "@/components/shared/ClassRecord";
+import { ContentGapOverviewCard } from "@/components/teacher/content-gap-overview-card";
 import { peekClassDetail } from "@/lib/class-cache";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { Reveal, SkeletonCard } from "@/components/shared/page-skeleton";
@@ -77,6 +78,11 @@ export default function TeacherClassOverviewPage() {
   return (
     <Reveal className="space-y-6">
       <ClassRecord cls={cls} role="teacher" />
+      <ContentGapOverviewCard
+        classId={id}
+        courseName={cls?.name}
+        courseCode={cls?.code}
+      />
       <ClassInfoCard
         info={info}
         action={
