@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 import { MessageBubble } from './message-bubble';
+import { AnswerFeedback } from './answer-feedback';
+import type { AnswerFeedback as Feedback } from './api';
 import { ChatInput } from './chat-input';
 import { ChatScrollArea } from './chat-scroll-area';
 import { SuggestedQuestions } from './suggested-questions';
@@ -18,6 +20,11 @@ import type { ChatCitation, ChatProgressStage } from '@/lib/sse';
 
 // Define message type
 type Message = {
+  backendMessageId?: string;
+  feedback?: Feedback | null;
+  ticketId?: string | null;
+  canCreateFeedbackTicket?: boolean;
+  originalQuestion?: string | null;
   id: string;
   role: 'user' | 'ai';
   content: string;
@@ -262,6 +269,11 @@ export function ChatWindow({
         if (!isMounted) return;
         const loaded: Message[] = (detail.messages || []).map((m: ChatMessageItem) => ({
           id: m.id,
+          backendMessageId: m.role === 'ASSISTANT' ? m.id : undefined,
+          feedback: m.feedback,
+          ticketId: m.ticket_id,
+          canCreateFeedbackTicket: m.can_create_feedback_ticket,
+          originalQuestion: m.original_question,
           role: m.role.toLowerCase() === 'user' ? 'user' : 'ai',
           content: m.content,
           citations: uniqueCitations((m.citations ?? []).map(mapHistoryCitation)),
@@ -386,6 +398,9 @@ export function ChatWindow({
       context.completed = true;
       const nextAnswer = {
         ...context.answer,
+        backendMessageId: event.assistantMessageId ?? undefined,
+        canCreateFeedbackTicket: Boolean(event.assistantMessageId && event.userMessageId),
+        originalQuestion: context.userMessage.content,
         traceCompleted: true,
         ...(event.suggestedQuestions && event.suggestedQuestions.length > 0
           ? { suggestedQuestions: event.suggestedQuestions }
@@ -688,6 +703,20 @@ export function ChatWindow({
                         renderMarkdown={msg.role === 'ai'}
                         chatSurface
                       />
+                      {canOpenTicket && msg.role === 'ai' && !msg.isError && !isMessageStreaming && !isMessagePending && msg.backendMessageId && (
+                        <AnswerFeedback messageId={msg.backendMessageId} feedback={msg.feedback} ticketId={msg.ticketId}
+                          canCreateTicket={Boolean(msg.canCreateFeedbackTicket)} classId={classId}
+                          question={msg.originalQuestion ?? ''} answer={msg.content} citations={msg.citations ?? []}
+                          onChange={(patch) => {
+                            const update = (item: Message) => item.backendMessageId === msg.backendMessageId ? { ...item, ...patch } : item;
+                            setMessages((current) => current.map(update));
+                            const context = streamContextRef.current;
+                            if (context) {
+                              context.answer = update(context.answer);
+                              context.baseMessages = context.baseMessages.map(update);
+                            }
+                          }} />
+                      )}
                       {ticketQuestion && (
                         <AskTeacherButton
                           classId={classId}

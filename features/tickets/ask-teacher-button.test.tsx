@@ -16,6 +16,14 @@ vi.mock("@/components/ui/dialog", () => {
 import { AskTeacherButton } from "./ask-teacher-button";
 
 describe("AskTeacherButton", () => {
+  it("offers a confirmed ticket dialog for saved negative feedback without text selection", () => {
+    const html = renderToStaticMarkup(
+      <AskTeacherButton classId="class-1" question="Original question"
+        feedbackContext={{ messageId: "answer-1", answer: "Complete answer", citations: [] }} />,
+    );
+    expect(html).toContain("Ask my teacher");
+    expect(html).not.toContain("Create ticket");
+  });
   it("hides the ticket action until answer text is selected", () => {
     const html = renderToStaticMarkup(
       <AskTeacherButton classId="class-1" question="How does this work?" />,

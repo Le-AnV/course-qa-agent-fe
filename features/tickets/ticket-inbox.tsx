@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { TicketCitations } from './ticket-citations';
 import { TicketsInboxLayout } from "@/components/shared/TicketsInboxLayout";
 import { AppSelect, type AppSelectOption } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
@@ -455,6 +456,7 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
                   </section>
                 )}
 
+                <TicketCitations citations={selected.citations} />
                 {selected.agent_answer && (
                   <section className="space-y-1.5">
                     <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[#6F6F6F]">
