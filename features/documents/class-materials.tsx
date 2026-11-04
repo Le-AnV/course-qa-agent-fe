@@ -21,7 +21,10 @@ import {
   acceptedExtensions,
   approveDocument,
   backendUrl,
+  canPreviewDocument,
   deleteDocument,
+  downloadDocumentFile,
+  fetchDocumentFile,
   fetchDocuments,
   formatFileSize,
   formatRelevanceReason,
@@ -101,6 +104,11 @@ export function ClassMaterials({
   const [pendingDelete, setPendingDelete] = React.useState<DocumentItem | null>(null);
   const [pendingReject, setPendingReject] = React.useState<DocumentItem | null>(null);
   const [replaceTarget, setReplaceTarget] = React.useState<DocumentItem | null>(null);
+  const [previewTarget, setPreviewTarget] = React.useState<{
+    item: DocumentItem;
+    url: string;
+  } | null>(null);
+  const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [pendingRelevanceConfirm, setPendingRelevanceConfirm] = React.useState<DocumentItem | null>(null);
   const [pendingUploadWarning, setPendingUploadWarning] = React.useState<{
@@ -380,6 +388,64 @@ export function ClassMaterials({
     } finally {
       setRejectingId(null);
     }
+  }
+
+  async function handleDownload(item: DocumentItem) {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    setDownloadingId(item.id);
+    setActionError(null);
+    try {
+      await downloadDocumentFile({ token }, item);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        router.push("/login");
+        return;
+      }
+      setActionError(
+        err instanceof ApiError
+          ? `Download failed: ${err.message}`
+          : "Download failed.",
+      );
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
+  async function handlePreview(item: DocumentItem) {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    setActionError(null);
+    try {
+      const blob = await fetchDocumentFile({ token }, item.id, "preview");
+      setPreviewTarget((current) => {
+        if (current) URL.revokeObjectURL(current.url);
+        return { item, url: URL.createObjectURL(blob) };
+      });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        router.push("/login");
+        return;
+      }
+      setActionError(
+        err instanceof ApiError
+          ? `Preview failed: ${err.message}`
+          : "Preview failed.",
+      );
+    }
+  }
+
+  function closePreview() {
+    setPreviewTarget((current) => {
+      if (current) URL.revokeObjectURL(current.url);
+      return null;
+    });
   }
 
   async function confirmDelete() {
@@ -778,6 +844,37 @@ export function ClassMaterials({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      {d.status !== "replaced" && (
+                        <>
+                          {canPreviewDocument(d) && (
+                            <button
+                              type="button"
+                              onClick={() => void handlePreview(d)}
+                              disabled={
+                                deletingId === d.id ||
+                                replacingId === d.id ||
+                                loading
+                              }
+                              className="rounded border border-[#CFCFCF] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+                            >
+                              Preview
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => void handleDownload(d)}
+                            disabled={
+                              downloadingId === d.id ||
+                              deletingId === d.id ||
+                              replacingId === d.id ||
+                              loading
+                            }
+                            className="rounded border border-[#CFCFCF] bg-white px-2.5 py-1.5 text-[11.5px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+                          >
+                            {downloadingId === d.id ? "Downloading…" : "Download"}
+                          </button>
+                        </>
+                      )}
                       {d.status === "pending" && (
                         <>
                           <button
@@ -1091,6 +1188,52 @@ export function ClassMaterials({
               className="rounded bg-[#111111] px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-xs hover:bg-[#2B2B2B]"
             >
               Yes, add file
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={previewTarget !== null}
+        onOpenChange={(open) => !open && closePreview()}
+      >
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{previewTarget?.item.fileName}</DialogTitle>
+            <DialogDescription>
+              Preview of the uploaded material. Only authorized trainers can
+              open this file.
+            </DialogDescription>
+          </DialogHeader>
+          {previewTarget &&
+            (previewTarget.item.mimeType.startsWith("image/") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={previewTarget.url}
+                alt={previewTarget.item.fileName}
+                className="max-h-[70vh] w-full rounded border border-[#E5E5E5] object-contain"
+              />
+            ) : (
+              <iframe
+                src={previewTarget.url}
+                title={`Preview of ${previewTarget.item.fileName}`}
+                className="h-[70vh] w-full rounded border border-[#E5E5E5]"
+              />
+            ))}
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={closePreview}
+              className="rounded border border-[#CFCFCF] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7]"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={() => previewTarget && void handleDownload(previewTarget.item)}
+              className="rounded border border-[#CFCFCF] bg-white px-3.5 py-1.5 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7]"
+            >
+              Download
             </button>
           </DialogFooter>
         </DialogContent>

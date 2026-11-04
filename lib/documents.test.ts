@@ -3,7 +3,9 @@ import {
   ACCEPTED_TYPES,
   MAX_FILE_SIZE_BYTES,
   acceptedExtensions,
+  canPreviewDocument,
   deleteDocument,
+  fetchDocumentFile,
   formatFileSize,
   rejectDocument,
   replaceNameError,
@@ -162,6 +164,65 @@ describe("retryDocument (AI-55)", () => {
       expect(result.failureReason).toBeNull();
       expect(calls[0].url).toContain("/api/documents/doc-1/retry");
       expect(calls[0].init?.method).toBe("POST");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+describe("canPreviewDocument (AI-43 AC-01)", () => {
+  it("previews PDFs and images only", () => {
+    expect(canPreviewDocument({ mimeType: "application/pdf" })).toBe(true);
+    expect(canPreviewDocument({ mimeType: "image/png" })).toBe(true);
+    expect(canPreviewDocument({ mimeType: "image/jpeg" })).toBe(true);
+    expect(canPreviewDocument({ mimeType: "text/plain" })).toBe(false);
+    expect(
+      canPreviewDocument({
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("fetchDocumentFile (AI-43)", () => {
+  it("fetches the preview blob with the bearer token", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      calls.push({ url: String(url), init });
+      return new Response("%PDF-1.4", {
+        status: 200,
+        headers: { "Content-Type": "application/pdf" },
+      });
+    }) as typeof fetch;
+    try {
+      const blob = await fetchDocumentFile({ token: "t" }, "doc-1", "preview");
+      expect(await blob.text()).toBe("%PDF-1.4");
+      expect(calls[0].url).toContain("/api/documents/doc-1/preview");
+      expect(
+        (calls[0].init?.headers as Record<string, string>).Authorization,
+      ).toBe("Bearer t");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("uses the download endpoint and surfaces backend errors", async () => {
+    const calls: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      calls.push(String(url));
+      return new Response(
+        JSON.stringify({ detail: "This file type cannot be previewed" }),
+        { status: 415, headers: { "Content-Type": "application/json" } },
+      );
+    }) as typeof fetch;
+    try {
+      await expect(
+        fetchDocumentFile({ token: "t" }, "doc-2", "download"),
+      ).rejects.toThrow("This file type cannot be previewed");
+      expect(calls[0]).toContain("/api/documents/doc-2/download");
     } finally {
       globalThis.fetch = originalFetch;
     }

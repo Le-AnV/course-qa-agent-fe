@@ -292,6 +292,11 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
               {ticket.class_status === "ARCHIVED" ? " · Archived" : ""} ·{" "}
               {ticket.replies.length} {ticket.replies.length === 1 ? "message" : "messages"}
             </span>
+            {ticket.escalated_to_name && (
+              <span className="mt-0.5 text-[11px] font-semibold text-amber-700">
+                Escalated to {ticket.escalated_to_name}
+              </span>
+            )}
           </button>
         ))
       )}
@@ -423,6 +428,19 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
                 <p className="mt-1 break-all font-mono text-[10px] text-[#6F6F6F]">
                   Ticket {selected.id}
                 </p>
+                {selected.escalated_to_name && (
+                  <p className="mt-2 text-xs font-semibold text-amber-700">
+                    Escalated to {selected.escalated_to_name}
+                    {selected.escalated_at && (
+                      <span className="font-normal text-[#6F6F6F]">
+                        {" · "}
+                        <time dateTime={selected.escalated_at}>
+                          {formatTicketDate(selected.escalated_at)}
+                        </time>
+                      </span>
+                    )}
+                  </p>
+                )}
               </header>
 
               <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
