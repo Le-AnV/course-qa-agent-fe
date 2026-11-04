@@ -43,6 +43,10 @@ export interface ChatMessageCitation {
  * Individual chat message in a conversation session (AC-01, AC-02).
  */
 export interface ChatMessageItem {
+  feedback?: 'helpful' | 'not_helpful' | null;
+  ticket_id?: string | null;
+  can_create_feedback_ticket?: boolean;
+  original_question?: string | null;
   id: string;
   session_id?: string;
   role: ChatRole;

@@ -11,3 +11,11 @@ export type ChatQuota = {
 export function getChatQuota(): Promise<ChatQuota> {
   return apiFetch<ChatQuota>('/api/chat/quota');
 }
+
+export type AnswerFeedback = 'helpful' | 'not_helpful';
+
+export function saveAnswerFeedback(messageId: string, feedback: AnswerFeedback): Promise<{ feedback: AnswerFeedback }> {
+  return apiFetch(`/api/chat/messages/${messageId}/feedback`, {
+    method: 'PUT', body: JSON.stringify({ feedback }),
+  });
+}
