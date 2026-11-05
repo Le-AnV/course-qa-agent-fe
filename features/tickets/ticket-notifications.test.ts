@@ -6,4 +6,8 @@ describe("ticketNotificationHref", () => {
     expect(ticketNotificationHref({ class_id: "class-1", id: "ticket-2" }))
       .toBe("/teacher/class/class-1/tickets?ticket_id=ticket-2");
   });
+  it("opens the student's ticket from the bell", () => {
+    expect(ticketNotificationHref({ class_id: "class-1", id: "ticket-2" }, "student"))
+      .toBe("/student/class/class-1/tickets?ticket_id=ticket-2");
+  });
 });
