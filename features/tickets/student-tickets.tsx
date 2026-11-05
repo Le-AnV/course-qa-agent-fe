@@ -9,11 +9,14 @@ import { studentApi, type StudentClass } from "@/lib/student-api";
 import { cn } from "@/lib/utils";
 import {
   addTicketReply,
+  getStudentTicket,
   listMyTickets,
+  markTicketSeen,
   reopenTicket,
   resolveTicket,
   type Ticket,
   type TicketList,
+  type TicketInboxItem,
 } from "./api";
 import {
   ArchivedClassBadge,
@@ -21,6 +24,8 @@ import {
   getTicketStatusTheme,
   TicketStatusBadge,
 } from "./ticket-status-badge";
+import { hasUnreadReply, latestUnreadReply } from "./unread-replies";
+import { useTicketNotifications } from "./ticket-notifications";
 
 const FILTERS = [
   { id: "OPEN", label: "Open" },
@@ -40,7 +45,12 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
   const [error, setError] = React.useState<string | null>(null);
   const [retry, setRetry] = React.useState(0);
   const [search, setSearch] = React.useState("");
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [selectedId, setSelectedId] = React.useState<string | null>(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("ticket_id"),
+  );
+  const [linkedTicket, setLinkedTicket] = React.useState<TicketInboxItem | null>(null);
+  const notifications = useTicketNotifications();
+  const markedReply = React.useRef<string | null>(null);
   const [followUp, setFollowUp] = React.useState("");
   const [replyBusy, setReplyBusy] = React.useState(false);
   const [replyError, setReplyError] = React.useState<string | null>(null);
@@ -95,7 +105,7 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [classId, filter, page, retry]);
+  }, [classId, filter, page, retry, notifications?.newReplyVersion]);
 
   // Keep the page fresh while the student waits for a teacher reply.
   React.useEffect(() => {
@@ -109,6 +119,7 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
     if (!soft) setLoading(true);
     setError(null);
     setSelectedId(null);
+    setLinkedTicket(null);
     setFollowUp("");
     setReplyError(null);
     setActionError(null);
@@ -124,7 +135,28 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
             value.toLowerCase().includes(query),
           ),
       );
-  const selected = visible.find((ticket) => ticket.id === selectedId) ?? visible[0];
+  React.useEffect(() => {
+    if (!selectedId || !data || data.items.some((ticket) => ticket.id === selectedId)) return;
+    let cancelled = false;
+    void getStudentTicket(selectedId).then((ticket) => {
+      if (cancelled) return;
+      const clazz = classes.find((item) => item.id === ticket.class_id);
+      setLinkedTicket({ ...ticket, student_name: "", class_name: clazz?.name ?? "", class_code: clazz?.code ?? "", class_status: clazz?.status ?? "ACTIVE" });
+    }).catch(() => { if (!cancelled) setLinkedTicket(null); });
+    return () => { cancelled = true; };
+  }, [selectedId, data, classes]);
+  const selected = selectedId
+    ? visible.find((ticket) => ticket.id === selectedId) ?? (linkedTicket?.id === selectedId ? linkedTicket : undefined)
+    : visible[0];
+  const unreadReply = selected ? latestUnreadReply(selected) : undefined;
+  React.useEffect(() => {
+    if (!selected || !unreadReply || markedReply.current === unreadReply.id) return;
+    markedReply.current = unreadReply.id;
+    void markTicketSeen(selected.id).then(() => {
+      setRetry((value) => value + 1);
+      void notifications?.refresh();
+    }).catch(() => { markedReply.current = null; });
+  }, [selected, unreadReply, notifications]);
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / (data?.page_size ?? 20)));
   const classSelectOptions: AppSelectOption[] = [
     { value: "", label: "All my classes" },
@@ -227,6 +259,7 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
           >
             <span className="flex items-center justify-between gap-2">
               <TicketStatusBadge status={ticket.status} />
+              {hasUnreadReply(ticket) && <span aria-label="New teacher reply" className="h-2 w-2 rounded-full bg-[#B74B3A]" />}
               <time dateTime={ticket.created_at} className="text-[11px] text-[#6F6F6F]">
                 {formatTicketDate(ticket.created_at)}
               </time>

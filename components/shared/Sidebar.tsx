@@ -374,7 +374,7 @@ export function AppSidebar({ role }: { role: Role }) {
       />
 
       {/* User Footer — collapsed rail keeps only the ticket bell. */}
-      {(!collapsed || role === "trainer") && (
+      {(!collapsed || role === "trainer" || role === "student") && (
         <div
           className={cn(
             "relative border-t border-[#DADADA]",
@@ -416,7 +416,7 @@ export function AppSidebar({ role }: { role: Role }) {
                   </span>
                   <span className="text-[11px] text-[#5A5A5A]">{roleLabel}</span>
                 </div>
-                {role === "trainer" && <TicketNotificationBell />}
+                {(role === "trainer" || role === "student") && <TicketNotificationBell />}
                 <button
                   onClick={() => setShowMenu(!showMenu)}
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-[#6F6F6F] hover:bg-[#F7F7F7] hover:text-[#111111]"
