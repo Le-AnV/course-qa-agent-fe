@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/admin-api";
+import type { ChatMessageCitation } from "@/features/history/types";
 
 export type Ticket = {
   id: string;
@@ -7,6 +8,8 @@ export type Ticket = {
   question: string;
   original_question?: string | null;
   agent_answer?: string | null;
+  citations?: ChatMessageCitation[];
+  source_message_id?: string | null;
   status: "OPEN" | "ANSWERED" | "RESOLVED" | "EXPIRED";
   created_at: string;
   escalated_to_id?: string | null;
@@ -95,6 +98,12 @@ export function createTicket(input: {
   return apiFetch<Ticket>("/api/tickets", {
     method: "POST",
     body: JSON.stringify(input),
+  });
+}
+
+export function createAnswerTicket(messageId: string, details: string): Promise<Ticket> {
+  return apiFetch<Ticket>(`/api/chat/messages/${messageId}/ticket`, {
+    method: "POST", body: JSON.stringify({ confirmed: true, details }),
   });
 }
 

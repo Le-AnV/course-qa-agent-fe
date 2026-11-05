@@ -13,20 +13,27 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { studentApi, type StudentClass } from '@/lib/student-api';
+import { createAnswerTicket } from './api';
+import type { ChatCitation } from '@/lib/sse';
+import { CitationChip } from '@/features/citations/citation-chip';
+import { citationKey } from '@/lib/citations';
+import { TicketCitations } from './ticket-citations';
 import { addTicketReply, createTicket, getStudentTicket, reopenTicket, resolveTicket, type Ticket, type TicketReply } from './api';
 
 export function AskTeacherButton({
   classId,
   question,
   selection,
+  feedbackContext,
 }: {
   classId: string;
   question: string;
   selection?: { text: string; left: number; top: number };
+  feedbackContext?: { messageId: string; answer: string; citations: ChatCitation[]; ticketId?: string | null; onCreated?: (ticketId: string) => void };
 }) {
   const [open, setOpen] = React.useState(false);
   const [classes, setClasses] = React.useState<StudentClass[]>([]);
-  const [selectedClassId, setSelectedClassId] = React.useState('');
+  const [selectedClassId, setSelectedClassId] = React.useState(feedbackContext ? classId : '');
   const [studentQuestion, setStudentQuestion] = React.useState('');
   const [agentAnswer, setAgentAnswer] = React.useState('');
   const [ticket, setTicket] = React.useState<Ticket | null>(null);
@@ -35,6 +42,8 @@ export function AskTeacherButton({
   const [loadingClasses, setLoadingClasses] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const submitLock = React.useRef(false);
+  const feedbackMode = Boolean(feedbackContext);
 
   React.useEffect(() => {
     if (!open || ticket) return;
@@ -45,7 +54,7 @@ export function AskTeacherButton({
         const available = result.filter((item) => item.status !== "ARCHIVED");
         setClasses(available);
         const initial = available.some((item) => item.id === classId) ? classId : '';
-        setSelectedClassId(initial);
+        setSelectedClassId(feedbackMode ? classId : initial);
       })
       .catch((cause) => {
         if (!cancelled) setError(cause instanceof Error ? cause.message : 'Could not load your classes.');
@@ -56,9 +65,9 @@ export function AskTeacherButton({
     return () => {
       cancelled = true;
     };
-  }, [open, classId, ticket]);
+  }, [open, classId, ticket, feedbackMode]);
 
-  const activeTicketId = ticket?.id;
+  const activeTicketId = ticket?.id ?? feedbackContext?.ticketId;
   React.useEffect(() => {
     if (!open || !activeTicketId) return;
     let cancelled = false;
@@ -68,8 +77,11 @@ export function AskTeacherButton({
         if (!cancelled) {
           setTicket(current);
           setReplies(current.replies);
+          setError(null);
         }
-      } catch { /* Keep the last known ticket state visible if refresh is temporarily unavailable. */ }
+      } catch (cause) {
+        if (!cancelled) setError(cause instanceof Error ? cause.message : 'Could not load the ticket.');
+      }
     };
     void refresh();
     const timer = window.setInterval(() => void refresh(), 8000);
@@ -78,22 +90,25 @@ export function AskTeacherButton({
 
   async function submitTicket(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedClassId || !studentQuestion.trim()) return;
+    if (submitLock.current || !selectedClassId || (!feedbackContext && !studentQuestion.trim())) return;
+    submitLock.current = true;
     setSubmitting(true);
     setError(null);
     try {
-      const created = await createTicket({
+      const created = feedbackContext ? await createAnswerTicket(feedbackContext.messageId, studentQuestion.trim()) : await createTicket({
         class_id: selectedClassId,
         question: studentQuestion.trim(),
         original_question: question,
         agent_answer: agentAnswer,
       });
       setTicket(created);
+      feedbackContext?.onCreated?.(created.id);
       setReplies([]);
       setStudentQuestion('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not create the ticket.');
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
     }
   }
@@ -146,12 +161,12 @@ export function AskTeacherButton({
 
   return (
     <>
-      {selection && !open && <Button
+      {(selection || feedbackContext) && !open && <Button
         type="button"
         variant="ghost"
         size="sm"
-        className="fixed z-[60] h-7 gap-1.5 bg-white px-2 text-xs text-[#5A5A5A] shadow-md"
-        style={{ left: selection.left, top: selection.top }}
+        className={feedbackContext ? 'h-7 text-xs' : 'fixed z-[60] h-7 gap-1.5 bg-white px-2 text-xs text-[#5A5A5A] shadow-md'}
+        style={feedbackContext ? undefined : { left: selection?.left, top: selection?.top }}
         aria-haspopup="dialog"
         data-ask-teacher-action
         onMouseDown={(event) => {
@@ -160,13 +175,13 @@ export function AskTeacherButton({
         }}
         onClick={() => {
           if (!ticket) {
-            setAgentAnswer(selection.text);
+            setAgentAnswer(feedbackContext?.answer ?? selection?.text ?? '');
             setStudentQuestion('');
           }
           setFollowUp('');
           if (!ticket) {
             setClasses([]);
-            setSelectedClassId('');
+            setSelectedClassId(feedbackContext ? classId : '');
           }
           setError(null);
           setLoadingClasses(!ticket);
@@ -174,9 +189,9 @@ export function AskTeacherButton({
         }}
       >
         <MessageSquarePlus aria-hidden="true" />
-        Ask my teacher
+        {activeTicketId ? 'Open ticket' : 'Ask my teacher'}
       </Button>}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(value) => { if (!submitting) setOpen(value); }}>
         <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
           {ticket ? (
             <>
@@ -188,6 +203,8 @@ export function AskTeacherButton({
                 </DialogDescription>
               </DialogHeader>
               <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-[#E5E5E5] p-3 text-sm">
+                <TicketCitations citations={ticket.citations} />
+                {ticket.original_question && <p className="whitespace-pre-wrap">{ticket.original_question}</p>}
                 {ticket.agent_answer && <div className="space-y-1">
                   <p className="text-xs font-medium text-[#777]">Agent answer</p>
                   <p className="whitespace-pre-wrap rounded-md bg-[#F7F7F7] p-2">{ticket.agent_answer}</p>
@@ -234,6 +251,10 @@ export function AskTeacherButton({
               </>}
               {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
             </>
+          ) : activeTicketId ? (
+            <><DialogHeader><DialogTitle>Open ticket</DialogTitle><DialogDescription>Loading ticket…</DialogDescription></DialogHeader>
+              {error && <p role="alert">{error}</p>}
+              <Button onClick={() => { setOpen(false); }}>Close</Button></>
           ) : (
             <form onSubmit={submitTicket} className="space-y-4">
               <DialogHeader>
@@ -259,11 +280,12 @@ export function AskTeacherButton({
                         ? 'No active classes'
                         : 'Select a class'
                   }
-                  disabled={loadingClasses || classes.length === 0}
+                  disabled={Boolean(feedbackContext) || loadingClasses || classes.length === 0}
                   aria-label="Class"
                   triggerClassName="w-full"
                 />
               </label>
+              {feedbackContext && <p className="text-sm">Class: {classes.find((item) => item.id === classId)?.name ?? classId}</p>}
               <div className="space-y-1.5 text-sm">
                 <p className="font-medium">Original question</p>
                 <p className="max-h-28 overflow-y-auto rounded-md bg-[#F7F7F7] p-3 text-[#444]">{question}</p>
@@ -273,14 +295,16 @@ export function AskTeacherButton({
                 <textarea id="ticket-agent-answer" value={agentAnswer} readOnly rows={3}
                   className="w-full rounded-md border border-[#DADADA] bg-[#F7F7F7] px-3 py-2 text-sm font-normal" />
               </label>
+              {feedbackContext?.citations.map((citation) => <CitationChip key={citationKey(citation)} citation={citation} />)}
               <label className="block space-y-1.5 text-sm font-medium" htmlFor="ticket-question">
-                Your question
+                {feedbackContext ? 'Additional details (optional)' : 'Your question'}
                 <textarea
                   id="ticket-question"
                   value={studentQuestion}
                   onChange={(event) => setStudentQuestion(event.target.value)}
                   placeholder="What would you like your teacher to explain?"
-                  required
+                  required={!feedbackContext}
+                  disabled={submitting}
                   maxLength={10000}
                   rows={3}
                   className="w-full rounded-md border border-[#DADADA] bg-white px-3 py-2 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -288,9 +312,9 @@ export function AskTeacherButton({
               </label>
               {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={submitting || loadingClasses || !selectedClassId || !studentQuestion.trim()}>
-                  {submitting ? 'Creating…' : 'Create ticket'}
+                <Button type="button" variant="outline" disabled={submitting} onClick={() => setOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={submitting || loadingClasses || !selectedClassId || (!feedbackContext && !studentQuestion.trim())}>
+                  {submitting ? 'Creating…' : feedbackContext ? 'Confirm and send' : 'Create ticket'}
                 </Button>
               </DialogFooter>
             </form>
