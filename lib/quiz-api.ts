@@ -27,7 +27,46 @@ export type QuizImportPreview = {
   questions: QuizImportQuestion[];
 };
 
-export type ImportedQuiz = { id: string; title: string; status: "DRAFT" };
+export type QuizQuestion = {
+  id: string;
+  question_type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "FILL_IN_BLANK";
+  question: string;
+  points: number;
+  difficulty: "REMEMBER" | "UNDERSTAND" | "APPLY";
+  order_index: number;
+  explanation: string | null;
+  rubric: string | null;
+  source_reference: string | null;
+  grading_config: { correct_answers?: string[] } | null;
+  options: {
+    id: string;
+    option_label: string;
+    option_text: string;
+    is_correct: boolean;
+  }[];
+};
+
+export type QuizSummary = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  question_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type QuizDetail = {
+  id: string;
+  class_id: string;
+  creator_id: string;
+  title: string;
+  description: string | null;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  questions: QuizQuestion[];
+};
+
+export type ImportedQuiz = QuizDetail;
 
 function token(): string | null {
   return typeof window === "undefined" ? null : window.localStorage.getItem(AUTH_TOKEN_KEY);
@@ -40,6 +79,15 @@ async function responseError(response: Response): Promise<Error> {
   const error = new Error(message) as Error & { detail?: unknown };
   error.detail = detail;
   return error;
+}
+
+async function request<T>(path: string): Promise<T> {
+  const auth = token();
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: auth ? { Authorization: `Bearer ${auth}` } : {},
+  });
+  if (!response.ok) throw await responseError(response);
+  return (await response.json()) as T;
 }
 
 async function upload<T>(
@@ -63,6 +111,12 @@ async function upload<T>(
 }
 
 export const quizApi = {
+  listQuizzes: (classId: string) =>
+    request<QuizSummary[]>(`/api/classes/${encodeURIComponent(classId)}/quizzes`),
+  getQuiz: (classId: string, quizId: string) =>
+    request<QuizDetail>(
+      `/api/classes/${encodeURIComponent(classId)}/quizzes/${encodeURIComponent(quizId)}`,
+    ),
   previewImport: (classId: string, file: File) => upload<QuizImportPreview>(classId, file),
   importQuiz: (classId: string, file: File, title: string, description: string) =>
     upload<ImportedQuiz>(classId, file, { title, description }),

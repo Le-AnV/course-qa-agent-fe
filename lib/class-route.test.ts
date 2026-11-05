@@ -9,6 +9,12 @@ describe("classSectionFromPathname", () => {
     );
   });
 
+  it("keeps nested sections so switching classes does not 404", () => {
+    expect(
+      classSectionFromPathname("/teacher/class/abc/quizzes/import", "/teacher"),
+    ).toBe("quizzes/import");
+  });
+
   it("falls back to overview outside a tab route", () => {
     expect(classSectionFromPathname("/teacher/class/abc", "/teacher")).toBe("overview");
     expect(classSectionFromPathname("/teacher/classes", "/teacher")).toBe("overview");
