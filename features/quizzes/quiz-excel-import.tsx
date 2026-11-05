@@ -84,7 +84,7 @@ export function QuizExcelImport({ classId }: { classId: string }) {
   }
 
   return (
-    <section className="mx-auto max-w-4xl space-y-5 pb-10">
+    <section className="space-y-6 pb-10">
       <ClassPageHeader
         title="Import from Excel"
         subtitle="Upload an .xlsx question bank, check the validation results, then create a draft for teacher review."
