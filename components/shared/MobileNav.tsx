@@ -111,7 +111,7 @@ export function MobileNav({ role }: { role: Role }) {
           </div>
           <span className="truncate font-heading text-[14px] font-bold text-[#111111]">Course Q&amp;A</span>
         </Link>
-        {role === "trainer" ? (
+        {role === "trainer" || role === "student" ? (
           <div className="ml-auto flex items-center gap-1">
             <TicketNotificationBell placement="down" />
             <Link
