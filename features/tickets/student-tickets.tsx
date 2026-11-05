@@ -15,7 +15,12 @@ import {
   type Ticket,
   type TicketList,
 } from "./api";
-import { formatTicketDate, TicketStatusBadge, ArchivedClassBadge } from "./ticket-status-badge";
+import {
+  ArchivedClassBadge,
+  formatTicketDate,
+  getTicketStatusTheme,
+  TicketStatusBadge,
+} from "./ticket-status-badge";
 
 const FILTERS = [
   { id: "OPEN", label: "Open" },
@@ -331,7 +336,12 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
       rightDetailContent={
         selected ? (
           <article className="flex h-full min-h-0 flex-col">
-            <header className="border-b border-[#E5E5E5] bg-[#FAFAFA] px-5 py-4">
+            <header
+              className={cn(
+                "border-b px-5 py-4",
+                getTicketStatusTheme(selected.status).headerClassName,
+              )}
+            >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <TicketStatusBadge status={selected.status} />
                 <span className="text-xs text-[#5A5A5A]">
@@ -345,7 +355,12 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
                   {formatTicketDate(selected.created_at)}
                 </time>
               </div>
-              <h2 className="mt-2 text-lg font-semibold leading-snug text-[#111111]">
+              <h2
+                className={cn(
+                  "mt-2 text-lg font-semibold leading-snug",
+                  getTicketStatusTheme(selected.status).titleClassName,
+                )}
+              >
                 {selected.question}
               </h2>
               <p className="mt-1 break-all font-mono text-[10px] text-[#6F6F6F]">

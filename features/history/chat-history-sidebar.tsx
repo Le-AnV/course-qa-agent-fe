@@ -4,8 +4,6 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   MessageSquare,
   MoreHorizontal,
@@ -32,7 +30,6 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useIsomorphicLayoutEffect } from '@/hooks/use-isomorphic-layout-effect';
 import {
   getSessions,
   deleteSession,
@@ -42,7 +39,6 @@ import {
   togglePinSession,
 } from './api';
 import { splitHighlightParts } from './search-highlight';
-import { readHistoryCollapsed, writeHistoryCollapsed } from './history-prefs';
 import type { ChatSessionItem, SearchResultItem } from './types';
 
 /**
@@ -66,12 +62,6 @@ function formatRelativeTime(isoString: string): string {
   } catch {
     return '';
   }
-}
-
-/** One letter is enough to tell conversations apart in the 64 px rail. */
-function railInitial(session: ChatSessionItem): string {
-  const title = session.title?.trim();
-  return title ? title[0].toUpperCase() : '';
 }
 
 function HighlightedText({ text, keyword }: { text: string; keyword: string }) {
@@ -116,18 +106,20 @@ export interface ChatHistorySidebarProps {
   className?: string;
   /** Desktop placement; the mobile drawer follows the same side. */
   side?: 'left' | 'right';
-  /** Mobile drawer (< md). Desktop always renders the persistent panel. */
+  /** Desktop: when true the history column is collapsed away and the chat takes the width. */
+  collapsed?: boolean;
+  /** Mobile drawer (< md). Desktop keeps the column mounted so it can animate. */
   mobileOpen?: boolean;
   onMobileOpenChange?: (open: boolean) => void;
 }
 
 /**
  * Chat history has two shapes of the *same* surface:
- * - desktop: a 256 px panel that collapses to a 64 px rail (state persisted).
+ * - desktop: a 256 px panel that animates its width down to zero when collapsed.
  * - mobile (< md): a left drawer opened from the chat header.
  *
- * Both shapes share one 36 px header row, so switching states never reflows the
- * panel's contents vertically — the bug that made collapsing feel unstable.
+ * The desktop toggle lives in the chat header's right corner, so it stays in
+ * the same place whether the column is open or closed.
  */
 export function ChatHistorySidebar({
   classId,
@@ -137,6 +129,7 @@ export function ChatHistorySidebar({
   refreshTrigger = 0,
   className,
   side = 'left',
+  collapsed = false,
   mobileOpen = false,
   onMobileOpenChange,
 }: ChatHistorySidebarProps) {
@@ -144,7 +137,6 @@ export function ChatHistorySidebar({
   const [sessions, setSessions] = React.useState<ChatSessionItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
 
   // State for delete confirmation modal
   const [sessionToDelete, setSessionToDelete] = React.useState<ChatSessionItem | null>(null);
@@ -265,16 +257,6 @@ export function ChatHistorySidebar({
     };
   }, [searchQuery, classId, searchRetryKey]);
   /* eslint-enable react-hooks/set-state-in-effect */
-
-  // Restore the last shape before paint; the server/first client render is expanded.
-  useIsomorphicLayoutEffect(() => {
-    setIsCollapsed(readHistoryCollapsed());
-  }, []);
-
-  const setCollapsed = (collapsed: boolean) => {
-    setIsCollapsed(collapsed);
-    writeHistoryCollapsed(collapsed);
-  };
 
   // Fetch past chat sessions for the current class
   const loadSessions = React.useCallback(async () => {
@@ -397,11 +379,8 @@ export function ChatHistorySidebar({
   const iconButton =
     'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--brand-ink)] transition-colors hover:bg-white/60 hover:text-[var(--brand-ink-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)] disabled:cursor-not-allowed disabled:opacity-40';
 
-  // A right-hand panel collapses toward the right, so its arrows mirror the left one.
-  const ToggleIcon = isCollapsed === isRight ? ChevronLeft : ChevronRight;
-
-  const states = (compact: boolean) => {
-    if (!compact && (isSearching || searchResults !== null || searchError !== null)) {
+  const states = () => {
+    if (isSearching || searchResults !== null || searchError !== null) {
       if (isSearching) {
         return (
           <div className="space-y-2 p-2" aria-busy="true" aria-live="polite">
@@ -479,13 +458,7 @@ export function ChatHistorySidebar({
     }
 
     if (isLoading) {
-      return compact ? (
-        <div className="flex flex-col items-center gap-2" aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-9 w-9 rounded-lg" />
-          ))}
-        </div>
-      ) : (
+      return (
         <div className="space-y-2" aria-hidden>
           <Skeleton className="h-12 w-full rounded-lg" />
           <Skeleton className="h-12 w-full rounded-lg" />
@@ -495,17 +468,7 @@ export function ChatHistorySidebar({
     }
 
     if (error) {
-      return compact ? (
-        <button
-          type="button"
-          onClick={() => setCollapsed(false)}
-          title={error}
-          aria-label={`Chat history failed to load: ${error}`}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#9D4C38] hover:bg-[#F7F7F7]"
-        >
-          <AlertCircle className="h-4 w-4" />
-        </button>
-      ) : (
+      return (
         <div className="my-auto flex flex-col items-center justify-center gap-2 p-3 text-center">
           <AlertCircle className="h-6 w-6 stroke-1.5 text-[#9D4C38]" />
           <p className="text-[11.5px] text-[#5A5A5A]">{error}</p>
@@ -521,7 +484,6 @@ export function ChatHistorySidebar({
     }
 
     if (sessions.length === 0) {
-      if (compact) return null;
       return (
         <div className="my-auto flex flex-col items-center justify-center gap-2 p-4 text-center">
           <MessageSquare className="h-7 w-7 stroke-1 text-[#CFCFCF]" />
@@ -705,51 +667,6 @@ export function ChatHistorySidebar({
       );
     };
 
-    if (compact) {
-      return (
-        <div className="flex flex-col items-center gap-2">
-          {sessions.map((session) => {
-            const isActive = activeSessionId === session.id;
-            const initial = railInitial(session);
-            return (
-              <button
-                key={session.id}
-                type="button"
-                onClick={() => selectSession(session.id)}
-                title={session.title || 'Conversation'}
-                aria-label={`Open ${session.title || 'conversation'}`}
-                aria-current={isActive ? 'true' : undefined}
-                className={cn(
-                  'relative flex h-9 w-9 items-center justify-center rounded-xl border text-[11.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]',
-                  isActive
-                    ? 'border-[var(--brand)] bg-[var(--brand)] text-white shadow-sm'
-                    : 'border-transparent text-[#6F6F6F] hover:border-[var(--brand-line)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand-ink)]',
-                )}
-              >
-                {session.is_pinned && (
-                  <span
-                    className={cn(
-                      'absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full',
-                      isActive ? 'bg-white' : 'bg-[var(--brand)]',
-                    )}
-                    title="Pinned conversation"
-                  >
-                    <span
-                      className={cn(
-                        'h-1 w-1 rounded-full',
-                        isActive ? 'bg-[var(--brand)]' : 'bg-white',
-                      )}
-                    />
-                  </span>
-                )}
-                {initial ? initial : <MessageSquare className="h-4 w-4" />}
-              </button>
-            );
-          })}
-        </div>
-      );
-    }
-
     const pinnedSessions = sessions.filter((s) => s.is_pinned);
     const recentSessions = sessions.filter((s) => !s.is_pinned);
 
@@ -789,71 +706,33 @@ export function ChatHistorySidebar({
     <>
       <aside
         aria-label="Chat history"
+        aria-hidden={collapsed || undefined}
+        inert={collapsed || undefined}
         className={cn(
-          // Width snaps instead of animating: animating it reflowed the whole
-          // transcript (865 -> 1057 px) on every frame of the toggle.
-          'hidden shrink-0 flex-col overflow-hidden rounded-xl border border-[#DADADA] bg-white shadow-sm md:flex',
-          isCollapsed ? 'w-16' : 'w-64',
+          'hidden shrink-0 overflow-hidden transition-all duration-300 ease-out md:block',
+          collapsed ? 'ml-0 w-0 opacity-0' : 'ml-4 w-64 opacity-100',
           className,
         )}
       >
-        <div
-          className={cn(
-            'flex h-11 shrink-0 items-center border-b border-[var(--brand-line)] bg-[var(--brand-soft-strong)]',
-            isCollapsed ? 'justify-center px-2' : 'justify-between pl-3 pr-1.5',
-          )}
-        >
-          {!isCollapsed && (
+        <div className="ml-auto flex h-full w-64 flex-col overflow-hidden rounded-xl border border-[#DADADA] bg-white shadow-sm">
+          <div className="flex h-11 shrink-0 items-center justify-between border-b border-[#45698B] bg-[linear-gradient(112deg,#294D72_0%,#365F85_68%,#47759A_100%)] px-3">
             <span className="flex min-w-0 items-center gap-1.5">
-              <span className="truncate text-[13.5px] font-semibold text-[var(--brand-ink)]">
+              <span className="truncate text-[13.5px] font-semibold text-white">
                 Chat History
               </span>
               {sessions.length > 0 && (
                 <span
-                  className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-white/70 px-1 text-[10px] font-semibold leading-none text-[var(--brand-ink)]"
+                  className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-white/15 px-1 text-[10px] font-semibold leading-none text-white"
                   aria-label={`${sessions.length} conversations`}
                 >
                   {sessions.length > 99 ? '99+' : sessions.length}
                 </span>
               )}
             </span>
-          )}
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              onClick={() => setCollapsed(!isCollapsed)}
-              title={isCollapsed ? 'Expand chat history' : 'Collapse chat history'}
-              aria-label={isCollapsed ? 'Expand chat history' : 'Collapse chat history'}
-              aria-expanded={!isCollapsed}
-              aria-controls="chat-history-panel"
-              className={iconButton}
-            >
-              <ToggleIcon className="h-4 w-4" />
-            </button>
           </div>
-        </div>
 
-        <div
-          id="chat-history-panel"
-          className={cn('flex min-h-0 flex-1 flex-col', isCollapsed && 'items-center')}
-        >
-          {/* Header, New chat and search stay put; only the list scrolls. */}
-          {isCollapsed ? (
-            onNewChat && (
-              <div className="flex shrink-0 flex-col items-center gap-1.5 px-2 pt-2">
-                <button
-                  type="button"
-                  onClick={startNewChat}
-                  title="New chat"
-                  aria-label="Start a new chat"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-ink)] transition-colors hover:bg-[var(--brand-soft-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-                <span className="h-px w-6 bg-[#E9EDF2]" aria-hidden="true" />
-              </div>
-            )
-          ) : (
+          <div id="chat-history-panel" className="flex min-h-0 flex-1 flex-col">
+            {/* Header, New chat and search stay put; only the list scrolls. */}
             <div className="shrink-0 space-y-1.5 px-2 pt-2">
               {onNewChat && (
                 <button
@@ -867,15 +746,10 @@ export function ChatHistorySidebar({
               )}
               {renderSearchBox()}
             </div>
-          )}
 
-          <div
-            className={cn(
-              'flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden p-2 pt-1',
-              isCollapsed && 'items-center',
-            )}
-          >
-            {states(isCollapsed)}
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden p-2 pt-1">
+              {states()}
+            </div>
           </div>
         </div>
       </aside>
@@ -896,13 +770,18 @@ export function ChatHistorySidebar({
             Choose a past conversation from this class or start a new one.
           </DialogDescription>
 
-          <div className="flex h-11 shrink-0 items-center justify-between border-b border-[var(--brand-line)] bg-[var(--brand-soft-strong)] pl-3 pr-1.5">
-            <span className="truncate text-[13.5px] font-semibold text-[var(--brand-ink)]">
+          <div className="flex h-11 shrink-0 items-center justify-between border-b border-[#45698B] bg-[linear-gradient(112deg,#294D72_0%,#365F85_68%,#47759A_100%)] pl-3 pr-1.5">
+            <span className="truncate text-[13.5px] font-semibold text-white">
               Chat History
             </span>
             <div className="flex items-center gap-0.5">
               <DialogClose asChild>
-                <button type="button" title="Close" aria-label="Close chat history" className={iconButton}>
+                <button
+                  type="button"
+                  title="Close"
+                  aria-label="Close chat history"
+                  className={cn(iconButton, 'text-white hover:bg-white/15 hover:text-white')}
+                >
                   <X className="h-4 w-4" />
                 </button>
               </DialogClose>
@@ -924,7 +803,7 @@ export function ChatHistorySidebar({
               {renderSearchBox()}
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2 pt-1">
-              {states(false)}
+              {states()}
             </div>
           </div>
         </DialogContent>
