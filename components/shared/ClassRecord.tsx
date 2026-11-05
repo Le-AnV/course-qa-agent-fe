@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { BookOpen, FileText, Users } from "lucide-react";
-import { accentFor, termFor, type StudentClass } from "@/lib/student-api";
+import { termFor, type StudentClass } from "@/lib/student-api";
 
 type ClassRecordRole = "teacher" | "student";
 
@@ -40,8 +40,7 @@ export function ClassRecord({
   return (
     <section
       aria-labelledby="class-overview-title"
-      className="relative isolate overflow-hidden rounded-xl border border-[#45698B] border-l-4 bg-[linear-gradient(112deg,#294D72_0%,#365F85_68%,#47759A_100%)] shadow-[0_8px_24px_rgba(23,51,83,0.12)]"
-      style={{ borderLeftColor: accentFor(cls.id) }}
+      className="relative isolate overflow-hidden rounded-xl border border-[#45698B] bg-[linear-gradient(112deg,#294D72_0%,#365F85_68%,#47759A_100%)] shadow-[0_8px_24px_rgba(23,51,83,0.12)]"
     >
       <div
         aria-hidden="true"
