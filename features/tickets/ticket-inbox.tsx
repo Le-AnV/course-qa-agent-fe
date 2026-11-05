@@ -361,7 +361,7 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
         subtitle="Student questions for your assigned classes. Newest first."
         titleBadge={
           !loading && !error && data ? (
-            <span className="text-xs text-[#6F6F6F]">
+            <span className="text-xs text-[#DEE8F2]">
               {data.total} {data.total === 1 ? "ticket" : "tickets"}
             </span>
           ) : undefined
@@ -369,7 +369,7 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
         headerActions={
           <label
             htmlFor="inbox-class"
-            className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-[#5A5A5A]"
+            className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-[#DEE8F2]"
           >
             Class
             <AppSelect
@@ -384,12 +384,12 @@ export function TicketInbox({ initialClassId }: { initialClassId: string }) {
               placeholder="All assigned classes"
               aria-label="Filter tickets by class"
               size="sm"
-              triggerClassName="w-[380px] max-w-full"
-              contentClassName="min-w-[340px]"
+              triggerClassName="w-[520px] max-w-full"
+              contentClassName="w-[var(--radix-select-trigger-width)] min-w-0"
               renderValue={(option) =>
                 option ? (
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate">{option.label}</span>
+                    <span className="whitespace-nowrap">{option.label}</span>
                     {option.description ? (
                       <span className="shrink-0 text-[11px] font-normal text-[#6F6F6F]">
                         {option.description}
