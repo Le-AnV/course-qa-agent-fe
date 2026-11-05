@@ -3,12 +3,9 @@
 import * as React from "react";
 import { FileSpreadsheet, LoaderCircle, Upload } from "lucide-react";
 import { toast } from "sonner";
-import {
-  quizApi,
-  type QuizDetail,
-  type QuizImportPreview,
-} from "@/lib/quiz-api";
+import { quizApi, type QuizDetail, type QuizImportPreview } from "@/lib/quiz-api";
 import { QuizList } from "@/features/quizzes/quiz-list";
+import { ClassPageHeader } from "@/components/shared/ClassPageHeader";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -88,13 +85,10 @@ export function QuizExcelImport({ classId }: { classId: string }) {
 
   return (
     <section className="mx-auto max-w-4xl space-y-5 pb-10">
-      <header>
-        <p className="text-sm font-medium text-slate-500">Quiz</p>
-        <h1 className="mt-1 text-2xl font-semibold text-slate-900">Import from Excel</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          Upload an .xlsx question bank, check the validation results, then create a draft for teacher review.
-        </p>
-      </header>
+      <ClassPageHeader
+        title="Import from Excel"
+        subtitle="Upload an .xlsx question bank, check the validation results, then create a draft for teacher review."
+      />
 
       <div className="rounded-lg border border-slate-200 bg-white p-5">
         <div className="grid gap-4 sm:grid-cols-2">
