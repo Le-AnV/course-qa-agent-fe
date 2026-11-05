@@ -5,6 +5,7 @@ import { Search, Users, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { studentApi, accentFor, termFor, type StudentClass } from "@/lib/student-api";
 import { PageContainer } from "@/components/shared/PageShell";
+import { WorkspacePageHeader } from "@/components/shared/WorkspacePageHeader";
 
 export default function TeacherClassesPage() {
   const router = useRouter();
@@ -77,12 +78,10 @@ export default function TeacherClassesPage() {
 
   return (
     <PageContainer className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <h1 className="text-[28px] font-bold text-[#111111] font-heading tracking-tight">My Classes</h1>
-          <p className="text-[14px] text-[#5A5A5A] mt-1">Your assigned classes — open one to review join requests.</p>
-        </div>
-      </div>
+      <WorkspacePageHeader
+        title="My Classes"
+        subtitle="Your assigned classes — open one to review join requests."
+      />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative w-full sm:w-72">

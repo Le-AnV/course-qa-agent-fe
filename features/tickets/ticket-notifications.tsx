@@ -20,6 +20,7 @@ type TicketNotificationsValue = {
 
 const TicketNotificationsContext = React.createContext<TicketNotificationsValue | null>(null);
 const AUTO_DISMISS_MS = 4_000;
+const NOTICE_TRANSITION_MS = 320;
 
 export function ticketNotificationHref(ticket: Pick<TicketInboxItem, "id" | "class_id">): string {
   return `/teacher/class/${ticket.class_id}/tickets?ticket_id=${encodeURIComponent(ticket.id)}`;
@@ -58,7 +59,7 @@ export function TicketNotificationsProvider({
       noticeRemovalTimer.current = setTimeout(() => {
         setNoticeCount(null);
         noticeRemovalTimer.current = null;
-      }, 200);
+      }, NOTICE_TRANSITION_MS);
     };
     noticeTimer.current = setTimeout(hideNotice, AUTO_DISMISS_MS);
   }, []);
@@ -70,7 +71,7 @@ export function TicketNotificationsProvider({
     noticeRemovalTimer.current = setTimeout(() => {
       setNoticeCount(null);
       noticeRemovalTimer.current = null;
-    }, 200);
+    }, NOTICE_TRANSITION_MS);
   }, []);
   const requestId = React.useRef(0);
 
@@ -161,15 +162,18 @@ export function TicketNotificationBell({ placement = "up" }: { placement?: "up" 
       {notifications.noticeCount !== null && (
         <aside
           role="status"
-          className={`absolute z-[100] flex w-max max-w-[min(280px,calc(100vw-2rem))] items-center gap-3 rounded-lg border border-[#DADADA] bg-white px-4 py-3 text-[13px] text-[#111111] shadow-lg transition-[opacity,transform] duration-200 ease-out ${panelPosition} ${notifications.noticeVisible ? "translate-y-0 scale-100 opacity-100" : placement === "up" ? "translate-y-1 scale-[0.98] opacity-0" : "-translate-y-1 scale-[0.98] opacity-0"}`}
+          className={`absolute z-[100] flex w-max max-w-[min(300px,calc(100vw-2rem))] items-center gap-3 overflow-hidden rounded-xl border border-[#C8D6E5] bg-[linear-gradient(135deg,#FFFFFF_0%,#F5F8FC_100%)] px-3.5 py-3 text-[13px] text-[#193653] shadow-[0_14px_36px_rgba(23,51,83,0.20)] ring-1 ring-[#173353]/[0.04] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${panelPosition} ${notifications.noticeVisible ? "translate-y-0 scale-100 opacity-100" : placement === "up" ? "translate-y-2 scale-[0.96] opacity-0 motion-reduce:translate-y-0 motion-reduce:scale-100" : "-translate-y-2 scale-[0.96] opacity-0 motion-reduce:translate-y-0 motion-reduce:scale-100"}`}
         >
-          <Bell className="h-4 w-4 shrink-0 text-[#5A5A5A]" aria-hidden="true" />
-          <span>Có {notifications.noticeCount} ticket chưa trả lời.</span>
+          <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-[linear-gradient(to_bottom,#47759A,#294D72)]" />
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#D6E2EF] bg-[#EAF0F7] text-[#294D72] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+            <Bell className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="leading-snug">Có <strong className="font-bold text-[#1F3A5F]">{notifications.noticeCount}</strong> ticket chưa trả lời.</span>
           <button
             type="button"
             aria-label="Đóng thông báo ticket"
             onClick={notifications.dismissNotice}
-            className="ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#6F6F6F] hover:bg-[#F7F7F7]"
+            className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#60758A] transition-colors hover:bg-[#E8EEF5] hover:text-[#193653] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#294D72]"
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>

@@ -62,7 +62,7 @@ export default function ClassWorkspaceLayout({
   const isAgentPage = pathname?.endsWith("/agent");
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#F4F5F8]">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#E7EDF5]">
       <CourseTabs tabs={tabs} />
 
       {isAgentPage ? (

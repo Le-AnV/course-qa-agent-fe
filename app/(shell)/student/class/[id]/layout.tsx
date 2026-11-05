@@ -62,7 +62,7 @@ export default function StudentClassWorkspaceLayout({
   const classSection = classSectionFromPathname(pathname ?? "", "/student");
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#F4F5F8]">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#E7EDF5]">
       <CourseTabs tabs={tabs} />
 
       {/* Mobile class-switcher: sidebar ẩn dưới lg nên cần chỗ đổi lớp nhanh. */}

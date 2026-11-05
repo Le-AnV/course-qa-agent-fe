@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { PAGE_COLUMN } from "@/components/shared/PageShell";
+import { WorkspacePageHeader } from "@/components/shared/WorkspacePageHeader";
 
 type AdminPageShellProps = {
   title: string;
@@ -19,14 +20,8 @@ type AdminPageShellProps = {
  */
 export function AdminPageShell({ title, subtitle, actions, children, className }: AdminPageShellProps) {
   return (
-    <div className={cn(PAGE_COLUMN, "space-y-6 bg-[#F4F5F8]", className)}>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <h1 className="text-[26px] font-semibold text-[#111111] font-heading tracking-tight">{title}</h1>
-          <p className="text-[13.5px] text-[#5A5A5A] mt-1.5">{subtitle}</p>
-        </div>
-        {actions && <div className="flex gap-2 shrink-0">{actions}</div>}
-      </div>
+    <div className={cn(PAGE_COLUMN, "space-y-6 bg-[#E7EDF5]", className)}>
+      <WorkspacePageHeader title={title} subtitle={subtitle} actions={actions} />
       {children}
     </div>
   );
