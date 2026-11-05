@@ -373,53 +373,61 @@ export function AppSidebar({ role }: { role: Role }) {
         onExpand={() => setCollapsed(false)}
       />
 
-      {/* User Footer */}
-      <div className="relative border-t border-[#DADADA] p-4">
-        {showMenu && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-            <div className="absolute bottom-full left-4 mb-2 w-[calc(100%-2rem)] rounded-md border border-[#DADADA] bg-white py-1 shadow-sm z-50">
-              <Link
-                href="/account"
-                className="block px-4 py-2 text-[12.5px] text-[#111111] hover:bg-[#F7F7F7]"
-                onClick={() => setShowMenu(false)}
-              >
-                Account settings
-              </Link>
-              <div className="my-1 border-t border-[#DADADA]" />
-              <button
-                onClick={handleLogout}
-                className="block w-full px-4 py-2 text-left text-[12.5px] text-[#9D4C38] hover:bg-[#F7F7F7]"
-              >
-                Log out
-              </button>
-            </div>
-          </>
-        )}
-        <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F7F7F7] text-[11px] font-semibold text-[#111111]">
-            {initialsFor(displayName)}
-          </div>
-          {!collapsed && (
+      {/* User Footer — collapsed rail keeps only the ticket bell. */}
+      {(!collapsed || role === "trainer" || role === "student") && (
+        <div
+          className={cn(
+            "relative border-t border-[#DADADA]",
+            collapsed ? "flex justify-center p-2" : "p-4",
+          )}
+        >
+          {collapsed ? (
+            <TicketNotificationBell />
+          ) : (
             <>
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <span className="truncate text-[12.5px] font-bold text-[#111111]">
-                  {displayName}
-                </span>
-                <span className="text-[11px] text-[#5A5A5A]">{roleLabel}</span>
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+                  <div className="absolute bottom-full left-4 mb-2 w-[calc(100%-2rem)] rounded-md border border-[#DADADA] bg-white py-1 shadow-sm z-50">
+                    <Link
+                      href="/account"
+                      className="block px-4 py-2 text-[12.5px] text-[#111111] hover:bg-[#F7F7F7]"
+                      onClick={() => setShowMenu(false)}
+                    >
+                      Account settings
+                    </Link>
+                    <div className="my-1 border-t border-[#DADADA]" />
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full px-4 py-2 text-left text-[12.5px] text-[#9D4C38] hover:bg-[#F7F7F7]"
+                    >
+                      Log out
+                    </button>
+                  </div>
+                </>
+              )}
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F7F7F7] text-[11px] font-semibold text-[#111111]">
+                  {initialsFor(displayName)}
+                </div>
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <span className="truncate text-[12.5px] font-bold text-[#111111]">
+                    {displayName}
+                  </span>
+                  <span className="text-[11px] text-[#5A5A5A]">{roleLabel}</span>
+                </div>
+                {(role === "trainer" || role === "student") && <TicketNotificationBell />}
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-[#6F6F6F] hover:bg-[#F7F7F7] hover:text-[#111111]"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
               </div>
-              {(role === "trainer" || role === "student") && <TicketNotificationBell />}
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-[#6F6F6F] hover:bg-[#F7F7F7] hover:text-[#111111]"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </button>
             </>
           )}
-          {collapsed && (role === "trainer" || role === "student") && <TicketNotificationBell />}
         </div>
-      </div>
+      )}
     </aside>
   );
 }

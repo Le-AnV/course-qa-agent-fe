@@ -33,7 +33,7 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
         <ProfileProvider>
           {/* Column below lg so the mobile header sits above main in flow;
               row from lg up, where the rail takes a fixed width. */}
-          <div className="flex h-screen flex-col bg-[#F4F5F8] overflow-hidden lg:flex-row">
+          <div className="flex h-screen flex-col bg-[#E7EDF5] overflow-hidden lg:flex-row">
             {/* Below lg the rail is hidden, so MobileNav owns the header. */}
             <TicketNotificationsProvider audience={role === "trainer" || role === "student" ? role : null}>
               <>
@@ -50,7 +50,7 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
                 ancestor here it escapes every inner scroller and stretches the
                 document, giving the whole app a second scrollbar. */}
             <main
-              className={`relative flex-1 flex flex-col min-w-0 min-h-0 bg-[#F4F5F8] ${
+              className={`relative flex-1 flex flex-col min-w-0 min-h-0 bg-[#E7EDF5] ${
                 isClassWorkspace
                   ? "overflow-hidden"
                   : "overflow-y-auto [scrollbar-gutter:stable]"

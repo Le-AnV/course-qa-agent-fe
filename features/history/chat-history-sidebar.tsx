@@ -4,6 +4,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertCircle,
+  History,
   Loader2,
   MessageSquare,
   MoreHorizontal,
@@ -64,6 +65,11 @@ function formatRelativeTime(isoString: string): string {
   }
 }
 
+function railInitial(session: ChatSessionItem): string {
+  const title = session.title?.trim();
+  return title ? title[0].toUpperCase() : '';
+}
+
 function HighlightedText({ text, keyword }: { text: string; keyword: string }) {
   return (
     <>
@@ -106,8 +112,10 @@ export interface ChatHistorySidebarProps {
   className?: string;
   /** Desktop placement; the mobile drawer follows the same side. */
   side?: 'left' | 'right';
-  /** Desktop: when true the history column is collapsed away and the chat takes the width. */
+  /** Desktop: when true the history column shows the compact icon rail. */
   collapsed?: boolean;
+  /** Desktop: expands the compact rail (used by its search and expand buttons). */
+  onExpand?: () => void;
   /** Mobile drawer (< md). Desktop keeps the column mounted so it can animate. */
   mobileOpen?: boolean;
   onMobileOpenChange?: (open: boolean) => void;
@@ -130,6 +138,7 @@ export function ChatHistorySidebar({
   className,
   side = 'left',
   collapsed = false,
+  onExpand,
   mobileOpen = false,
   onMobileOpenChange,
 }: ChatHistorySidebarProps) {
@@ -152,6 +161,13 @@ export function ChatHistorySidebar({
   const [menuCoords, setMenuCoords] = React.useState<{ top: number; left: number } | null>(null);
   const menuRef = React.useRef<HTMLDivElement | null>(null);
   const activeTriggerRef = React.useRef<HTMLButtonElement | null>(null);
+  const searchInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  // Expanding from the rail: let the width transition finish, then focus search.
+  const expandForSearch = () => {
+    onExpand?.();
+    window.setTimeout(() => searchInputRef.current?.focus(), 320);
+  };
 
   React.useEffect(() => {
     if (!openMenuId) return;
@@ -352,6 +368,7 @@ export function ChatHistorySidebar({
     <div className="relative" role="search">
       <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6F6F6F]" />
       <input
+        ref={searchInputRef}
         type="text"
         inputMode="search"
         autoComplete="off"
@@ -702,19 +719,28 @@ export function ChatHistorySidebar({
     );
   };
 
+  const railSessions = sessions.filter((session) => session.is_pinned);
+
   return (
     <>
       <aside
         aria-label="Chat history"
-        aria-hidden={collapsed || undefined}
-        inert={collapsed || undefined}
         className={cn(
-          'hidden shrink-0 overflow-hidden transition-all duration-300 ease-out md:block',
-          collapsed ? 'ml-0 w-0 opacity-0' : 'ml-4 w-64 opacity-100',
+          'relative hidden shrink-0 overflow-hidden transition-[width] duration-300 ease-out md:block',
+          collapsed ? 'w-16' : 'w-64',
           className,
         )}
       >
-        <div className="ml-auto flex h-full w-64 flex-col overflow-hidden rounded-xl border border-[#DADADA] bg-white shadow-sm">
+        {/* Full panel */}
+        <div
+          aria-hidden={collapsed || undefined}
+          inert={collapsed || undefined}
+          className={cn(
+            'absolute inset-y-0 left-0 flex h-full w-64 flex-col overflow-hidden border-[#DADADA] bg-white transition-opacity duration-200',
+            isRight ? 'border-l' : 'border-r',
+            collapsed ? 'pointer-events-none opacity-0' : 'opacity-100',
+          )}
+        >
           <div className="flex h-11 shrink-0 items-center justify-between border-b border-[#45698B] bg-[linear-gradient(112deg,#294D72_0%,#365F85_68%,#47759A_100%)] px-3">
             <span className="flex min-w-0 items-center gap-1.5">
               <span className="truncate text-[13.5px] font-semibold text-white">
@@ -750,6 +776,85 @@ export function ChatHistorySidebar({
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden p-2 pt-1">
               {states()}
             </div>
+          </div>
+        </div>
+
+        {/* Collapsed rail: same surface, icons only. */}
+        <div
+          aria-hidden={!collapsed || undefined}
+          inert={!collapsed || undefined}
+          className={cn(
+            'absolute inset-y-0 left-0 flex h-full w-16 flex-col overflow-hidden border-[#DADADA] bg-white transition-opacity duration-200',
+            isRight ? 'border-l' : 'border-r',
+            collapsed ? 'opacity-100' : 'pointer-events-none opacity-0',
+          )}
+        >
+          <div className="flex h-11 shrink-0 items-center justify-center border-b border-[#45698B] bg-[linear-gradient(112deg,#294D72_0%,#365F85_68%,#47759A_100%)]">
+            <History className="h-4 w-4 text-white/70" aria-hidden="true" />
+          </div>
+
+          <div className="flex shrink-0 flex-col items-center gap-1.5 px-2 pt-2">
+            {onNewChat && (
+              <button
+                type="button"
+                onClick={startNewChat}
+                title="New chat"
+                aria-label="Start a new chat"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-ink)] transition-colors hover:bg-[var(--brand-soft-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={expandForSearch}
+              title="Search conversations"
+              aria-label="Search conversations"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-[#5A5A5A] transition-colors hover:bg-[var(--brand-soft)] hover:text-[var(--brand-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+            <span className="h-px w-6 bg-[#E9EDF2]" aria-hidden="true" />
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto px-2 py-2">
+            {railSessions.length === 0 ? (
+              <span className="mt-1 text-center text-[9px] font-medium leading-tight text-[#9F9F9F]">
+                Pin a chat
+              </span>
+            ) : (
+              railSessions.map((session) => {
+                const isActive = activeSessionId === session.id;
+                const initial = railInitial(session);
+                return (
+                  <button
+                    key={session.id}
+                    type="button"
+                    onClick={() => selectSession(session.id)}
+                    title={session.title || 'Conversation'}
+                    aria-label={`Open ${session.title || 'conversation'}`}
+                    aria-current={isActive ? 'true' : undefined}
+                    className={cn(
+                      'relative flex h-9 w-9 items-center justify-center rounded-xl border text-[11.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-line)]',
+                      isActive
+                        ? 'border-[var(--brand)] bg-[var(--brand)] text-white shadow-sm'
+                        : 'border-transparent text-[#6F6F6F] hover:border-[var(--brand-line)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand-ink)]',
+                    )}
+                  >
+                    {initial || <MessageSquare className="h-4 w-4" />}
+                    <span
+                      className={cn(
+                        'absolute -right-0.5 -top-0.5 flex h-3 w-3 items-center justify-center rounded-full',
+                        isActive ? 'bg-white text-[var(--brand)]' : 'bg-[var(--brand)] text-white',
+                      )}
+                      aria-hidden="true"
+                    >
+                      <Pin className="h-2 w-2 rotate-45" />
+                    </span>
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
       </aside>

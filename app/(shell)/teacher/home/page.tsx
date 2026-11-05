@@ -8,6 +8,7 @@ import { peekClasses } from "@/lib/class-cache";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { useProfile } from "@/features/profile/profile-context";
 import { PageContainer } from "@/components/shared/PageShell";
+import { WorkspacePageHeader } from "@/components/shared/WorkspacePageHeader";
 import { Reveal, SkeletonLine } from "@/components/shared/page-skeleton";
 import { buildActionItems } from "@/features/teacher-home/action-items";
 import { AppSelect, type AppSelectOption } from "@/components/ui/app-select";
@@ -134,22 +135,18 @@ export default function TeacherHomePage() {
 
   return (
     <PageContainer className="space-y-8">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[28px] font-heading font-bold text-[#111111] tracking-tight">
-            {name ? `Welcome back, ${name}` : "Welcome back"}
-          </h1>
-          <p className="text-[14px] text-[#5A5A5A] mt-1">Here is what is waiting on you today.</p>
-        </div>
-        {classes && classes.length > 0 && (
+      <WorkspacePageHeader
+        title={name ? `Welcome back, ${name}` : "Welcome back"}
+        subtitle="Here is what is waiting on you today."
+        actions={classes && classes.length > 0 ? (
           <Link
             href="/teacher/classes"
-            className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-[#111111] hover:underline"
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--brand-line)] bg-white px-3 py-2 text-[13px] font-semibold text-[var(--brand-ink)] transition-colors hover:bg-[var(--brand-soft)]"
           >
             All classes ({classes.length}) <ChevronRight className="h-3 w-3" />
           </Link>
-        )}
-      </header>
+        ) : undefined}
+      />
 
       {error ? (
         <div className="rounded-xl border border-[#CFCFCF] bg-white p-6 text-center text-[13px]">
