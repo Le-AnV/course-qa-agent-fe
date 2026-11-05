@@ -10,6 +10,8 @@ import { useProfile } from "@/features/profile/profile-context";
 import { PageContainer } from "@/components/shared/PageShell";
 import { Reveal, SkeletonLine } from "@/components/shared/page-skeleton";
 import { buildActionItems } from "@/features/teacher-home/action-items";
+import { AppSelect, type AppSelectOption } from "@/components/ui/app-select";
+import { ContentGapOverviewCard } from "@/components/teacher/content-gap-overview-card";
 
 /**
  * Teacher home is the "what needs me" surface, not a second copy of
@@ -75,6 +77,7 @@ export default function TeacherHomePage() {
   const [classes, setClasses] = React.useState<StudentClass[] | null>(null);
   const [pending, setPending] = React.useState<Record<string, number | null> | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [gapClassId, setGapClassId] = React.useState<string>("");
 
   // Seed the class list from the session cache so the header and the class count
   // paint with real numbers on the first frame after a reload (no placeholder swap).
@@ -108,6 +111,16 @@ export default function TeacherHomePage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time fetch; load() only sets state after awaits.
     void load();
   }, [load]);
+
+  // Content Gap follows the picked class; fall back to the first class until one is chosen.
+  const activeGapClass = React.useMemo(
+    () => classes?.find((c) => c.id === gapClassId) ?? classes?.[0] ?? null,
+    [classes, gapClassId],
+  );
+  const classOptions: AppSelectOption[] = React.useMemo(
+    () => (classes ?? []).map((c) => ({ value: c.id, label: c.name, description: c.code })),
+    [classes],
+  );
 
   const name = profile?.username?.trim();
   const items = React.useMemo(
@@ -207,6 +220,30 @@ export default function TeacherHomePage() {
               </Reveal>
             )}
           </section>
+
+          {activeGapClass && (
+            <section className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-[17px] font-heading font-bold text-[#111111]">Content gap</h2>
+                <AppSelect
+                  value={activeGapClass.id}
+                  onValueChange={setGapClassId}
+                  options={classOptions}
+                  placeholder="Select a class"
+                  aria-label="Select class for content gap"
+                  triggerClassName="sm:w-[280px]"
+                />
+              </div>
+              <Reveal>
+                <ContentGapOverviewCard
+                  key={activeGapClass.id}
+                  classId={activeGapClass.id}
+                  courseName={activeGapClass.name}
+                  courseCode={activeGapClass.code}
+                />
+              </Reveal>
+            </section>
+          )}
         </>
       )}
     </PageContainer>

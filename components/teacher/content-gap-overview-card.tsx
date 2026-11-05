@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { contentGapApi } from "@/lib/content-gap-api";
+import { AppSelect, type AppSelectOption } from "@/components/ui/app-select";
 
 // --- TYPES ---
 
@@ -30,6 +31,33 @@ export interface ContentIssueRecord {
   course: string;
   materialSet: "all" | "lecture" | "lab" | "policies";
 }
+
+const TIME_OPTIONS: AppSelectOption[] = [
+  { value: "30d", label: "Last 30 Days" },
+  { value: "7d", label: "Last 7 Days" },
+  { value: "90d", label: "Last 90 Days" },
+  { value: "semester", label: "Full Semester" },
+];
+
+const MATERIAL_OPTIONS: AppSelectOption[] = [
+  { value: "all", label: "All Material Sets" },
+  { value: "lecture", label: "Lecture Notes & Materials" },
+  { value: "lab", label: "Lab Guides & Exercises" },
+  { value: "policies", label: "Syllabus & Policies" },
+];
+
+const SOURCE_OPTIONS: AppSelectOption[] = [
+  { value: "all", label: "All Answers" },
+  { value: "web", label: "Used Web Search" },
+];
+
+const PRIORITY_OPTIONS: AppSelectOption[] = [
+  { value: "all", label: "All Priorities" },
+  { value: "High", label: "High" },
+  { value: "Medium", label: "Medium" },
+  { value: "Low", label: "Low" },
+  { value: "Info", label: "Info" },
+];
 
 interface ContentGapOverviewCardProps {
   classId?: string;
@@ -62,7 +90,6 @@ export function ContentGapOverviewCard({
   const [tableTopicFilter, setTableTopicFilter] = React.useState<string>("all");
   const [sourceFilter, setSourceFilter] = React.useState<"all" | "web">("all");
   const [priorityFilter, setPriorityFilter] = React.useState<"all" | PriorityLevel>("all");
-  const [statusFilter, setStatusFilter] = React.useState<"all" | IssueStatus>("all");
 
   // --- PAGINATION ---
   const [currentPage, setCurrentPage] = React.useState<number>(1);
@@ -85,8 +112,10 @@ export function ContentGapOverviewCard({
             const total = pat.total_inquiry_count ?? pat.inquiry_count;
             const web = pat.inquiry_count;
             const ratio = total > 0 ? web / total : 0;
+            const enrichmentRegex = /(?:ngôn ngữ khác|ngôn ngữ lập trình khác|ngoài đề cương|ngoài giáo trình|vulkan|opengl|directx|unreal|game engine|thư viện đồ họa|python|java|c#|rust|golang)/i;
             const isEnrichment = pat.scope_type === "enrichment" ||
-              /vulkan|opengl|directx|unreal|game engine|thư viện đồ họa|ngôn ngữ khác|ngoài đề cương/i.test(pat.pattern);
+              enrichmentRegex.test(pat.pattern) ||
+              (Boolean(pat.sample_question) && enrichmentRegex.test(pat.sample_question || ""));
 
             let status: IssueStatus;
             let priority: PriorityLevel;
@@ -113,8 +142,8 @@ export function ContentGapOverviewCard({
               priorityReason: isEnrichment
                 ? "Nhu cầu tự tìm hiểu thêm của sinh viên ngoài đề cương bài học (Optional inquiry)."
                 : (pat.sample_question
-                    ? `Student query: "${pat.sample_question}" (${web} web fallback(s) out of ${total} total inquiries)`
-                    : `${web} web fallback(s) out of ${total} total inquiries across ${pat.student_count} student(s).`),
+                  ? `Student query: "${pat.sample_question}" (${web} web fallback(s) out of ${total} total inquiries)`
+                  : `${web} web fallback(s) out of ${total} total inquiries across ${pat.student_count} student(s).`),
               totalQuestions: total,
               webQuestions: web,
               suggestedAction:
@@ -134,33 +163,40 @@ export function ContentGapOverviewCard({
             const total = topic.total_queries;
             const web = rg.question_count;
             const ratio = total > 0 ? web / total : 0;
-            const status: IssueStatus =
-              web === 0
-                ? "Covered"
-                : (ratio >= 0.3 && web >= 2) || ratio >= 0.5
-                ? "Missing Material"
-                : "Needs Review";
+            const sampleQ = rg.questions && rg.questions.length > 0 ? rg.questions[0].question : "";
+            const enrichmentRegex = /(?:ngôn ngữ khác|ngôn ngữ lập trình khác|ngoài đề cương|ngoài giáo trình|vulkan|opengl|directx|unreal|game engine|thư viện đồ họa|python|java|c#|rust|golang)/i;
+            const isEnrichment = enrichmentRegex.test(rg.title) || (Boolean(sampleQ) && enrichmentRegex.test(sampleQ));
+
+            let status: IssueStatus;
+            let priority: PriorityLevel;
+
+            if (isEnrichment) {
+              status = "Optional";
+              priority = "Info";
+            } else if (web === 0) {
+              status = "Covered";
+              priority = "Low";
+            } else if ((ratio >= 0.3 && web >= 2) || ratio >= 0.5) {
+              status = "Missing Material";
+              priority = web >= 10 ? "High" : "Medium";
+            } else {
+              status = "Needs Review";
+              priority = web >= 10 ? "High" : web >= 4 ? "Medium" : "Low";
+            }
 
             records.push({
               id: `real-${topic.category_id}-rg-${idx}`,
               issue: rg.title,
               topic: topic.category_name,
-              priority:
-                topic.status === "critical"
-                  ? "High"
-                  : topic.status === "warning"
-                  ? "Medium"
-                  : "Low",
-              priorityReason:
-                rg.explanation ||
-                (rg.questions.length > 0
-                  ? `Recent query: "${rg.questions[0].question}"`
-                  : `Topic health: ${topic.status}`),
+              priority: priority,
+              priorityReason: isEnrichment
+                ? "Nhu cầu tự tìm hiểu thêm của sinh viên ngoài đề cương bài học (Optional inquiry)."
+                : (rg.explanation || (sampleQ ? `Recent query: "${sampleQ}"` : `Topic health: ${topic.status}`)),
               totalQuestions: total,
               webQuestions: web,
-              suggestedAction:
-                topic.curriculum_gap?.recommendation ||
-                "Review and expand course materials for this section.",
+              suggestedAction: isEnrichment
+                ? "Nhu cầu tự tìm hiểu thêm của sinh viên ngoài đề cương; thầy/cô có thể tạo bài đọc thêm tự chọn (Optional Reading) hoặc gợi ý đề tài nếu muốn."
+                : (topic.curriculum_gap?.recommendation || "Review and expand course materials for this section."),
               status: status,
               timeframe: "30d",
               course: currentCourseName,
@@ -218,46 +254,53 @@ export function ContentGapOverviewCard({
     });
   }, [issuesData, selectedMaterialSet]);
 
-  // --- B. LEFT CHART DATA (Total student inquiries grouped by general topic, sorted desc) ---
-  const leftChartData = React.useMemo(() => {
-    const topicMap = new Map<string, number>();
-    baseData.forEach((item) => {
-      topicMap.set(item.topic, (topicMap.get(item.topic) ?? 0) + item.totalQuestions);
-    });
+  // --- B. TOP CONTENT ISSUES GROUPED BAR CHART (Adaptive Y-ticks & Responsive Bar Width) ---
+  const chartIssuesData = React.useMemo(() => {
+    // Pick top 5 issues from baseData sorted by total questions
+    const sorted = [...baseData]
+      .sort((a, b) => b.totalQuestions - a.totalQuestions)
+      .slice(0, 5)
+      .map((item) => ({
+        id: item.id,
+        issue: item.issue,
+        topic: item.topic,
+        total: item.totalQuestions,
+        webCount: item.webQuestions,
+        internalCount: Math.max(0, item.totalQuestions - item.webQuestions),
+      }));
 
-    const sorted = Array.from(topicMap.entries())
-      .map(([topic, count]) => ({ topic, count }))
-      .sort((a, b) => b.count - a.count);
+    const maxRaw = sorted.length > 0 ? Math.max(...sorted.map((t) => Math.max(t.internalCount, t.webCount, t.total))) : 4;
 
-    const totalTopicsCount = sorted.length;
-    const top5 = sorted.slice(0, 5);
-    const maxCount = top5.length > 0 ? Math.max(...top5.map((t) => t.count)) : 1;
+    // Adaptive clean step size and yMax
+    let step = 5;
+    let yMax = 15;
 
-    return { top5, totalTopicsCount, maxCount };
+    if (maxRaw <= 4) {
+      step = 1;
+      yMax = Math.max(4, maxRaw + 1);
+    } else if (maxRaw <= 8) {
+      step = 2;
+      yMax = Math.max(6, Math.ceil(maxRaw / 2) * 2);
+    } else if (maxRaw <= 20) {
+      step = 5;
+      yMax = Math.max(10, Math.ceil(maxRaw / 5) * 5);
+    } else if (maxRaw <= 50) {
+      step = 10;
+      yMax = Math.ceil(maxRaw / 10) * 10;
+    } else {
+      step = 20;
+      yMax = Math.ceil(maxRaw / 20) * 20;
+    }
+
+    const yTicks: number[] = [];
+    for (let val = yMax; val >= 0; val -= step) {
+      yTicks.push(val);
+    }
+
+    return { top5: sorted, totalCount: baseData.length, yMax, yTicks };
   }, [baseData]);
 
-  // --- B. RIGHT CHART DATA (Web-assisted inquiries grouped by specific issue/need, sorted desc) ---
-  const rightChartData = React.useMemo(() => {
-    const needMap = new Map<string, { count: number; topic: string }>();
-    baseData.forEach((item) => {
-      if (item.webQuestions > 0) {
-        needMap.set(item.issue, {
-          count: item.webQuestions,
-          topic: item.topic,
-        });
-      }
-    });
 
-    const sorted = Array.from(needMap.entries())
-      .map(([need, info]) => ({ need, count: info.count, topic: info.topic }))
-      .sort((a, b) => b.count - a.count);
-
-    const totalNeedsCount = sorted.length;
-    const top5 = sorted.slice(0, 5);
-    const maxCount = top5.length > 0 ? Math.max(...top5.map((n) => n.count)) : 1;
-
-    return { top5, totalNeedsCount, maxCount };
-  }, [baseData]);
 
   // --- FILTERED TABLE DATA ---
   const filteredTableData = React.useMemo(() => {
@@ -267,7 +310,6 @@ export function ContentGapOverviewCard({
       if (tableTopicFilter !== "all" && item.topic !== tableTopicFilter) return false;
       if (sourceFilter === "web" && item.webQuestions === 0) return false;
       if (priorityFilter !== "all" && item.priority !== priorityFilter) return false;
-      if (statusFilter !== "all" && item.status !== statusFilter) return false;
 
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
@@ -286,7 +328,6 @@ export function ContentGapOverviewCard({
     tableTopicFilter,
     sourceFilter,
     priorityFilter,
-    statusFilter,
     searchQuery,
   ]);
 
@@ -300,7 +341,6 @@ export function ContentGapOverviewCard({
     tableTopicFilter,
     sourceFilter,
     priorityFilter,
-    statusFilter,
     searchQuery,
     selectedMaterialSet,
   ]);
@@ -313,24 +353,6 @@ export function ContentGapOverviewCard({
     return filteredTableData.slice(start, start + PAGE_SIZE);
   }, [filteredTableData, currentPage]);
 
-  // --- CHART INTERACTION HANDLERS ---
-  const handleLeftBarClick = (topicName: string) => {
-    if (chartSelectedTopic === topicName) {
-      setChartSelectedTopic(null);
-    } else {
-      setChartSelectedTopic(topicName);
-    }
-  };
-
-  const handleRightBarClick = (needName: string) => {
-    if (chartSelectedNeed === needName) {
-      setChartSelectedNeed(null);
-    } else {
-      setChartSelectedNeed(needName);
-      setSourceFilter("web");
-    }
-  };
-
   const clearAllTableFilters = () => {
     setChartSelectedTopic(null);
     setChartSelectedNeed(null);
@@ -338,7 +360,6 @@ export function ContentGapOverviewCard({
     setTableTopicFilter("all");
     setSourceFilter("all");
     setPriorityFilter("all");
-    setStatusFilter("all");
   };
 
   const hasActiveTableFilters =
@@ -347,8 +368,7 @@ export function ContentGapOverviewCard({
     searchQuery.trim() !== "" ||
     tableTopicFilter !== "all" ||
     sourceFilter !== "all" ||
-    priorityFilter !== "all" ||
-    statusFilter !== "all";
+    priorityFilter !== "all";
 
   // Priority badge styling (clean, modern pill)
   const renderPriorityBadge = (priority: PriorityLevel, reason: string) => {
@@ -367,70 +387,20 @@ export function ContentGapOverviewCard({
     );
   };
 
-  // Status badge styling (modern, elegant pill badge with soft dot indicator)
-  const renderStatusBadge = (status: IssueStatus) => {
-    switch (status) {
-      case "Missing Material":
-        return (
-          <span
-            title="High web fallback ratio; requires supplemental course materials."
-            className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-medium text-rose-700 border border-rose-200/80 shadow-2xs"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-            Missing Material
-          </span>
-        );
-      case "Needs Review":
-        return (
-          <span
-            title="Moderate web search; review clarity or practical examples in materials."
-            className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-200/80 shadow-2xs"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-            Needs Review
-          </span>
-        );
-      case "Optional":
-      case "Enrichment":
-        return (
-          <span
-            title="Kiến thức tự chọn / sinh viên tự tìm hiểu thêm ngoài đề cương chính khóa."
-            className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-2.5 py-0.5 text-[11px] font-medium text-purple-700 border border-purple-200/80 shadow-2xs"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
-            Optional
-          </span>
-        );
-      case "Covered":
-        return (
-          <span
-            title="Directly answered from internal course materials (0% web fallback)."
-            className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 border border-slate-200 shadow-2xs"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-            Covered
-          </span>
-        );
-      case "Resolved":
-      default:
-        return (
-          <span
-            title="Instructor has supplemented course materials for this topic."
-            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 border border-emerald-200/80 shadow-2xs"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Resolved
-          </span>
-        );
-    }
-  };
-
   // All unique topics for the dropdown (strictly scoped to this course)
   const uniqueTopics = React.useMemo(() => {
     const set = new Set<string>();
     issuesData.forEach((i) => set.add(i.topic));
     return Array.from(set);
   }, [issuesData]);
+
+  const topicOptions: AppSelectOption[] = React.useMemo(
+    () => [
+      { value: "all", label: "All Topics" },
+      ...uniqueTopics.map((t) => ({ value: t, label: t })),
+    ],
+    [uniqueTopics],
+  );
 
   // Loading skeleton
   if (isLoading && issuesData.length === 0) {
@@ -456,9 +426,9 @@ export function ContentGapOverviewCard({
       {/* ========================================================================= */}
       <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-[20px] font-bold tracking-tight text-[#0F172A]">Content Gap</h1>
-              <p className="text-[13px] text-[#64748B] mt-0.5">
+          <div>
+            <h1 className="text-[20px] font-bold tracking-tight text-[#0F172A]">Content Gap</h1>
+            <p className="text-[13px] text-[#64748B] mt-0.5">
               Explore student learning needs and materials to review or add.
             </p>
           </div>
@@ -473,35 +443,29 @@ export function ContentGapOverviewCard({
             </div>
 
             {/* Time Range */}
-            <div className="flex items-center gap-1.5 rounded-lg border border-[#D1D5DB] bg-white px-2.5 py-1.5 text-[12px]">
+            <div className="flex items-center gap-1.5">
               <span className="text-[#9CA3AF] text-[11.5px] font-medium">Time:</span>
-              <select
+              <AppSelect
+                size="sm"
                 value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value as "30d" | "7d" | "90d" | "semester")}
-                className="bg-transparent font-medium text-[#374151] focus:outline-none cursor-pointer"
-              >
-                <option value="30d">Last 30 Days</option>
-                <option value="7d">Last 7 Days</option>
-                <option value="90d">Last 90 Days</option>
-                <option value="semester">Full Semester</option>
-              </select>
+                onValueChange={(v) => setTimeRange(v as "30d" | "7d" | "90d" | "semester")}
+                options={TIME_OPTIONS}
+                aria-label="Time range"
+                triggerClassName="w-[140px]"
+              />
             </div>
 
             {/* Material Set */}
-            <div className="flex items-center gap-1.5 rounded-lg border border-[#D1D5DB] bg-white px-2.5 py-1.5 text-[12px]">
+            <div className="flex items-center gap-1.5">
               <span className="text-[#9CA3AF] text-[11.5px] font-medium">Materials:</span>
-              <select
+              <AppSelect
+                size="sm"
                 value={selectedMaterialSet}
-                onChange={(e) =>
-                  setSelectedMaterialSet(e.target.value as "all" | "lecture" | "lab" | "policies")
-                }
-                className="bg-transparent font-medium text-[#374151] focus:outline-none cursor-pointer"
-              >
-                <option value="all">All Material Sets</option>
-                <option value="lecture">Lecture Notes & Materials</option>
-                <option value="lab">Lab Guides & Exercises</option>
-                <option value="policies">Syllabus & Policies</option>
-              </select>
+                onValueChange={(v) => setSelectedMaterialSet(v as "all" | "lecture" | "lab" | "policies")}
+                options={MATERIAL_OPTIONS}
+                aria-label="Material set"
+                triggerClassName="w-[200px]"
+              />
             </div>
           </div>
         </div>
@@ -510,182 +474,206 @@ export function ContentGapOverviewCard({
       {/* ========================================================================= */}
       {/* B. TWO CHARTS (Side-by-side on desktop, stacked on mobile, equal height)  */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
-        {/* --- LEFT CHART: WHAT ARE STUDENTS ASKING? --- */}
-        <div className="flex flex-col justify-between rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-xs transition-shadow hover:shadow-sm">
-          <div>
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <div>
-                <h3 className="text-[15px] font-bold text-[#0F172A]">What are students asking?</h3>
-                <p className="text-[12px] text-[#64748B]">Top 5 topics by question count</p>
-              </div>
-              <span className="text-[11px] font-semibold text-[#2563EB] bg-[#EFF6FF] px-2 py-0.5 rounded-md border border-[#DBEAFE]">
-                All Questions
+      <div className="w-full">
+        {/* --- VERTICAL GROUPED BAR CHART: TONE XANH & RO RANG X/Y AXIS --- */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+          {/* Card Header with Title and Legend */}
+          <div className="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Content Issues Inquiries</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Top issues from table &bull; Course materials vs Web assisted inquiries
+              </p>
+            </div>
+            {/* Legend (Tone Xanh) */}
+            <div className="flex items-center gap-4 text-xs font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3.5 h-3.5 rounded-xs bg-blue-200 border border-blue-300" />
+                Course Materials (No web search)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3.5 h-3.5 rounded-xs bg-blue-600" />
+                Web Assisted (Web search)
               </span>
             </div>
-
-            {/* Bars List */}
-            <div className="space-y-3 pt-2">
-              {leftChartData.top5.length === 0 ? (
-                <div className="py-8 text-center text-[13px] text-[#9CA3AF]">
-                  No student questions recorded for this scope.
-                </div>
-              ) : (
-                leftChartData.top5.map((item) => {
-                  const isSelected = chartSelectedTopic === item.topic;
-                  const pct = Math.max(8, Math.round((item.count / leftChartData.maxCount) * 100));
-
-                  return (
-                    <div
-                      key={item.topic}
-                      onClick={() => handleLeftBarClick(item.topic)}
-                      title={`Click to filter table by topic: ${item.topic} (${item.count.toLocaleString()} inquiries)`}
-                      className={`group flex items-center gap-2.5 sm:gap-3.5 cursor-pointer rounded-xl p-2 transition-all border ${
-                        isSelected
-                          ? "bg-[#EFF6FF] border-[#BFDBFE] ring-2 ring-[#3B82F6]/30 shadow-xs"
-                          : "border-transparent hover:bg-[#F8FAFC] hover:border-[#E2E8F0]"
-                      }`}
-                    >
-                      {/* Fixed Label Zone */}
-                      <div className="w-[130px] sm:w-[165px] shrink-0 text-right pr-1">
-                        <span
-                          title={item.topic}
-                          className={`block truncate text-[12.5px] sm:text-[13px] transition-colors ${
-                            isSelected
-                              ? "text-[#1D4ED8] font-bold"
-                              : "text-[#1E293B] font-semibold group-hover:text-[#0F172A]"
-                          }`}
-                        >
-                          {item.topic}
-                        </span>
-                      </div>
-
-                      {/* Bar Track + Bar */}
-                      <div className="relative flex-1 h-7 rounded-lg bg-[#F1F5F9] border border-[#E2E8F0]/70 overflow-hidden flex items-center p-0.5">
-                        <div
-                          style={{ width: `${pct}%` }}
-                          className={`h-full rounded-md transition-all duration-300 ${
-                            isSelected
-                              ? "bg-gradient-to-r from-[#1D4ED8] to-[#2563EB] shadow-xs"
-                              : "bg-gradient-to-r from-[#2563EB] to-[#3B82F6] group-hover:from-[#1D4ED8] group-hover:to-[#2563EB]"
-                          }`}
-                        />
-                      </div>
-
-                      {/* Inquiry Count Badge (Dedicated slot, right next to bar, high-contrast) */}
-                      <div className="w-14 sm:w-16 shrink-0 text-right">
-                        <span
-                          className={`inline-flex items-center justify-center min-w-[34px] px-2 py-0.5 rounded-md text-[12px] font-bold tabular-nums transition-colors ${
-                            isSelected
-                              ? "bg-[#1D4ED8] text-white shadow-xs"
-                              : "bg-[#F1F5F9] text-[#0F172A] border border-[#E2E8F0] group-hover:bg-[#EFF6FF] group-hover:text-[#1D4ED8] group-hover:border-[#BFDBFE]"
-                          }`}
-                        >
-                          {item.count.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
           </div>
 
-          {/* Scale info + Scope counter (Informational, NOT a button) */}
-          <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-[11px] text-[#94A3B8]">
-            <span>Scale: Total answer count</span>
-            <span className="font-medium text-[#64748B]">
-              Showing {leftChartData.top5.length} of {leftChartData.totalTopicsCount} topics
-            </span>
-          </div>
-        </div>
-
-        {/* --- RIGHT CHART: CONTENT REQUIRING WEB SEARCH --- */}
-        <div className="flex flex-col justify-between rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-xs transition-shadow hover:shadow-sm">
-          <div>
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <div>
-                <h3 className="text-[15px] font-bold text-[#0F172A]">Content requiring web search</h3>
-                <p className="text-[12px] text-[#64748B]">Top 5 content groups by web fallback</p>
+          {/* Chart Canvas Area */}
+          <div className="p-6">
+            {chartIssuesData.top5.length === 0 ? (
+              <div className="py-16 text-center text-sm text-slate-400">
+                No issues recorded in the table for this scope.
               </div>
-              <span className="text-[11px] font-semibold text-[#7C3AED] bg-[#F5F3FF] px-2 py-0.5 rounded-md border border-[#DDD6FE]">
-                Used Web Search
-              </span>
-            </div>
+            ) : (
+              (() => {
+                const itemCount = chartIssuesData.top5.length;
+                const containerAlignClass = itemCount <= 2
+                  ? "justify-start gap-12 sm:gap-20 pl-6 sm:pl-12"
+                  : "justify-around px-3 sm:px-6";
+                const itemMaxWClass = itemCount === 1 ? "max-w-[200px]" : itemCount === 2 ? "max-w-[160px]" : "max-w-[120px]";
+                const barWClass = itemCount === 1 ? "w-10 sm:w-12" : itemCount === 2 ? "w-8 sm:w-10" : "w-5 sm:w-7";
+                const labelMaxWClass = itemCount === 1
+                  ? "max-w-[180px] sm:max-w-[220px]"
+                  : itemCount === 2
+                    ? "max-w-[140px] sm:max-w-[160px]"
+                    : "max-w-[110px] sm:max-w-[125px]";
 
-            {/* Bars List */}
-            <div className="space-y-3 pt-2">
-              {rightChartData.top5.length === 0 ? (
-                <div className="py-8 text-center text-[13px] text-[#9CA3AF]">
-                  No web search fallbacks recorded for this scope.
-                </div>
-              ) : (
-                rightChartData.top5.map((item) => {
-                  const isSelected = chartSelectedNeed === item.need;
-                  const pct = Math.max(8, Math.round((item.count / rightChartData.maxCount) * 100));
-
-                  return (
-                    <div
-                      key={item.need}
-                      onClick={() => handleRightBarClick(item.need)}
-                      title={`Click to filter table by issue: ${item.need} (${item.count.toLocaleString()} web inquiries)`}
-                      className={`group flex items-center gap-2.5 sm:gap-3.5 cursor-pointer rounded-xl p-2 transition-all border ${
-                        isSelected
-                          ? "bg-[#FAF5FF] border-[#E9D5FF] ring-2 ring-[#7C3AED]/30 shadow-xs"
-                          : "border-transparent hover:bg-[#F8FAFC] hover:border-[#E2E8F0]"
-                      }`}
-                    >
-                      {/* Fixed Label Zone */}
-                      <div className="w-[130px] sm:w-[165px] shrink-0 text-right pr-1">
-                        <span
-                          title={item.need}
-                          className={`block truncate text-[12.5px] sm:text-[13px] transition-colors ${
-                            isSelected
-                              ? "text-[#6D28D9] font-bold"
-                              : "text-[#1E293B] font-semibold group-hover:text-[#0F172A]"
-                          }`}
-                        >
-                          {item.need}
+                return (
+                  <div className="pt-2">
+                    {/* Y-Axis Label */}
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 pl-12 flex items-center justify-between pr-4">
+                      <span>Questions</span>
+                      {itemCount === 1 && (
+                        <span className="text-[11px] font-normal text-slate-400 italic">
+                          Lớp đang có 1 vấn đề được ghi nhận
                         </span>
+                      )}
+                    </div>
+
+                    {/* Chart Frame with Y-Axis & Plot Area */}
+                    <div className="flex">
+                      {/* Y-Axis Tick Numbers */}
+                      <div className="w-12 shrink-0 flex flex-col justify-between items-end pr-2.5 h-[240px] select-none py-0">
+                        {chartIssuesData.yTicks.map((tick) => (
+                          <span key={tick} className="text-xs font-semibold text-slate-500 tabular-nums leading-none">
+                            {tick}
+                          </span>
+                        ))}
                       </div>
 
-                      {/* Bar Track + Bar */}
-                      <div className="relative flex-1 h-7 rounded-lg bg-[#F1F5F9] border border-[#E2E8F0]/70 overflow-hidden flex items-center p-0.5">
-                        <div
-                          style={{ width: `${pct}%` }}
-                          className={`h-full rounded-md transition-all duration-300 ${
-                            isSelected
-                              ? "bg-gradient-to-r from-[#6D28D9] to-[#7C3AED] shadow-xs"
-                              : "bg-gradient-to-r from-[#7C3AED] to-[#8B5CF6] group-hover:from-[#6D28D9] group-hover:to-[#7C3AED]"
-                          }`}
-                        />
-                      </div>
+                      {/* Plot Area with Clear Solid Y-axis (border-l-2) and X-axis (border-b-2) */}
+                      <div className="relative flex-1 h-[240px] border-l-2 border-b-2 border-slate-400">
+                        {/* Horizontal Gridlines */}
+                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                          {chartIssuesData.yTicks.map((tick, idx) => (
+                            <div
+                              key={idx}
+                              className={`w-full ${idx === chartIssuesData.yTicks.length - 1 ? "" : "border-b border-slate-100"}`}
+                            />
+                          ))}
+                        </div>
 
-                      {/* Web Inquiries Count Badge */}
-                      <div className="w-14 sm:w-16 shrink-0 text-right">
-                        <span
-                          className={`inline-flex items-center justify-center min-w-[34px] px-2 py-0.5 rounded-md text-[12px] font-bold tabular-nums transition-colors ${
-                            isSelected
-                              ? "bg-[#7C3AED] text-white shadow-xs"
-                              : "bg-[#F1F5F9] text-[#0F172A] border border-[#E2E8F0] group-hover:bg-[#FAF5FF] group-hover:text-[#6D28D9] group-hover:border-[#E9D5FF]"
-                          }`}
-                        >
-                          {item.count.toLocaleString()}
-                        </span>
+                        {/* Bars Container with Adaptive Alignment & Width */}
+                        <div className={`relative h-full flex items-end ${containerAlignClass} z-10`}>
+                          {chartIssuesData.top5.map((item) => {
+                            const isSelected = chartSelectedNeed === item.issue;
+                            const internalPct = item.internalCount === 0
+                              ? 0
+                              : Math.max(6, Math.round((item.internalCount / chartIssuesData.yMax) * 100));
+                            const webPct = item.webCount === 0
+                              ? 0
+                              : Math.max(6, Math.round((item.webCount / chartIssuesData.yMax) * 100));
+
+                            return (
+                              <div
+                                key={item.id}
+                                onClick={() => {
+                                  if (chartSelectedNeed === item.issue) {
+                                    setChartSelectedNeed(null);
+                                  } else {
+                                    setChartSelectedNeed(item.issue);
+                                  }
+                                }}
+                                className={`h-full flex-1 ${itemMaxWClass} flex items-end justify-center gap-2 sm:gap-3 group cursor-pointer`}
+                                title={`${item.issue} (${item.topic}): ${item.total.toLocaleString()} total inquiries (${item.internalCount.toLocaleString()} course materials, ${item.webCount.toLocaleString()} web assisted). Click to filter table.`}
+                              >
+                                {/* Bar 1: Course Materials (Light Blue) */}
+                                <div className="h-full flex flex-col justify-end items-center relative">
+                                  <span className="text-[11px] font-bold text-slate-600 mb-1 opacity-0 group-hover:opacity-100 transition-opacity tabular-nums whitespace-nowrap">
+                                    {item.internalCount}
+                                  </span>
+                                  <div
+                                    style={{ height: `${internalPct}%` }}
+                                    className={`${barWClass} rounded-t-sm transition-all duration-300 ${
+                                      item.internalCount === 0
+                                        ? "h-0.5 bg-blue-300/40"
+                                        : `bg-blue-200 border border-blue-300 group-hover:bg-blue-300 shadow-2xs ${
+                                            isSelected ? "ring-2 ring-blue-400 ring-offset-1" : ""
+                                          }`
+                                    }`}
+                                  />
+                                </div>
+
+                                {/* Bar 2: Web Assisted (Deep Blue) */}
+                                <div className="h-full flex flex-col justify-end items-center relative">
+                                  <span className="text-[11px] font-bold text-blue-700 mb-1 opacity-0 group-hover:opacity-100 transition-opacity tabular-nums whitespace-nowrap">
+                                    {item.webCount}
+                                  </span>
+                                  <div
+                                    style={{ height: `${webPct}%` }}
+                                    className={`${barWClass} rounded-t-sm transition-all duration-300 ${
+                                      item.webCount === 0
+                                        ? "h-0.5 bg-blue-600/30"
+                                        : `bg-blue-600 group-hover:bg-blue-700 shadow-xs ${
+                                            isSelected ? "ring-2 ring-blue-700 ring-offset-1" : ""
+                                          }`
+                                    }`}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
+
+                    {/* X-Axis Labels Row */}
+                    <div className="flex mt-2.5">
+                      {/* Spacer matching Y-axis width */}
+                      <div className="w-12 shrink-0" />
+
+                      {/* Labels underneath the solid X-axis */}
+                      <div className={`flex-1 flex ${containerAlignClass}`}>
+                        {chartIssuesData.top5.map((item) => {
+                          const isSelected = chartSelectedNeed === item.issue;
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={() => {
+                                if (chartSelectedNeed === item.issue) {
+                                  setChartSelectedNeed(null);
+                                } else {
+                                  setChartSelectedNeed(item.issue);
+                                }
+                              }}
+                              className={`flex-1 ${itemMaxWClass} text-center cursor-pointer group px-1`}
+                              title={item.issue}
+                            >
+                              <p
+                                className={`text-xs font-semibold truncate transition-colors ${labelMaxWClass} mx-auto ${
+                                  isSelected ? "text-blue-700 font-bold" : "text-slate-700 group-hover:text-blue-600"
+                                }`}
+                              >
+                                {item.issue}
+                              </p>
+                              <p className={`text-[10px] text-slate-400 truncate mt-0.5 ${labelMaxWClass} mx-auto`} title={item.topic}>
+                                {item.topic}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
           </div>
 
-          {/* Scale info + Scope counter (Informational, NOT a button) */}
-          <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-[11px] text-[#94A3B8]">
-            <span>Scale: Web fallback inquiries count</span>
-            <span className="font-medium text-[#64748B]">
-              Showing {rightChartData.top5.length} of {rightChartData.totalNeedsCount} content groups
-            </span>
+          {/* Card Footer */}
+          <div className="px-6 py-3 bg-slate-50/50 border-t border-slate-100 flex flex-wrap justify-between items-center text-xs text-slate-500 gap-2">
+            <div className="flex items-center gap-2">
+              <span>Showing top {chartIssuesData.top5.length} of {chartIssuesData.totalCount} table items</span>
+              {chartSelectedNeed && (
+                <button
+                  type="button"
+                  onClick={() => setChartSelectedNeed(null)}
+                  className="text-blue-600 hover:text-blue-700 font-medium ml-2 underline"
+                >
+                  Clear filter ({chartSelectedNeed})
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -733,66 +721,42 @@ export function ContentGapOverviewCard({
             </div>
 
             {/* Topic Filter */}
-            <div className="flex items-center gap-1.5 rounded-lg border border-[#D1D5DB] bg-white px-2.5 py-1.5 text-[12px]">
+            <div className="flex items-center gap-1.5">
               <span className="text-[#9CA3AF] text-[11.5px] font-medium">Topic:</span>
-              <select
+              <AppSelect
+                size="sm"
                 value={tableTopicFilter}
-                onChange={(e) => setTableTopicFilter(e.target.value)}
-                className="bg-transparent font-medium text-[#374151] focus:outline-none cursor-pointer max-w-[130px] truncate"
-              >
-                <option value="all">All Topics</option>
-                {uniqueTopics.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(v) => setTableTopicFilter(v)}
+                options={topicOptions}
+                aria-label="Topic filter"
+                triggerClassName="w-[170px]"
+              />
             </div>
 
             {/* Source Filter */}
-            <div className="flex items-center gap-1.5 rounded-lg border border-[#D1D5DB] bg-white px-2.5 py-1.5 text-[12px]">
+            <div className="flex items-center gap-1.5">
               <span className="text-[#9CA3AF] text-[11.5px] font-medium">Source:</span>
-              <select
+              <AppSelect
+                size="sm"
                 value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value as "all" | "web")}
-                className="bg-transparent font-medium text-[#374151] focus:outline-none cursor-pointer"
-              >
-                <option value="all">All Answers</option>
-                <option value="web">Used Web Search</option>
-              </select>
+                onValueChange={(v) => setSourceFilter(v as "all" | "web")}
+                options={SOURCE_OPTIONS}
+                aria-label="Source filter"
+                triggerClassName="w-[150px]"
+              />
             </div>
 
             {/* Priority Filter */}
-            <div className="flex items-center gap-1.5 rounded-lg border border-[#D1D5DB] bg-white px-2.5 py-1.5 text-[12px]">
+            <div className="flex items-center gap-1.5">
               <span className="text-[#9CA3AF] text-[11.5px] font-medium">Priority:</span>
-              <select
+              <AppSelect
+                size="sm"
                 value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value as "all" | PriorityLevel)}
-                className="bg-transparent font-medium text-[#374151] focus:outline-none cursor-pointer"
-              >
-                <option value="all">All Priorities</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
-                <option value="Info">Info</option>
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div className="flex items-center gap-1.5 rounded-lg border border-[#D1D5DB] bg-white px-2.5 py-1.5 text-[12px]">
-              <span className="text-[#9CA3AF] text-[11.5px] font-medium">Status:</span>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as "all" | IssueStatus)}
-                className="bg-transparent font-medium text-[#374151] focus:outline-none cursor-pointer"
-              >
-                <option value="all">All Statuses</option>
-                <option value="Missing Material">Missing Material</option>
-                <option value="Needs Review">Needs Review</option>
-                <option value="Optional">Optional</option>
-                <option value="Covered">Covered</option>
-                <option value="Resolved">Resolved</option>
-              </select>
+                onValueChange={(v) => setPriorityFilter(v as "all" | PriorityLevel)}
+                options={PRIORITY_OPTIONS}
+                aria-label="Priority filter"
+                triggerClassName="w-[150px]"
+              />
             </div>
 
             {/* Reset Button */}
@@ -858,15 +822,6 @@ export function ContentGapOverviewCard({
                 </span>
               )}
 
-              {statusFilter !== "all" && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-[#F1F5F9] px-2 py-0.5 text-[11px] font-medium text-[#475569] border border-[#E2E8F0]">
-                  <span>Status: {statusFilter}</span>
-                  <button type="button" onClick={() => setStatusFilter("all")}>
-                    <X className="h-3 w-3 hover:text-[#B91C1C]" />
-                  </button>
-                </span>
-              )}
-
               {searchQuery && (
                 <span className="inline-flex items-center gap-1 rounded-md bg-[#F1F5F9] px-2 py-0.5 text-[11px] font-medium text-[#475569] border border-[#E2E8F0]">
                   <span>Keyword: &quot;{searchQuery}&quot;</span>
@@ -890,13 +845,12 @@ export function ContentGapOverviewCard({
                 <th className="py-3 px-3 w-[110px] text-right">Web Assisted</th>
                 <th className="py-3 px-3 w-[120px]">Web Ratio</th>
                 <th className="py-3 px-4 min-w-[250px]">Suggested Action</th>
-                <th className="py-3 px-4 w-[130px]">Status</th>
-              </tr>
+                              </tr>
             </thead>
             <tbody className="divide-y divide-[#F1F5F9] text-[12.5px]">
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-[#64748B]">
+                  <td colSpan={6} className="py-12 text-center text-[#64748B]">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <HelpCircle className="h-8 w-8 text-[#CBD5E1]" />
                       <p className="font-semibold text-[#374151]">No content issues found matching current filters</p>
@@ -951,13 +905,12 @@ export function ContentGapOverviewCard({
                           <div className="flex-1 h-1.5 rounded-full bg-[#F1F5F9] overflow-hidden">
                             <div
                               style={{ width: `${Math.min(100, webRatio)}%` }}
-                              className={`h-full rounded-full transition-all duration-300 ${
-                                webRatio >= 60
-                                  ? "bg-[#DC2626]"
-                                  : webRatio >= 30
+                              className={`h-full rounded-full transition-all duration-300 ${webRatio >= 60
+                                ? "bg-[#DC2626]"
+                                : webRatio >= 30
                                   ? "bg-[#D97706]"
                                   : "bg-[#059669]"
-                              }`}
+                                }`}
                             />
                           </div>
                           <span className="text-[11.5px] font-semibold tabular-nums text-[#475569] w-8 text-right">
@@ -971,10 +924,6 @@ export function ContentGapOverviewCard({
                         {row.suggestedAction}
                       </td>
 
-                      {/* 7. Status */}
-                      <td className="py-3 px-4">
-                        {renderStatusBadge(row.status)}
-                      </td>
                     </tr>
                   );
                 })
@@ -1011,11 +960,10 @@ export function ContentGapOverviewCard({
                     key={pageNum}
                     type="button"
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`h-8 w-8 rounded-lg text-[12px] font-semibold transition-colors ${
-                      isCurrent
-                        ? "bg-[#2563EB] text-white"
-                        : "border border-[#D1D5DB] bg-white text-[#374151] hover:bg-[#F3F4F6]"
-                    }`}
+                    className={`h-8 w-8 rounded-lg text-[12px] font-semibold transition-colors ${isCurrent
+                      ? "bg-[#2563EB] text-white"
+                      : "border border-[#D1D5DB] bg-white text-[#374151] hover:bg-[#F3F4F6]"
+                      }`}
                   >
                     {pageNum}
                   </button>
