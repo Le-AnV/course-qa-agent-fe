@@ -229,21 +229,40 @@ export function AttendanceSummaryTable({
 
       {/* Summary Table */}
       {loading ? (
-        <div className="flex items-center justify-center p-12 text-[#5A5A5A] gap-2">
-          <Spinner className="size-4" />
-          <span className="text-xs">Loading attendance summary...</span>
+        <div data-testid="attendance-summary-loading" className="space-y-3 p-6">
+          <div className="flex items-center justify-center p-4 text-[#5A5A5A] gap-2">
+            <Spinner className="size-4" />
+            <span className="text-xs font-medium">Loading attendance summary...</span>
+          </div>
+          <div className="space-y-2">
+            <div className="h-8 bg-[#F0F0F0] rounded-sm animate-pulse" />
+            <div className="h-8 bg-[#F5F5F5] rounded-sm animate-pulse" />
+            <div className="h-8 bg-[#F5F5F5] rounded-sm animate-pulse" />
+          </div>
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center p-8 text-center gap-2 rounded-lg border border-[#FCA5A5] bg-[#FEF2F2]">
+        <div
+          data-testid="attendance-summary-error"
+          className="flex flex-col items-center justify-center p-8 text-center gap-2 rounded-lg border border-[#FCA5A5] bg-[#FEF2F2]"
+        >
           <p className="text-xs text-[#991B1B] font-medium">{error}</p>
           {onRetry && (
-            <Button size="xs" variant="outline" onClick={onRetry} className="gap-1 border-[#FCA5A5] text-[#991B1B] hover:bg-[#FEE2E2]">
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={onRetry}
+              data-testid="attendance-summary-retry-btn"
+              className="gap-1 border-[#FCA5A5] text-[#991B1B] hover:bg-[#FEE2E2]"
+            >
               Retry
             </Button>
           )}
         </div>
       ) : sortedRows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#DADADA] bg-[#FAFAFA] p-8 text-center text-xs text-[#8C8C8C]">
+        <div
+          data-testid="attendance-summary-empty"
+          className="rounded-lg border border-dashed border-[#DADADA] bg-[#FAFAFA] p-8 text-center text-xs text-[#8C8C8C]"
+        >
           <Calendar className="mx-auto size-7 text-[#8C8C8C] mb-2" />
           No attendance records found for this period.
         </div>

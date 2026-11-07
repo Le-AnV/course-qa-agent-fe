@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, Plus, X, Users, UserMinus, UserPlus } from "lucide-react";
+import { Search, Plus, X, Users, UserMinus, UserPlus, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi, type ClassSection, type AdminUser, type ClassTrainer } from "@/lib/admin-api";
 import { ActionMenu } from "@/components/shared/ActionMenu";
@@ -11,6 +11,7 @@ import { AdminPageShell, ADMIN_CARD } from "@/components/shared/AdminPageShell";
 import { PrerequisiteHint } from "@/components/shared/PrerequisiteHint";
 import { AppSelect, type AppSelectOption } from "@/components/ui/app-select";
 import { semesterDateRange } from "@/lib/semester";
+import { AdminAttendanceModal } from "@/features/attendance/admin-attendance-modal";
 
 const SEMESTER_OPTIONS: AppSelectOption[] = ["Fall", "Spring", "Summer"].map((semester) => ({
   value: semester,
@@ -130,6 +131,8 @@ export default function AdminClassesPage() {
   const [manageBusy, setManageBusy] = React.useState(false);
   // Prerequisite subjects edited inside the manage modal (replaces the whole list).
   const [managePrereqs, setManagePrereqs] = React.useState<string[]>([]);
+  // Attendance summary modal for a class.
+  const [attendanceClass, setAttendanceClass] = React.useState<ClassSection | null>(null);
   const loadData = React.useCallback(async () => {
     try {
       setLoading(true);
@@ -278,7 +281,7 @@ export default function AdminClassesPage() {
     setManageBusy(true);
     try {
       const updated = await adminApi.setPrerequisites(String(manageClass.id), managePrereqs);
-      setManageClass(updated);
+      setManageClass(null);
       setPendingManageAction(null);
       setManagePrereqs((updated.prerequisites ?? []).map((p) => p.id));
       setNotice(`Prerequisites updated for ${updated.code}.`);
@@ -470,6 +473,7 @@ export default function AdminClassesPage() {
                         direction={idx === filteredClasses.length - 1 ? "up" : "down"}
                         items={[
                           { label: "Manage trainers", icon: <Users className="w-3.5 h-3.5" />, onSelect: () => { setManageClass(cls); setNewCoTrainer(""); setManagePrereqs((cls.prerequisites ?? []).map((p) => p.id)); } },
+                          { label: "Attendance summary", icon: <CalendarCheck className="w-3.5 h-3.5" />, onSelect: () => setAttendanceClass(cls) },
                           isArchived(cls)
                             ? { label: "Restore class", onSelect: () => setPendingArchive(cls) }
                             : { label: "Archive class", onSelect: () => setPendingArchive(cls) },
@@ -709,14 +713,23 @@ export default function AdminClassesPage() {
                 <p className="text-[11.5px] text-[#5A5A5A]">
                   Students must pass these subjects before joining this class.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setPendingManageAction({ kind: "save-prereqs" })}
-                  disabled={manageBusy}
-                  className="rounded-md border border-[#CFCFCF] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
-                >
-                  Save prerequisites
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setManageClass(null)}
+                    className="rounded-md border border-[#DADADA] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#5A5A5A] transition-colors hover:bg-[#F7F7F7]"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingManageAction({ kind: "save-prereqs" })}
+                    disabled={manageBusy}
+                    className="rounded-md border border-[#CFCFCF] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#111111] shadow-xs transition-colors hover:bg-[#F7F7F7] disabled:opacity-50"
+                  >
+                    Save prerequisites
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -793,6 +806,12 @@ export default function AdminClassesPage() {
           return handleSavePrereqs();
         }}
         onCancel={() => setPendingManageAction(null)}
+      />
+      <AdminAttendanceModal
+        classId={attendanceClass ? String(attendanceClass.id) : ""}
+        classCode={attendanceClass?.code}
+        isOpen={Boolean(attendanceClass)}
+        onClose={() => setAttendanceClass(null)}
       />
     </AdminPageShell>
   );
