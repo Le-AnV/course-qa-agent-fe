@@ -49,6 +49,7 @@ export default function ClassWorkspaceLayout({
     { id: "agent", label: "Q&A Chat", href: `/teacher/class/${id}/agent` },
     { id: "tickets", label: "Tickets", href: `/teacher/class/${id}/tickets` },
     { id: "quizzes", label: "Quiz Import", href: `/teacher/class/${id}/quizzes/import` },
+    { id: "attendance", label: "Attendance", href: `/teacher/class/${id}/attendance` },
     {
       id: "members",
       label: "Members",
