@@ -51,6 +51,10 @@ export type QuizSummary = {
   title: string;
   description: string | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  time_limit_minutes: number | null;
+  opens_at: string | null;
+  closes_at: string | null;
+  max_attempts: number | null;
   question_count: number;
   created_at: string;
   updated_at: string;
@@ -64,6 +68,9 @@ export type QuizDetail = {
   description: string | null;
   time_limit_minutes: number | null;
   passing_score: number | null;
+  opens_at: string | null;
+  closes_at: string | null;
+  max_attempts: number | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   approved_by_id: string | null;
   approved_at: string | null;
@@ -81,6 +88,9 @@ export type QuizMetadataUpdate = {
   description?: string | null;
   time_limit_minutes?: number | null;
   passing_score?: number | null;
+  opens_at?: string | null;
+  closes_at?: string | null;
+  max_attempts?: number | null;
 };
 
 export type QuizQuestionInput = {
