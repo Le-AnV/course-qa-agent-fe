@@ -101,6 +101,27 @@ export type QuizQuestionInput = {
 
 export type QuizAttemptStatus = "IN_PROGRESS" | "SUBMITTED" | "EXPIRED";
 
+/** One published quiz in the student's class list, with their own attempt summary. */
+export type QuizStudentSummary = {
+  id: string;
+  class_id: string;
+  title: string;
+  description: string | null;
+  question_count: number;
+  total_points: number;
+  time_limit_minutes: number | null;
+  passing_score: number | null;
+  attempt_count: number;
+  submitted_count: number;
+  has_in_progress: boolean;
+  official_attempt_id: string | null;
+  official_score: number | null;
+  official_max_score: number | null;
+  official_percentage: number | null;
+  official_is_passed: boolean | null;
+  official_submitted_at: string | null;
+};
+
 /** One row in the student's own attempt history for a quiz. */
 export type QuizAttemptHistory = {
   id: string;
@@ -376,6 +397,10 @@ export const quizApi = {
  * backend: a caller only ever sees their own attempts.
  */
 export const studentQuizResultApi = {
+  listClassQuizzes: (classId: string) =>
+    request<QuizStudentSummary[]>(
+      `/api/student/classes/${encodeURIComponent(classId)}/quizzes`,
+    ),
   listAttempts: (quizId: string) =>
     request<QuizAttemptHistory[]>(
       `/api/student/quizzes/${encodeURIComponent(quizId)}/attempts`,

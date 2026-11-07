@@ -50,6 +50,7 @@ export default function StudentClassWorkspaceLayout({
 
   const tabs: CourseTabItem[] = [
     { id: "overview", label: "Overview", href: `/student/class/${id}/overview` },
+    { id: "quizzes", label: "Quizzes", href: `/student/class/${id}/quizzes` },
     { id: "syllabus", label: "Syllabus", href: `/student/class/${id}/syllabus` },
     { id: "agent", label: "Q&A Chat", href: `/student/class/${id}/agent` },
     { id: "tickets", label: "My Tickets", href: `/student/class/${id}/tickets` },

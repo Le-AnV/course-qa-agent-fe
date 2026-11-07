@@ -24,13 +24,16 @@ shared primitives (`ClassPageHeader`, `WorkspacePageHeader`, `Card`, `Table`, `B
 | Route | Screen | Entry point |
 |---|---|---|
 | `/teacher/class/{classId}/quizzes/{quizId}/results` | Teacher results dashboard | `Results` button on the quiz list and on the quiz review header (hidden for `DRAFT`) |
-| `/student/quizzes/{quizId}` | Student attempt history | Linked by AI-153's quiz detail/list; direct URL works today |
-| `/student/quizzes/{quizId}/attempts/{attemptId}` | Student answer review | `View result` on the history row; AI-153 should redirect here after submit |
+| `/student/class/{classId}/quizzes` | Student class quiz list | `Quizzes` tab in the student class workspace |
+| `/student/quizzes/{quizId}` | Student attempt history | `Attempt history` on a class quiz row; AI-153's quiz detail/list can also link here |
+| `/student/quizzes/{quizId}/attempts/{attemptId}` | Student answer review | `View result` on the class quiz row and on the history row; AI-153 should redirect here after submit |
 
-**Why the student routes are not under `/student/class/[id]/quizzes/...`:** AI-153 owns the
-student quiz list/detail and will land there. Keeping AI-154's read-only screens on a
-separate prefix prevents route collisions while still allowing AI-153 to link to them. The
-student pages use `PageContainer` + `WorkspacePageHeader`, exactly like `/student/classes`.
+**Why the attempt routes stay outside the class workspace:** AI-153 owns the student
+quiz-taking screens and will land them under `/student/class/[id]/quizzes/...`. The
+read-only attempt history/review keep a separate `/student/quizzes/...` prefix to avoid
+route collisions. The new class quiz **list** lives in the workspace tab because it is the
+navigation surface students actually use. The student pages use `PageContainer` +
+`WorkspacePageHeader` / `ClassPageHeader`, exactly like the other student screens.
 
 ## 3. Teacher results dashboard
 
@@ -105,7 +108,39 @@ Rows are not clickable: the backend exposes no teacher endpoint for a student's 
 answer review, so the UI does not pretend one exists. Each row is keyed by `attempt_id`, so
 multiple attempts from the same student never collapse.
 
-## 4. Student attempt history
+## 4. Student quizzes in the class workspace
+
+### 4.1 Class quiz list (entry point)
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│ Quizzes                                                            │
+│ Published quizzes for this class and how you did on each one.      │
+└────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────┐
+│ Quiz                                      Your result              │
+├────────────────────────────────────────────────────────────────────┤
+│ C++ Fundamentals - Midterm Quiz [Passed]      75%                  │
+│ 6 questions · 8 points · Passing 4 · 30 min   6 / 8 points         │
+│                                                Submitted Nov 5     │
+│                                     [View result] [Attempt history]│
+└────────────────────────────────────────────────────────────────────┘
+```
+
+* `Quizzes` sits between `Overview` and `Syllabus` in the student class tabs, so the
+  attempt history is reachable without typing a URL.
+* Data comes from `GET /api/student/classes/{classId}/quizzes`; only `PUBLISHED` quizzes
+  are returned and every summary value is scoped to the signed-in student.
+* Row status: `Passed`/`Failed` badge when an official attempt exists, amber
+  `In progress` when only an in-progress attempt exists, otherwise `Not started.`
+* Actions: `View result` opens the official answer review; `Attempt history` opens
+  `/student/quizzes/{quizId}`. Both are hidden when the student has no attempts.
+* Loading uses the shared `SkeletonLine` rows; error uses the bordered student-style
+  alert with `Retry`; empty uses `EmptyState` inside the same white panel.
+* Mobile: the row stacks title → result → actions, matching the other student tabs.
+
+### 4.2 Attempt history
 
 ```
 ← My classes
@@ -188,13 +223,16 @@ it receives and never exposes a "show explanation" affordance.
 ## 7. Implementation notes
 
 * `lib/quiz-api.ts` gains the AI-154 types (`QuizAttemptHistory`, `QuizAttemptResult`,
-  `QuizSubmission`, `QuizStatistics`, …), teacher methods
+  `QuizStudentSummary`, `QuizSubmission`, `QuizStatistics`, …), teacher methods
   `listSubmissions` / `getStatistics` / `exportResults`, and a separate
   `studentQuizResultApi` object for the ownership-scoped student routes.
 * New `features/quizzes/quiz-results.tsx` (teacher dashboard),
+  `student-quiz-list.tsx` (class quiz list + entry into history),
   `student-quiz-attempts.tsx` (history), `student-quiz-result.tsx` (answer review),
   `quiz-result-badges.tsx` (status/pass/official pills) and `quiz-result-format.ts`
   (score, percentage, date and question-type formatting).
+* The student class layout adds a `Quizzes` tab and the page at
+  `app/(shell)/student/class/[id]/quizzes/page.tsx` renders `StudentQuizList`.
 * `quiz-list.tsx` gains a `Results` row action for published/archived quizzes;
   `quiz-review.tsx` gains the same action in its header. Drafts never show it because no
   attempt can exist yet.
@@ -207,7 +245,8 @@ AI-154 owns the read side. AI-153 should:
 
 1. Call `grade_attempt(db, attempt.id, commit=False)` inside the submit transaction.
 2. Redirect to `/student/quizzes/{quizId}/attempts/{attemptId}` after a successful submit.
-3. Link the quiz detail/list row to `/student/quizzes/{quizId}` for attempt history.
+3. Add `Start` / `Continue` on the class quiz row (AI-154 ships the row and `Attempt history`
+   action; the quiz-taking action belongs to AI-153).
 
 Without step 1, the AI-154 reads still grade lazily, so the screens remain correct — only
 the "immediate feedback" transition is delayed by one read.
@@ -224,6 +263,13 @@ the "immediate feedback" transition is delayed by one read.
 
 | Context | String |
 |---|---|
+| Student quiz list title | `Quizzes` |
+| Student quiz list subtitle | `Published quizzes for this class and how you did on each one.` |
+| Student quiz list empty | `No quizzes yet` / `Your trainer has not published a quiz for this class yet. It will appear here when it is ready.` |
+| Student quiz row | `{n} questions · {points} points · Passing {x} · {m} min` |
+| Not started | `Not started.` |
+| In progress | `In progress` / `Attempt in progress — result available after submission.` |
+| Row actions | `View result` / `Attempt history` |
 | Teacher page title | `{quiz title}` / fallback `Quiz results` |
 | Teacher subtitle | `Scores, pass rate and question-level performance. Only one official attempt per student is counted.` |
 | Export | `Export Excel` / `Exporting…` / toast `Results exported.` |
@@ -249,14 +295,20 @@ npm run build
 
 Manual, with a published quiz that has submissions:
 
-1. Teacher list → `Results` appears only on published/archived quizzes; opens the dashboard.
-2. Summary values match the backend (`submitted_count`, averages, pass rate).
-3. Bands sum to the official attempt count; per-question rows match the quiz order.
-4. Search + `Official only` filter narrow the table; `Clear` restores it.
-5. Export downloads a three-sheet workbook and toasts on success.
-6. Student history marks exactly one official attempt; in-progress rows have no link.
-7. Result page shows the score, correct/selected options, fill-in accepted answers, and
+1. Student class workspace → `Quizzes` tab lists only published quizzes with the signed-in
+   student's own official score; `View result` opens the review and `Attempt history` opens
+   the history page.
+2. A student with no attempts sees `Not started.` and no row actions; an in-progress attempt
+   shows the amber badge and no score.
+3. Teacher list → `Results` appears only on published/archived quizzes; opens the dashboard.
+4. Summary values match the backend (`submitted_count`, averages, pass rate).
+5. Bands sum to the official attempt count; per-question rows match the quiz order.
+6. Search + `Official only` filter narrow the table; `Clear` restores it.
+7. Export downloads a three-sheet workbook and toasts on success.
+8. Student history marks exactly one official attempt; in-progress rows have no link.
+9. Result page shows the score, correct/selected options, fill-in accepted answers, and
    explanations only when enabled.
-8. Another student's attempt → unavailable panel; own in-progress attempt → `409` panel.
-9. Empty class (no submissions) and empty student history both render their `EmptyState`.
-10. Mobile: cards stack, tables scroll, header actions wrap.
+10. Another student's attempt → unavailable panel; own in-progress attempt → `409` panel.
+11. Empty class (no submissions), empty class quiz list, and empty student history all
+    render their `EmptyState`.
+12. Mobile: cards stack, tables scroll, header actions wrap.
