@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   ArrowLeft,
+  BarChart3,
   CheckCircle2,
   Download,
   LoaderCircle,
@@ -262,6 +263,13 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
                 }
               >
                 <CheckCircle2 /> Approve
+              </Button>
+            )}
+            {!isDraft && (
+              <Button asChild variant="outline">
+                <Link href={`/teacher/class/${classId}/quizzes/${quizId}/results`}>
+                  <BarChart3 /> Results
+                </Link>
               </Button>
             )}
             {(isPublished || quiz.status === "ARCHIVED") && (

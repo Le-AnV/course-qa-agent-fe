@@ -95,6 +95,123 @@ export type QuizQuestionInput = {
   correct_answers: string[];
 };
 
+// ---------------------------------------------------------------------------
+// Results, attempt history and class statistics (AI-154)
+// ---------------------------------------------------------------------------
+
+export type QuizAttemptStatus = "IN_PROGRESS" | "SUBMITTED" | "EXPIRED";
+
+/** One row in the student's own attempt history for a quiz. */
+export type QuizAttemptHistory = {
+  id: string;
+  quiz_id: string;
+  status: QuizAttemptStatus;
+  started_at: string;
+  submitted_at: string | null;
+  graded_at: string | null;
+  total_score: number | null;
+  max_score: number | null;
+  passing_score: number | null;
+  percentage: number | null;
+  is_passed: boolean | null;
+  official: boolean;
+};
+
+export type QuizOptionResult = {
+  id: string;
+  option_label: string;
+  option_text: string;
+  is_correct: boolean;
+  order_index: number;
+};
+
+export type QuizAnswerResult = {
+  question_id: string;
+  selected_option_labels: string[] | null;
+  text_answer: string | null;
+  score_awarded: number | null;
+  is_correct: boolean | null;
+};
+
+export type QuizQuestionResult = {
+  id: string;
+  question_type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "FILL_IN_BLANK";
+  question: string;
+  points: number;
+  order_index: number;
+  explanation: string | null;
+  options: QuizOptionResult[];
+  correct_option_labels: string[];
+  accepted_text_answers: string[];
+  answer: QuizAnswerResult | null;
+};
+
+/** Full result for one submitted attempt, including the answer review. */
+export type QuizAttemptResult = {
+  id: string;
+  quiz_id: string;
+  quiz_title: string;
+  student_id: string;
+  status: QuizAttemptStatus;
+  started_at: string;
+  submitted_at: string | null;
+  graded_at: string | null;
+  total_score: number | null;
+  max_score: number | null;
+  passing_score: number | null;
+  percentage: number | null;
+  is_passed: boolean | null;
+  official: boolean;
+  show_explanations: boolean;
+  questions: QuizQuestionResult[];
+};
+
+/** One row in the teacher's submissions table. */
+export type QuizSubmission = {
+  attempt_id: string;
+  student_id: string;
+  student_name: string;
+  student_code: string | null;
+  student_email: string;
+  status: QuizAttemptStatus;
+  submitted_at: string | null;
+  graded_at: string | null;
+  total_score: number | null;
+  max_score: number | null;
+  percentage: number | null;
+  is_passed: boolean | null;
+  official: boolean;
+};
+
+export type QuizScoreBand = {
+  band: string;
+  count: number;
+};
+
+export type QuizQuestionStatistic = {
+  question_id: string;
+  order_index: number;
+  question_type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "FILL_IN_BLANK";
+  question: string;
+  points: number;
+  answered_count: number;
+  average_score: number;
+  full_correct_rate: number;
+};
+
+/** Class statistics computed from one official attempt per student. */
+export type QuizStatistics = {
+  quiz_id: string;
+  quiz_title: string;
+  submitted_count: number;
+  max_score: number;
+  average_score: number | null;
+  average_percentage: number | null;
+  pass_rate: number | null;
+  score_bands: QuizScoreBand[];
+  per_question: QuizQuestionStatistic[];
+};
+
 function token(): string | null {
   return typeof window === "undefined" ? null : window.localStorage.getItem(AUTH_TOKEN_KEY);
 }
@@ -218,6 +335,26 @@ export const quizApi = {
     link.click();
     URL.revokeObjectURL(url);
   },
+  listSubmissions: (classId: string, quizId: string) =>
+    request<QuizSubmission[]>(quizPath(classId, quizId, "/submissions")),
+  getStatistics: (classId: string, quizId: string) =>
+    request<QuizStatistics>(quizPath(classId, quizId, "/statistics")),
+  async exportResults(classId: string, quizId: string, fallbackName: string): Promise<void> {
+    const auth = token();
+    const response = await fetch(
+      `${API_URL}${quizPath(classId, quizId, "/results/export")}`,
+      { headers: auth ? { Authorization: `Bearer ${auth}` } : {} },
+    );
+    if (!response.ok) throw await responseError(response);
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const match = /filename="?([^"]+)"?/.exec(disposition);
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = match ? match[1] : `${fallbackName}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+  },
   async downloadTemplate(classId: string): Promise<void> {
     const auth = token();
     const response = await fetch(
@@ -232,4 +369,19 @@ export const quizApi = {
     link.click();
     URL.revokeObjectURL(url);
   },
+};
+
+/**
+ * Student-side result reads (AI-154). These routes are ownership-scoped on the
+ * backend: a caller only ever sees their own attempts.
+ */
+export const studentQuizResultApi = {
+  listAttempts: (quizId: string) =>
+    request<QuizAttemptHistory[]>(
+      `/api/student/quizzes/${encodeURIComponent(quizId)}/attempts`,
+    ),
+  getAttemptResult: (quizId: string, attemptId: string) =>
+    request<QuizAttemptResult>(
+      `/api/student/quizzes/${encodeURIComponent(quizId)}/attempts/${encodeURIComponent(attemptId)}/result`,
+    ),
 };
