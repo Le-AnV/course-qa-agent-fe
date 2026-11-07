@@ -4,6 +4,10 @@
 > **Backend contract:** `course-qa-agent-be/docs/design/ai-151-quiz-review-approve-export.md`
 > **Branches:** `features/Design_QuizReviewExport` (this) · `features/Implementation_QuizReviewExport`
 
+> [!NOTE]
+> **Evolution Note (AI-159 & AI-160):**
+> Question items now feature class-scoped Dreyfus Skill Taxonomy tags (`skill_id`) and 5-level difficulty badges (`NOVICE` $\rightarrow$ `MASTER`). Refer to [`ai-159-skill-taxonomy-rubrics-ui.md`](./ai-159-skill-taxonomy-rubrics-ui.md) for full taxonomy definitions.
+
 ## 1. Purpose and user
 
 Today a teacher can import a quiz from Excel (AI-152) and see the result as a read-only
