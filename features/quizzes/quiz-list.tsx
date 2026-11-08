@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronDown, Download, LoaderCircle, Trash2 } from "lucide-react";
+import { BarChart3, ChevronDown, Download, LoaderCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -196,6 +196,13 @@ export function QuizList({
                       {isDraft ? "Review" : "Open"}
                     </Link>
                   </Button>
+                  {!isDraft && (
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/teacher/class/${classId}/quizzes/${quiz.id}/results`}>
+                        <BarChart3 /> Results
+                      </Link>
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
