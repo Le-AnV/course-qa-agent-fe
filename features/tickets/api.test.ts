@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addTicketReply, createTicket, getTicketCounts, listMyTickets, listTickets, reopenTicket, resolveTicket } from "./api";
+import { addTicketReply, createTicket, getTicketCounts, listMyTickets, listTickets, markTicketSeen, reopenTicket, resolveTicket } from "./api";
 
 describe("ticket API", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -61,6 +61,17 @@ describe("ticket API", () => {
     expect(url.searchParams.get("class_id")).toBe("class-1");
     expect(url.searchParams.get("status")).toBe("ANSWERED");
     expect(fetchMock.mock.calls[0][1]?.method).toBeUndefined();
+  });
+
+  it("filters unread replies and marks a ticket seen", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [], total: 0, page: 1, page_size: 5 })))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await listMyTickets({ unread: true, page_size: 5 });
+    expect(new URL(String(fetchMock.mock.calls[0][0])).searchParams.get("unread")).toBe("true");
+    await expect(markTicketSeen("ticket-1")).resolves.toBeUndefined();
+    expect(fetchMock.mock.calls[1][0]).toContain("/api/tickets/ticket-1/seen");
+    expect(fetchMock.mock.calls[1][1]?.method).toBe("POST");
   });
 
   it("loads per-class open and completed ticket counts", async () => {

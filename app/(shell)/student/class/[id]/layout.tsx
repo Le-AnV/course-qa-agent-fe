@@ -51,8 +51,10 @@ export default function StudentClassWorkspaceLayout({
   const tabs: CourseTabItem[] = [
     { id: "overview", label: "Overview", href: `/student/class/${id}/overview` },
     { id: "syllabus", label: "Syllabus", href: `/student/class/${id}/syllabus` },
+    { id: "quizzes", label: "Quizzes", href: `/student/class/${id}/quizzes` },
     { id: "agent", label: "Q&A Chat", href: `/student/class/${id}/agent` },
     { id: "tickets", label: "My Tickets", href: `/student/class/${id}/tickets` },
+    { id: "attendance", label: "Attendance", href: `/student/class/${id}/attendance` },
     { id: "members", label: "Members", href: `/student/class/${id}/members` },
   ];
 
@@ -62,7 +64,7 @@ export default function StudentClassWorkspaceLayout({
   const classSection = classSectionFromPathname(pathname ?? "", "/student");
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#F4F5F8]">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#E7EDF5]">
       <CourseTabs tabs={tabs} />
 
       {/* Mobile class-switcher: sidebar ẩn dưới lg nên cần chỗ đổi lớp nhanh. */}

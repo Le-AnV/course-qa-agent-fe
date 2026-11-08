@@ -8,8 +8,11 @@ import { peekClasses } from "@/lib/class-cache";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { useProfile } from "@/features/profile/profile-context";
 import { PageContainer } from "@/components/shared/PageShell";
+import { WorkspacePageHeader } from "@/components/shared/WorkspacePageHeader";
 import { Reveal, SkeletonLine } from "@/components/shared/page-skeleton";
 import { buildActionItems } from "@/features/teacher-home/action-items";
+import { AppSelect, type AppSelectOption } from "@/components/ui/app-select";
+import { ContentGapOverviewCard } from "@/components/teacher/content-gap-overview-card";
 
 /**
  * Teacher home is the "what needs me" surface, not a second copy of
@@ -75,6 +78,7 @@ export default function TeacherHomePage() {
   const [classes, setClasses] = React.useState<StudentClass[] | null>(null);
   const [pending, setPending] = React.useState<Record<string, number | null> | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [gapClassId, setGapClassId] = React.useState<string>("");
 
   // Seed the class list from the session cache so the header and the class count
   // paint with real numbers on the first frame after a reload (no placeholder swap).
@@ -109,6 +113,16 @@ export default function TeacherHomePage() {
     void load();
   }, [load]);
 
+  // Content Gap follows the picked class; fall back to the first class until one is chosen.
+  const activeGapClass = React.useMemo(
+    () => classes?.find((c) => c.id === gapClassId) ?? classes?.[0] ?? null,
+    [classes, gapClassId],
+  );
+  const classOptions: AppSelectOption[] = React.useMemo(
+    () => (classes ?? []).map((c) => ({ value: c.id, label: c.name, description: c.code })),
+    [classes],
+  );
+
   const name = profile?.username?.trim();
   const items = React.useMemo(
     () => (classes && pending ? buildActionItems(classes, pending) : []),
@@ -121,22 +135,18 @@ export default function TeacherHomePage() {
 
   return (
     <PageContainer className="space-y-8">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[28px] font-heading font-bold text-[#111111] tracking-tight">
-            {name ? `Welcome back, ${name}` : "Welcome back"}
-          </h1>
-          <p className="text-[14px] text-[#5A5A5A] mt-1">Here is what is waiting on you today.</p>
-        </div>
-        {classes && classes.length > 0 && (
+      <WorkspacePageHeader
+        title={name ? `Welcome back, ${name}` : "Welcome back"}
+        subtitle="Here is what is waiting on you today."
+        actions={classes && classes.length > 0 ? (
           <Link
             href="/teacher/classes"
-            className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-[#111111] hover:underline"
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--brand-line)] bg-white px-3 py-2 text-[13px] font-semibold text-[var(--brand-ink)] transition-colors hover:bg-[var(--brand-soft)]"
           >
             All classes ({classes.length}) <ChevronRight className="h-3 w-3" />
           </Link>
-        )}
-      </header>
+        ) : undefined}
+      />
 
       {error ? (
         <div className="rounded-xl border border-[#CFCFCF] bg-white p-6 text-center text-[13px]">
@@ -207,6 +217,30 @@ export default function TeacherHomePage() {
               </Reveal>
             )}
           </section>
+
+          {activeGapClass && (
+            <section className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-[17px] font-heading font-bold text-[#111111]">Content gap</h2>
+                <AppSelect
+                  value={activeGapClass.id}
+                  onValueChange={setGapClassId}
+                  options={classOptions}
+                  placeholder="Select a class"
+                  aria-label="Select class for content gap"
+                  triggerClassName="sm:w-[280px]"
+                />
+              </div>
+              <Reveal>
+                <ContentGapOverviewCard
+                  key={activeGapClass.id}
+                  classId={activeGapClass.id}
+                  courseName={activeGapClass.name}
+                  courseCode={activeGapClass.code}
+                />
+              </Reveal>
+            </section>
+          )}
         </>
       )}
     </PageContainer>

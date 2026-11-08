@@ -36,7 +36,11 @@ function TabBadge({ count }: { count: number }) {
  * section index. The active section sits on a compact sliding white pill, so
  * the row stays quiet without adding another bordered surface.
  */
-export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
+export function CourseTabs({
+  tabs,
+}: {
+  tabs: CourseTabItem[];
+}) {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
   const active =
@@ -54,7 +58,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
 
   return (
     <div
-      className="relative w-full shrink-0 border-b border-[#CDD1D8] bg-[#E3E5E9]"
+      className="relative w-full shrink-0 border-b border-[var(--brand-line)] bg-[var(--brand-soft)]"
       onKeyDown={(event) => {
         if (event.key === "Escape") setMenuOpen(false);
       }}
@@ -72,7 +76,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
             aria-controls="course-tab-menu"
             className="flex min-w-0 items-center justify-center gap-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-ink)]"
           >
-            <span className="truncate text-[13px] font-semibold text-[#111]">{active.label}</span>
+            <span className="truncate text-[13px] font-semibold text-[var(--brand-ink)]">{active.label}</span>
             <TabBadge count={active.badge ?? 0} />
             <ChevronDown
               className={cn(
@@ -104,7 +108,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
                     className={cn(
                       "flex items-center justify-between gap-3 px-4 py-2.5 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-ink)]",
                       isActive
-                        ? "bg-[var(--brand-soft)] font-semibold text-[#111]"
+                        ? "bg-[var(--brand)] font-semibold text-white"
                         : "text-[#5A5A5A] hover:bg-[#F7F7F7] hover:text-[#111]",
                     )}
                   >
@@ -113,7 +117,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
                       <TabBadge count={tab.badge ?? 0} />
                     </span>
                     {isActive && (
-                      <Check className="h-4 w-4 shrink-0 text-[var(--brand-ink)]" />
+                      <Check className="h-4 w-4 shrink-0 text-white" />
                     )}
                   </Link>
                 );
@@ -130,7 +134,7 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
         >
           <nav
             aria-label="Class sections"
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 overflow-x-auto max-w-full"
           >
             {tabs.map((tab) => {
               const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
@@ -142,14 +146,14 @@ export function CourseTabs({ tabs }: { tabs: CourseTabItem[] }) {
                   className={cn(
                     "relative flex h-7 items-center whitespace-nowrap rounded-full px-3 text-[12.5px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-ink)]",
                     isActive
-                      ? "text-[#111]"
+                      ? "text-white"
                       : "text-[#526173] hover:bg-white/40 hover:text-[#111]",
                   )}
                 >
                   {isActive && (
                     <motion.span
                       layoutId="course-tab-pill"
-                      className="absolute inset-0 rounded-full bg-white shadow-[0_1px_2px_rgba(16,34,59,0.10)]"
+                      className="absolute inset-0 rounded-full bg-[var(--brand)] shadow-[0_1px_2px_rgba(16,34,59,0.25)]"
                       transition={indicatorTransition}
                     />
                   )}

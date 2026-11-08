@@ -9,13 +9,23 @@ import { studentApi, type StudentClass } from "@/lib/student-api";
 import { cn } from "@/lib/utils";
 import {
   addTicketReply,
+  getStudentTicket,
   listMyTickets,
+  markTicketSeen,
   reopenTicket,
   resolveTicket,
   type Ticket,
   type TicketList,
+  type TicketInboxItem,
 } from "./api";
-import { formatTicketDate, TicketStatusBadge, ArchivedClassBadge } from "./ticket-status-badge";
+import {
+  ArchivedClassBadge,
+  formatTicketDate,
+  getTicketStatusTheme,
+  TicketStatusBadge,
+} from "./ticket-status-badge";
+import { hasUnreadReply, latestUnreadReply } from "./unread-replies";
+import { useTicketNotifications } from "./ticket-notifications";
 
 const FILTERS = [
   { id: "OPEN", label: "Open" },
@@ -35,7 +45,12 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
   const [error, setError] = React.useState<string | null>(null);
   const [retry, setRetry] = React.useState(0);
   const [search, setSearch] = React.useState("");
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [selectedId, setSelectedId] = React.useState<string | null>(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("ticket_id"),
+  );
+  const [linkedTicket, setLinkedTicket] = React.useState<TicketInboxItem | null>(null);
+  const notifications = useTicketNotifications();
+  const markedReply = React.useRef<string | null>(null);
   const [followUp, setFollowUp] = React.useState("");
   const [replyBusy, setReplyBusy] = React.useState(false);
   const [replyError, setReplyError] = React.useState<string | null>(null);
@@ -90,7 +105,7 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [classId, filter, page, retry]);
+  }, [classId, filter, page, retry, notifications?.newReplyVersion]);
 
   // Keep the page fresh while the student waits for a teacher reply.
   React.useEffect(() => {
@@ -104,6 +119,7 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
     if (!soft) setLoading(true);
     setError(null);
     setSelectedId(null);
+    setLinkedTicket(null);
     setFollowUp("");
     setReplyError(null);
     setActionError(null);
@@ -119,7 +135,28 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
             value.toLowerCase().includes(query),
           ),
       );
-  const selected = visible.find((ticket) => ticket.id === selectedId) ?? visible[0];
+  React.useEffect(() => {
+    if (!selectedId || !data || data.items.some((ticket) => ticket.id === selectedId)) return;
+    let cancelled = false;
+    void getStudentTicket(selectedId).then((ticket) => {
+      if (cancelled) return;
+      const clazz = classes.find((item) => item.id === ticket.class_id);
+      setLinkedTicket({ ...ticket, student_name: "", class_name: clazz?.name ?? "", class_code: clazz?.code ?? "", class_status: clazz?.status ?? "ACTIVE" });
+    }).catch(() => { if (!cancelled) setLinkedTicket(null); });
+    return () => { cancelled = true; };
+  }, [selectedId, data, classes]);
+  const selected = selectedId
+    ? visible.find((ticket) => ticket.id === selectedId) ?? (linkedTicket?.id === selectedId ? linkedTicket : undefined)
+    : visible[0];
+  const unreadReply = selected ? latestUnreadReply(selected) : undefined;
+  React.useEffect(() => {
+    if (!selected || !unreadReply || markedReply.current === unreadReply.id) return;
+    markedReply.current = unreadReply.id;
+    void markTicketSeen(selected.id).then(() => {
+      setRetry((value) => value + 1);
+      void notifications?.refresh();
+    }).catch(() => { markedReply.current = null; });
+  }, [selected, unreadReply, notifications]);
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / (data?.page_size ?? 20)));
   const classSelectOptions: AppSelectOption[] = [
     { value: "", label: "All my classes" },
@@ -222,6 +259,7 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
           >
             <span className="flex items-center justify-between gap-2">
               <TicketStatusBadge status={ticket.status} />
+              {hasUnreadReply(ticket) && <span aria-label="New teacher reply" className="h-2 w-2 rounded-full bg-[#B74B3A]" />}
               <time dateTime={ticket.created_at} className="text-[11px] text-[#6F6F6F]">
                 {formatTicketDate(ticket.created_at)}
               </time>
@@ -276,7 +314,7 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
       subtitle="Questions you sent to your teacher. Replies and status updates appear here."
       titleBadge={
         !loading && !error && data ? (
-          <span className="text-xs text-[#6F6F6F]">
+          <span className="text-xs text-[#DEE8F2]">
             {data.total} {data.total === 1 ? "ticket" : "tickets"}
           </span>
         ) : undefined
@@ -284,7 +322,7 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
       headerActions={
         <label
           htmlFor="student-ticket-class"
-          className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-[#5A5A5A]"
+          className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-[#DEE8F2]"
         >
           Class
           <AppSelect
@@ -299,12 +337,12 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
             placeholder="All my classes"
             aria-label="Filter tickets by class"
             size="sm"
-            triggerClassName="w-[340px] max-w-full"
-            contentClassName="min-w-[280px]"
+            triggerClassName="w-[520px] max-w-full"
+            contentClassName="w-[var(--radix-select-trigger-width)] min-w-0"
             renderValue={(option) =>
               option ? (
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate">{option.label}</span>
+                  <span className="whitespace-nowrap">{option.label}</span>
                   {option.description ? (
                     <span className="shrink-0 text-[11px] font-normal text-[#6F6F6F]">
                       {option.description}
@@ -331,7 +369,12 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
       rightDetailContent={
         selected ? (
           <article className="flex h-full min-h-0 flex-col">
-            <header className="border-b border-[#E5E5E5] bg-[#FAFAFA] px-5 py-4">
+            <header
+              className={cn(
+                "border-b px-5 py-4",
+                getTicketStatusTheme(selected.status).headerClassName,
+              )}
+            >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <TicketStatusBadge status={selected.status} />
                 <span className="text-xs text-[#5A5A5A]">
@@ -345,7 +388,12 @@ export function StudentTickets({ initialClassId }: { initialClassId: string }) {
                   {formatTicketDate(selected.created_at)}
                 </time>
               </div>
-              <h2 className="mt-2 text-lg font-semibold leading-snug text-[#111111]">
+              <h2
+                className={cn(
+                  "mt-2 text-lg font-semibold leading-snug",
+                  getTicketStatusTheme(selected.status).titleClassName,
+                )}
+              >
                 {selected.question}
               </h2>
               <p className="mt-1 break-all font-mono text-[10px] text-[#6F6F6F]">

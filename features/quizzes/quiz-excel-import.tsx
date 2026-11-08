@@ -3,7 +3,9 @@
 import * as React from "react";
 import { FileSpreadsheet, LoaderCircle, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { quizApi, type QuizImportPreview } from "@/lib/quiz-api";
+import { quizApi, type QuizDetail, type QuizImportPreview } from "@/lib/quiz-api";
+import { QuizList } from "@/features/quizzes/quiz-list";
+import { ClassPageHeader } from "@/components/shared/ClassPageHeader";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -14,6 +16,9 @@ export function QuizExcelImport({ classId }: { classId: string }) {
   const [preview, setPreview] = React.useState<QuizImportPreview | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [createdTitle, setCreatedTitle] = React.useState("");
+  const [lastImported, setLastImported] = React.useState<QuizDetail | null>(null);
+  const [refreshToken, setRefreshToken] = React.useState(0);
+  const [fileInputKey, setFileInputKey] = React.useState(0);
 
   function selectFile(selected: File | null) {
     setFile(selected);
@@ -56,6 +61,15 @@ export function QuizExcelImport({ classId }: { classId: string }) {
     try {
       const quiz = await quizApi.importQuiz(classId, file, title.trim(), description.trim());
       setCreatedTitle(quiz.title);
+      setLastImported(quiz);
+      setRefreshToken((value) => value + 1);
+      // Clear the upload form so the freshly imported quiz list is what the
+      // teacher sees next, with the new quiz already expanded.
+      setFile(null);
+      setPreview(null);
+      setTitle("");
+      setDescription("");
+      setFileInputKey((value) => value + 1);
       toast.success("Quiz imported as a draft.");
     } catch (error) {
       const detail = (error as Error & { detail?: unknown }).detail;
@@ -70,14 +84,11 @@ export function QuizExcelImport({ classId }: { classId: string }) {
   }
 
   return (
-    <section className="mx-auto max-w-4xl space-y-5 pb-10">
-      <header>
-        <p className="text-sm font-medium text-slate-500">Quiz</p>
-        <h1 className="mt-1 text-2xl font-semibold text-slate-900">Import from Excel</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          Upload an .xlsx question bank, check the validation results, then create a draft for teacher review.
-        </p>
-      </header>
+    <section className="space-y-6 pb-10">
+      <ClassPageHeader
+        title="Import from Excel"
+        subtitle="Upload an .xlsx question bank, check the validation results, then create a draft for teacher review."
+      />
 
       <div className="rounded-lg border border-slate-200 bg-white p-5">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -106,7 +117,13 @@ export function QuizExcelImport({ classId }: { classId: string }) {
           <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
             <FileSpreadsheet className="size-4" />
             {file?.name ?? "Choose .xlsx file"}
-            <input type="file" accept=".xlsx" className="sr-only" onChange={(event) => selectFile(event.target.files?.[0] ?? null)} />
+            <input
+              key={fileInputKey}
+              type="file"
+              accept=".xlsx"
+              className="sr-only"
+              onChange={(event) => selectFile(event.target.files?.[0] ?? null)}
+            />
           </label>
           <button
             type="button"
@@ -151,12 +168,6 @@ export function QuizExcelImport({ classId }: { classId: string }) {
           {preview.valid && !title.trim() && (
             <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
               Add a quiz title above to enable import.
-            </p>
-          )}
-
-          {createdTitle && (
-            <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
-              “{createdTitle}” was created as a draft. It still needs teacher review.
             </p>
           )}
 
@@ -237,6 +248,14 @@ export function QuizExcelImport({ classId }: { classId: string }) {
           )}
         </div>
       )}
+
+      {createdTitle && (
+        <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
+          “{createdTitle}” was created as a draft. It still needs teacher review.
+        </p>
+      )}
+
+      <QuizList classId={classId} refreshToken={refreshToken} lastImported={lastImported} />
     </section>
   );
 }
