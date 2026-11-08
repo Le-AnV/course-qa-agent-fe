@@ -231,7 +231,7 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
   }
 
   const totalAfter = quiz.questions.reduce((sum, question) => sum + question.points, 0);
-  const livePassingPercentage = form.passing_percentage ?? quiz.passing_percentage;
+  const livePassingPercentage = form.passing_percentage ?? quiz.passing_percentage ?? 50;
   const livePassingPoints =
     Math.round(((totalAfter * livePassingPercentage) / 100 + Number.EPSILON) * 100) / 100;
 
