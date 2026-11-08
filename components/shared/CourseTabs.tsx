@@ -134,7 +134,7 @@ export function CourseTabs({
         >
           <nav
             aria-label="Class sections"
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 overflow-x-auto max-w-full"
           >
             {tabs.map((tab) => {
               const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);

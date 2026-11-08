@@ -51,6 +51,10 @@ export type QuizSummary = {
   title: string;
   description: string | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  time_limit_minutes: number | null;
+  opens_at: string | null;
+  closes_at: string | null;
+  max_attempts: number | null;
   question_count: number;
   created_at: string;
   updated_at: string;
@@ -64,6 +68,10 @@ export type QuizDetail = {
   description: string | null;
   time_limit_minutes: number | null;
   passing_score: number | null;
+  passing_percentage: number;
+  opens_at: string | null;
+  closes_at: string | null;
+  max_attempts: number | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   approved_by_id: string | null;
   approved_at: string | null;
@@ -80,7 +88,10 @@ export type QuizMetadataUpdate = {
   title?: string;
   description?: string | null;
   time_limit_minutes?: number | null;
-  passing_score?: number | null;
+  passing_percentage?: number | null;
+  opens_at?: string | null;
+  closes_at?: string | null;
+  max_attempts?: number | null;
 };
 
 export type QuizQuestionInput = {
@@ -111,6 +122,7 @@ export type QuizStudentSummary = {
   total_points: number;
   time_limit_minutes: number | null;
   passing_score: number | null;
+  passing_percentage: number | null;
   attempt_count: number;
   submitted_count: number;
   has_in_progress: boolean;
@@ -133,6 +145,7 @@ export type QuizAttemptHistory = {
   total_score: number | null;
   max_score: number | null;
   passing_score: number | null;
+  passing_percentage: number | null;
   percentage: number | null;
   is_passed: boolean | null;
   official: boolean;
@@ -180,6 +193,7 @@ export type QuizAttemptResult = {
   total_score: number | null;
   max_score: number | null;
   passing_score: number | null;
+  passing_percentage: number | null;
   percentage: number | null;
   is_passed: boolean | null;
   official: boolean;
@@ -199,6 +213,7 @@ export type QuizSubmission = {
   graded_at: string | null;
   total_score: number | null;
   max_score: number | null;
+  passing_percentage: number | null;
   percentage: number | null;
   is_passed: boolean | null;
   official: boolean;
@@ -226,6 +241,7 @@ export type QuizStatistics = {
   quiz_title: string;
   submitted_count: number;
   max_score: number;
+  passing_percentage: number | null;
   average_score: number | null;
   average_percentage: number | null;
   pass_rate: number | null;

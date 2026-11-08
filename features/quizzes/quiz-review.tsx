@@ -35,6 +35,7 @@ import {
   type QuizQuestionInput,
 } from "@/lib/quiz-api";
 import { QuizQuestionEditor } from "@/features/quizzes/quiz-question-editor";
+import { fromDateTimeLocal, toDateTimeLocal } from "@/features/quizzes/quiz-take-utils";
 
 function formatPoints(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, "");
@@ -76,7 +77,10 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
           title: detail.title,
           description: detail.description,
           time_limit_minutes: detail.time_limit_minutes,
-          passing_score: detail.passing_score,
+          passing_percentage: detail.passing_percentage,
+          opens_at: detail.opens_at,
+          closes_at: detail.closes_at,
+          max_attempts: detail.max_attempts,
         });
         setDirty(false);
       })
@@ -98,7 +102,10 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
       title: detail.title,
       description: detail.description,
       time_limit_minutes: detail.time_limit_minutes,
-      passing_score: detail.passing_score,
+      passing_percentage: detail.passing_percentage,
+      opens_at: detail.opens_at,
+      closes_at: detail.closes_at,
+      max_attempts: detail.max_attempts,
     });
     setDirty(false);
   }
@@ -224,6 +231,9 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
   }
 
   const totalAfter = quiz.questions.reduce((sum, question) => sum + question.points, 0);
+  const livePassingPercentage = form.passing_percentage ?? quiz.passing_percentage;
+  const livePassingPoints =
+    Math.round(((totalAfter * livePassingPercentage) / 100 + Number.EPSILON) * 100) / 100;
 
   return (
     <div className="space-y-5">
@@ -338,22 +348,82 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
                 />
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="qs-passing">Passing score</Label>
+                <Label htmlFor="qs-passing">Passing percentage (%)</Label>
                 <Input
                   id="qs-passing"
                   type="number"
                   min="0"
-                  value={form.passing_score ?? ""}
+                  max="100"
+                  step="1"
+                  value={form.passing_percentage ?? ""}
                   onChange={(event) => {
                     const raw = event.target.value;
                     setForm((c) => ({
                       ...c,
-                      passing_score: raw === "" ? null : Number(raw),
+                      passing_percentage: raw === "" ? null : Number(raw),
                     }));
                     setDirty(true);
                   }}
                   disabled={busy}
                 />
+                <p className="text-[11px] text-slate-500">
+                  A student passes at {formatPoints(livePassingPercentage)}% ={" "}
+                  {formatPoints(livePassingPoints)} of {formatPoints(totalAfter)} points.
+                </p>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="qs-open">Opens at</Label>
+                <Input
+                  id="qs-open"
+                  type="datetime-local"
+                  value={toDateTimeLocal(form.opens_at ?? null)}
+                  onChange={(event) => {
+                    setForm((c) => ({
+                      ...c,
+                      opens_at: fromDateTimeLocal(event.target.value),
+                    }));
+                    setDirty(true);
+                  }}
+                  disabled={busy}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="qs-close">Closes at</Label>
+                <Input
+                  id="qs-close"
+                  type="datetime-local"
+                  value={toDateTimeLocal(form.closes_at ?? null)}
+                  onChange={(event) => {
+                    setForm((c) => ({
+                      ...c,
+                      closes_at: fromDateTimeLocal(event.target.value),
+                    }));
+                    setDirty(true);
+                  }}
+                  disabled={busy}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="qs-attempts">Attempts allowed</Label>
+                <Input
+                  id="qs-attempts"
+                  type="number"
+                  min="1"
+                  placeholder="Unlimited"
+                  value={form.max_attempts ?? ""}
+                  onChange={(event) => {
+                    const raw = event.target.value;
+                    setForm((c) => ({
+                      ...c,
+                      max_attempts: raw === "" ? null : Number(raw),
+                    }));
+                    setDirty(true);
+                  }}
+                  disabled={busy}
+                />
+                <p className="text-[11px] text-slate-500">
+                  Leave blank for unlimited. Students see the window and attempts left.
+                </p>
               </div>
               <div className="sm:col-span-2">
                 <Button onClick={() => void saveMetadata()} disabled={busy || !dirty}>
@@ -372,6 +442,10 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
           </p>
           <p className="text-sm text-slate-600">
             {quiz.question_count} question{quiz.question_count === 1 ? "" : "s"}
+          </p>
+          <p className="text-sm text-slate-600">
+            Passing: {formatPoints(livePassingPercentage)}% ({formatPoints(livePassingPoints)} of{" "}
+            {formatPoints(totalAfter)} points)
           </p>
           <ul className="space-y-1.5 text-sm">
             {Object.entries(quiz.question_type_counts).map(([type, count]) => {

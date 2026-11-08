@@ -177,8 +177,8 @@ export function StudentQuizResult({
 
           <div className="grid content-center gap-3 sm:grid-cols-2">
             <SummaryField
-              label="Passing score"
-              value={`${formatScore(result.passing_score)} / ${formatScore(result.max_score)}`}
+              label="Passing threshold"
+              value={`${formatPercentage(result.passing_percentage)} (${formatScore(result.passing_score)} / ${formatScore(result.max_score)} points)`}
             />
             <SummaryField
               label="Questions fully correct"

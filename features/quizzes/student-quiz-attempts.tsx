@@ -166,7 +166,8 @@ export function StudentQuizAttempts({ quizId }: { quizId: string }) {
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {formatPercentage(attempt.percentage)} · Passing{" "}
-                              {formatScore(attempt.passing_score)}
+                              {formatPercentage(attempt.passing_percentage)} (
+                              {formatScore(attempt.passing_score)} pts)
                             </p>
                           </div>
                           <PassBadge isPassed={attempt.is_passed} />

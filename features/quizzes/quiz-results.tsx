@@ -205,7 +205,7 @@ export function QuizResults({ classId, quizId }: { classId: string; quizId: stri
               icon={CheckCircle2}
               label="Pass rate"
               value={formatPercentage(statistics.pass_rate)}
-              hint={passRateHint(passed, officialRows.length)}
+              hint={`${passRateHint(passed, officialRows.length)} · Passing ${formatPercentage(statistics.passing_percentage)}`}
             />
           </div>
 
