@@ -2,12 +2,13 @@
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import StudentAttendancePage, {
+import StudentAttendancePage from "./page";
+import {
   getMonthRange,
   getCurrentMonth,
   getAdjacentMonth,
   formatAttendanceRate,
-} from "./page";
+} from "@/features/attendance/student-attendance-history";
 import { attendanceApi, type StudentAttendance } from "@/lib/attendance-api";
 
 vi.mock("next/navigation", () => ({

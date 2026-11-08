@@ -19,53 +19,11 @@ import {
 } from "@/lib/attendance-api";
 import {
   StudentAttendanceHistory,
-  formatAttendanceRate,
-  formatDisplayDate,
-  formatTimeRange,
-  AttendanceStatusChip,
+  getCurrentMonth,
+  getMonthRange,
+  formatMonthLabel,
+  getAdjacentMonth,
 } from "@/features/attendance/student-attendance-history";
-
-export { formatAttendanceRate, formatDisplayDate, formatTimeRange, AttendanceStatusChip };
-
-export function getCurrentMonth(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-}
-
-export function getMonthRange(yearMonth: string): { from: string; to: string } {
-  const [yStr, mStr] = yearMonth.split("-");
-  const year = parseInt(yStr, 10);
-  const month = parseInt(mStr, 10);
-  const from = `${year}-${String(month).padStart(2, "0")}-01`;
-  const lastDayDate = new Date(year, month, 0);
-  const lastDay = String(lastDayDate.getDate()).padStart(2, "0");
-  const to = `${year}-${String(month).padStart(2, "0")}-${lastDay}`;
-  return { from, to };
-}
-
-export function formatMonthLabel(yearMonth: string): string {
-  try {
-    const [yStr, mStr] = yearMonth.split("-");
-    const year = parseInt(yStr, 10);
-    const monthIndex = parseInt(mStr, 10) - 1;
-    const date = new Date(year, monthIndex, 1);
-    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  } catch {
-    return yearMonth;
-  }
-}
-
-export function getAdjacentMonth(yearMonth: string, delta: number): string {
-  const [yStr, mStr] = yearMonth.split("-");
-  const year = parseInt(yStr, 10);
-  const month = parseInt(mStr, 10);
-  const target = new Date(year, month - 1 + delta, 1);
-  const nextY = target.getFullYear();
-  const nextM = String(target.getMonth() + 1).padStart(2, "0");
-  return `${nextY}-${nextM}`;
-}
 
 export default function StudentAttendancePage() {
   const params = useParams();
