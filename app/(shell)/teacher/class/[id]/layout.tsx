@@ -48,7 +48,8 @@ export default function ClassWorkspaceLayout({
     { id: "syllabus", label: "Syllabus", href: `/teacher/class/${id}/syllabus` },
     { id: "agent", label: "Q&A Chat", href: `/teacher/class/${id}/agent` },
     { id: "tickets", label: "Tickets", href: `/teacher/class/${id}/tickets` },
-    { id: "quizzes", label: "Quiz Import", href: `/teacher/class/${id}/quizzes/import` },
+    { id: "skills", label: "Skills & Rubrics", href: `/teacher/class/${id}/skills` },
+    { id: "quizzes", label: "Quizzes", href: `/teacher/class/${id}/quizzes` },
     { id: "attendance", label: "Attendance", href: `/teacher/class/${id}/attendance` },
     {
       id: "members",
@@ -63,7 +64,7 @@ export default function ClassWorkspaceLayout({
   const isAgentPage = pathname?.endsWith("/agent");
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#F4F5F8]">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#E7EDF5]">
       <CourseTabs tabs={tabs} />
 
       {isAgentPage ? (

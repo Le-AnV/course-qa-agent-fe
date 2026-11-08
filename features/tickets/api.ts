@@ -15,6 +15,7 @@ export type Ticket = {
   escalated_to_id?: string | null;
   escalated_at?: string | null;
   escalated_to_name?: string | null;
+  student_seen_at?: string | null;
 };
 
 export type TicketReply = {
@@ -76,6 +77,7 @@ export function listTickets(input: {
 export function listMyTickets(input: {
   class_id?: string;
   status?: Ticket["status"];
+  unread?: boolean;
   page?: number;
   page_size?: number;
 }): Promise<TicketList> {
@@ -85,7 +87,12 @@ export function listMyTickets(input: {
   });
   if (input.class_id) query.set("class_id", input.class_id);
   if (input.status) query.set("status", input.status);
+  if (input.unread) query.set("unread", "true");
   return apiFetch<TicketList>(`/api/tickets/mine?${query}`);
+}
+
+export function markTicketSeen(ticketId: string): Promise<void> {
+  return apiFetch<void>(`/api/tickets/${encodeURIComponent(ticketId)}/seen`, { method: "POST" });
 }
 
 export function createTicket(input: {

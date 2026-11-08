@@ -29,9 +29,22 @@ export default function AgentPage() {
   };
 
   return (
-    <div className="flex h-full w-full min-h-0 flex-1">
-      {/* Main column: the chat itself, scoped to this class */}
-      <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl border border-[#DADADA] bg-white">
+    <div className="flex h-full w-full min-h-0 flex-1 overflow-hidden rounded-xl border border-[#DADADA] bg-white">
+      {/* GPT-style workspace: history sits inside the same surface and slides away. */}
+      <ChatHistorySidebar
+        classId={classId}
+        activeSessionId={activeSessionId}
+        onSelectSession={(sessionId) => setActiveSessionId(sessionId)}
+        onNewChat={startNewChat}
+        refreshTrigger={historyRefresh}
+        side="left"
+        collapsed={historyCollapsed}
+        onExpand={() => setHistoryCollapsed(false)}
+        mobileOpen={historyOpen}
+        onMobileOpenChange={setHistoryOpen}
+      />
+
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <ChatWindow
           classId={classId}
           canOpenTicket
@@ -45,19 +58,6 @@ export default function AgentPage() {
           onToggleHistory={() => setHistoryCollapsed(!historyCollapsed)}
         />
       </div>
-
-      {/* Right column: chat history (AI-95) */}
-      <ChatHistorySidebar
-        classId={classId}
-        activeSessionId={activeSessionId}
-        onSelectSession={(sessionId) => setActiveSessionId(sessionId)}
-        onNewChat={startNewChat}
-        refreshTrigger={historyRefresh}
-        side="right"
-        collapsed={historyCollapsed}
-        mobileOpen={historyOpen}
-        onMobileOpenChange={setHistoryOpen}
-      />
     </div>
   );
 }

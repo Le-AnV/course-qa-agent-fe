@@ -14,7 +14,7 @@ import { getSessionDetail } from '@/features/history/api';
 import { getChatQuota, type ChatQuota } from './api';
 import { mapHistoryCitation, mergeCitation, uniqueCitations } from '@/lib/citations';
 import type { ChatMessageItem } from '@/features/history/types';
-import { History, Loader2, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { History, Loader2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ChatCitation, ChatProgressStage } from '@/lib/sse';
 
@@ -601,6 +601,23 @@ export function ChatWindow({
             <History className="h-4 w-4" />
           </button>
         )}
+        {onToggleHistory && (
+          <button
+            type="button"
+            onClick={onToggleHistory}
+            title={historyCollapsed ? 'Show chat history' : 'Hide chat history'}
+            aria-label={historyCollapsed ? 'Show chat history' : 'Hide chat history'}
+            aria-expanded={!historyCollapsed}
+            aria-controls="chat-history-panel"
+            className="-ml-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-white/90 transition-colors hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 md:flex"
+          >
+            {historyCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </button>
+        )}
         <h1 className="truncate text-[13.5px] font-semibold text-white">Course AI Assistant</h1>
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {quota?.limit != null && (
@@ -619,23 +636,6 @@ export function ChatWindow({
                   : `${quota.remaining ?? 0} of ${quota.limit} questions left today`}
               </span>
             </span>
-          )}
-          {onToggleHistory && (
-            <button
-              type="button"
-              onClick={onToggleHistory}
-              title={historyCollapsed ? 'Show chat history' : 'Hide chat history'}
-              aria-label={historyCollapsed ? 'Show chat history' : 'Hide chat history'}
-              aria-expanded={!historyCollapsed}
-              aria-controls="chat-history-panel"
-              className="-mr-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-white/90 transition-colors hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 md:flex"
-            >
-              {historyCollapsed ? (
-                <PanelRightOpen className="h-4 w-4" />
-              ) : (
-                <PanelRightClose className="h-4 w-4" />
-              )}
-            </button>
           )}
         </div>
       </header>

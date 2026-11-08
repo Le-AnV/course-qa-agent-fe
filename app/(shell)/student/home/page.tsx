@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useProfile } from "@/features/profile/profile-context";
 import { studentApi, accentFor, type StudentClass } from "@/lib/student-api";
 import { PageContainer } from "@/components/shared/PageShell";
+import { WorkspacePageHeader } from "@/components/shared/WorkspacePageHeader";
 
 export default function StudentHomePage() {
   const router = useRouter();
@@ -32,14 +33,10 @@ export default function StudentHomePage() {
 
   return (
     <PageContainer className="space-y-8">
-      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-[28px] font-heading font-bold tracking-tight text-[#111111]">
-            Welcome back, {greetingName}
-          </h1>
-          <p className="mt-1 text-[14px] text-[#5A5A5A]">Here is your workspace at a glance.</p>
-        </div>
-      </div>
+      <WorkspacePageHeader
+        title={`Welcome back, ${greetingName}`}
+        subtitle="Here is your workspace at a glance."
+      />
 
       <div className="w-full">
         <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">

@@ -1,9 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, LoaderCircle } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, Download, LoaderCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { quizApi, type QuizDetail, type QuizSummary } from "@/lib/quiz-api";
+
+function formatPoints(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, "");
+}
 
 function answerLines(question: QuizDetail["questions"][number]): string[] {
   if (question.question_type === "FILL_IN_BLANK") {
@@ -28,6 +42,18 @@ export function QuizList({
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [loadingId, setLoadingId] = React.useState<string | null>(null);
   const [details, setDetails] = React.useState<Record<string, QuizDetail>>({});
+  const [pendingDelete, setPendingDelete] = React.useState<QuizSummary | null>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    try {
+      setQuizzes(await quizApi.listQuizzes(classId));
+      setError(null);
+    } catch (err) {
+      setQuizzes([]);
+      setError(err instanceof Error ? err.message : "Could not load quizzes.");
+    }
+  }, [classId]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -38,7 +64,7 @@ export function QuizList({
         setQuizzes(list);
         setError(null);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (cancelled) return;
         setQuizzes([]);
         setError(err instanceof Error ? err.message : "Could not load quizzes.");
@@ -76,12 +102,38 @@ export function QuizList({
     }
   }
 
+  async function exportQuiz(quiz: QuizSummary) {
+    setBusy(true);
+    try {
+      await quizApi.exportQuiz(classId, quiz.id, quiz.title);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not download the quiz.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeQuiz() {
+    if (!pendingDelete) return;
+    setBusy(true);
+    try {
+      await quizApi.deleteQuiz(classId, pendingDelete.id);
+      toast.success("Quiz deleted.");
+      setPendingDelete(null);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete this quiz.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
       <header>
-        <h2 className="font-semibold text-slate-900">Imported quizzes</h2>
+        <h2 className="font-semibold text-slate-900">Quizzes</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Expand a quiz to review its questions and answers.
+          Expand a quiz to review its questions, or open it to edit, approve and export.
         </p>
       </header>
 
@@ -98,13 +150,14 @@ export function QuizList({
         </div>
       ) : quizzes.length === 0 ? (
         <p className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
-          No quizzes imported for this class yet.
+          No quizzes for this class yet.
         </p>
       ) : (
         <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
           {quizzes.map((quiz) => {
             const open = expandedId === quiz.id;
             const detail = details[quiz.id];
+            const isDraft = quiz.status === "DRAFT";
             return (
               <li key={quiz.id}>
                 <button
@@ -137,6 +190,33 @@ export function QuizList({
                   />
                 </button>
 
+                <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
+                  <Button asChild size="sm" variant={isDraft ? "default" : "outline"}>
+                    <Link href={`/teacher/class/${classId}/quizzes/${quiz.id}`}>
+                      {isDraft ? "Review" : "Open"}
+                    </Link>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void exportQuiz(quiz)}
+                    disabled={busy || isDraft}
+                    title={isDraft ? "Approve this quiz before exporting it" : undefined}
+                  >
+                    <Download /> Export
+                  </Button>
+                  {isDraft && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setPendingDelete(quiz)}
+                      disabled={busy}
+                    >
+                      <Trash2 /> Delete
+                    </Button>
+                  )}
+                </div>
+
                 {open && (
                   <div
                     id={`quiz-detail-${quiz.id}`}
@@ -151,80 +231,87 @@ export function QuizList({
                       detail.questions.length === 0 ? (
                         <p className="text-sm text-slate-500">This quiz has no questions.</p>
                       ) : (
-                        <ol className="space-y-3">
-                          {detail.questions.map((question, index) => {
-                            const answers = answerLines(question);
-                            return (
-                              <li
-                                key={question.id}
-                                className="rounded-md border border-slate-200 bg-white p-3"
-                              >
-                                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                  <span>Question {index + 1}</span>
-                                  <span>·</span>
-                                  <span>{question.question_type.replaceAll("_", " ")}</span>
-                                  <span>·</span>
-                                  <span>
-                                    {question.points} point{question.points === 1 ? "" : "s"}
-                                  </span>
-                                  <span>·</span>
-                                  <span>{question.difficulty}</span>
-                                </div>
-                                <p className="mt-1.5 text-sm font-medium text-slate-900">
-                                  {question.question}
-                                </p>
-
-                                {question.options.length > 0 && (
-                                  <ul className="mt-2 grid gap-1 text-sm text-slate-700 sm:grid-cols-2">
-                                    {question.options.map((option) => (
-                                      <li
-                                        key={option.id}
-                                        className="flex items-start gap-2"
-                                      >
-                                        <span
-                                          className={
-                                            option.is_correct
-                                              ? "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-green-700 text-[11px] font-bold text-green-900"
-                                              : "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center text-[11px] font-semibold text-slate-400"
-                                          }
-                                        >
-                                          {option.option_label}
-                                        </span>
-                                        <span
-                                          className={
-                                            option.is_correct
-                                              ? "font-semibold text-green-950"
-                                              : "text-slate-700"
-                                          }
-                                        >
-                                          {option.option_text}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-
-                                {answers.length > 0 && (
-                                  <p className="mt-2 text-sm text-slate-600">
-                                    {question.question_type === "FILL_IN_BLANK"
-                                      ? "Accepted answers: "
-                                      : "Correct answer: "}
-                                    <span className="font-semibold text-green-900">
-                                      {answers.join(", ")}
+                        <>
+                          <ol className="space-y-3">
+                            {detail.questions.map((question, index) => {
+                              const answers = answerLines(question);
+                              return (
+                                <li
+                                  key={question.id}
+                                  className="rounded-md border border-slate-200 bg-white p-3"
+                                >
+                                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                    <span>Question {index + 1}</span>
+                                    <span>·</span>
+                                    <span>{question.question_type.replaceAll("_", " ")}</span>
+                                    <span>·</span>
+                                    <span>
+                                      {formatPoints(question.points)} point
+                                      {question.points === 1 ? "" : "s"}
                                     </span>
+                                    <span>·</span>
+                                    <span>{question.difficulty}</span>
+                                  </div>
+                                  <p className="mt-1.5 text-sm font-medium text-slate-900">
+                                    {question.question}
                                   </p>
-                                )}
 
-                                {question.explanation && (
-                                  <p className="mt-2 text-sm text-slate-600">
-                                    <span className="font-semibold">Explanation: </span>
-                                    {question.explanation}
-                                  </p>
-                                )}
-                              </li>
-                            );
-                          })}
-                        </ol>
+                                  {question.options.length > 0 && (
+                                    <ul className="mt-2 grid gap-1 text-sm text-slate-700 sm:grid-cols-2">
+                                      {question.options.map((option) => (
+                                        <li key={option.id} className="flex items-start gap-2">
+                                          <span
+                                            className={
+                                              option.is_correct
+                                                ? "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-green-700 text-[11px] font-bold text-green-900"
+                                                : "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center text-[11px] font-semibold text-slate-400"
+                                            }
+                                          >
+                                            {option.option_label}
+                                          </span>
+                                          <span
+                                            className={
+                                              option.is_correct
+                                                ? "font-semibold text-green-950"
+                                                : "text-slate-700"
+                                            }
+                                          >
+                                            {option.option_text}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+
+                                  {answers.length > 0 && (
+                                    <p className="mt-2 text-sm text-slate-600">
+                                      {question.question_type === "FILL_IN_BLANK"
+                                        ? "Accepted answers: "
+                                        : "Correct answer: "}
+                                      <span className="font-semibold text-green-900">
+                                        {answers.join(", ")}
+                                      </span>
+                                    </p>
+                                  )}
+
+                                  {question.explanation && (
+                                    <p className="mt-2 text-sm text-slate-600">
+                                      <span className="font-semibold">Explanation: </span>
+                                      {question.explanation}
+                                    </p>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ol>
+                          <div className="mt-3">
+                            <Button asChild size="sm" variant="link">
+                              <Link href={`/teacher/class/${classId}/quizzes/${quiz.id}`}>
+                                Open full review →
+                              </Link>
+                            </Button>
+                          </div>
+                        </>
                       )
                     ) : null}
                   </div>
@@ -234,6 +321,29 @@ export function QuizList({
           })}
         </ul>
       )}
+
+      <Dialog
+        open={pendingDelete !== null}
+        onOpenChange={(next) => (!next && !busy ? setPendingDelete(null) : undefined)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete “{pendingDelete?.title}”?</DialogTitle>
+            <DialogDescription>
+              The quiz and all its questions are removed permanently. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDelete(null)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => void removeQuiz()} disabled={busy}>
+              Delete quiz
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
+

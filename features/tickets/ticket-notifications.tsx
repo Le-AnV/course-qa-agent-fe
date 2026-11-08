@@ -3,9 +3,14 @@
 import * as React from "react";
 import { Bell, RefreshCw, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { listTickets, type TicketInboxItem } from "./api";
+import { listMyTickets, listTickets, type TicketInboxItem } from "./api";
+import { latestUnreadReply } from "./unread-replies";
+
+type Audience = "trainer" | "student" | null;
 
 type TicketNotificationsValue = {
+  audience: Audience;
+  newReplyVersion: number;
   tickets: TicketInboxItem[];
   total: number;
   loading: boolean;
@@ -20,21 +25,25 @@ type TicketNotificationsValue = {
 
 const TicketNotificationsContext = React.createContext<TicketNotificationsValue | null>(null);
 const AUTO_DISMISS_MS = 4_000;
+const NOTICE_TRANSITION_MS = 320;
 
-export function ticketNotificationHref(ticket: Pick<TicketInboxItem, "id" | "class_id">): string {
-  return `/teacher/class/${ticket.class_id}/tickets?ticket_id=${encodeURIComponent(ticket.id)}`;
+export function ticketNotificationHref(ticket: Pick<TicketInboxItem, "id" | "class_id">, audience: "trainer" | "student" = "trainer"): string {
+  return `/${audience === "student" ? "student" : "teacher"}/class/${ticket.class_id}/tickets?ticket_id=${encodeURIComponent(ticket.id)}`;
 }
 
 export function TicketNotificationsProvider({
   children,
-  enabled,
+  audience,
 }: {
   children: React.ReactNode;
-  enabled: boolean;
+  audience: Audience;
 }) {
   const pathname = usePathname();
   const [tickets, setTickets] = React.useState<TicketInboxItem[]>([]);
   const [total, setTotal] = React.useState(0);
+  const [newReplyVersion, setNewReplyVersion] = React.useState(0);
+  const previousReplies = React.useRef<Map<string, string>>(new Map());
+  const homeNoticeShown = React.useRef(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [openPath, setOpenPath] = React.useState<string | null>(null);
@@ -58,7 +67,7 @@ export function TicketNotificationsProvider({
       noticeRemovalTimer.current = setTimeout(() => {
         setNoticeCount(null);
         noticeRemovalTimer.current = null;
-      }, 200);
+      }, NOTICE_TRANSITION_MS);
     };
     noticeTimer.current = setTimeout(hideNotice, AUTO_DISMISS_MS);
   }, []);
@@ -70,17 +79,27 @@ export function TicketNotificationsProvider({
     noticeRemovalTimer.current = setTimeout(() => {
       setNoticeCount(null);
       noticeRemovalTimer.current = null;
-    }, 200);
+    }, NOTICE_TRANSITION_MS);
   }, []);
   const requestId = React.useRef(0);
 
   const refresh = React.useCallback(async () => {
-    if (!enabled) return 0;
+    if (!audience) return 0;
     const currentRequest = ++requestId.current;
     setLoading(true);
     try {
-      const result = await listTickets({ status: "OPEN", page: 1, page_size: 5 });
+      const result = audience === "student"
+        ? await listMyTickets({ unread: true, page: 1, page_size: 5 })
+        : await listTickets({ status: "OPEN", page: 1, page_size: 5 });
       if (currentRequest === requestId.current) {
+        if (audience === "student") {
+          const latest = new Map(result.items.map((ticket) => [ticket.id, latestUnreadReply(ticket)?.id ?? ""]));
+          const changed = [...latest].filter(([id, replyId]) => replyId && previousReplies.current.get(id) !== replyId);
+          previousReplies.current = latest;
+          if (changed.length > 0) {
+            setNewReplyVersion((value) => value + 1);
+          }
+        }
         setTickets(result.items);
         setTotal(result.total);
         setError(null);
@@ -94,22 +113,29 @@ export function TicketNotificationsProvider({
     } finally {
       if (currentRequest === requestId.current) setLoading(false);
     }
-  }, [enabled]);
+  }, [audience]);
 
   React.useEffect(() => {
-    if (!enabled) return;
+    if (!audience) return;
     let active = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh reads the trainer inbox after route entry.
     void refresh().then((count) => {
-      if (active && pathname === "/teacher/home" && count > 0) showNotice(count);
+      const homePath = audience === "student" ? "/student/home" : "/teacher/home";
+      const isHomeEntry = pathname === homePath || (audience === "student" && pathname === "/student");
+      if (active && !homeNoticeShown.current && isHomeEntry && count > 0) {
+        homeNoticeShown.current = true;
+        showNotice(count);
+      }
     });
     const onFocus = () => { void refresh(); };
     window.addEventListener("focus", onFocus);
+    const interval = audience === "student" ? window.setInterval(onFocus, 30_000) : null;
     return () => {
       active = false;
       window.removeEventListener("focus", onFocus);
+      if (interval !== null) window.clearInterval(interval);
     };
-  }, [enabled, pathname, refresh, showNotice]);
+  }, [audience, pathname, refresh, showNotice]);
 
   React.useEffect(() => () => {
     if (noticeTimer.current !== null) clearTimeout(noticeTimer.current);
@@ -117,8 +143,8 @@ export function TicketNotificationsProvider({
   }, []);
 
   const value = React.useMemo(
-    () => ({ tickets, total, loading, error, open, setOpen, noticeCount, noticeVisible, dismissNotice, refresh }),
-    [tickets, total, loading, error, open, refresh, setOpen, noticeCount, noticeVisible, dismissNotice],
+    () => ({ audience, newReplyVersion, tickets, total, loading, error, open, setOpen, noticeCount, noticeVisible, dismissNotice, refresh }),
+    [audience, newReplyVersion, tickets, total, loading, error, open, refresh, setOpen, noticeCount, noticeVisible, dismissNotice],
   );
 
   return (
@@ -126,6 +152,10 @@ export function TicketNotificationsProvider({
       {children}
     </TicketNotificationsContext.Provider>
   );
+}
+
+export function useTicketNotifications() {
+  return React.useContext(TicketNotificationsContext);
 }
 
 export function TicketNotificationBell({ placement = "up" }: { placement?: "up" | "down" }) {
@@ -161,15 +191,33 @@ export function TicketNotificationBell({ placement = "up" }: { placement?: "up" 
       {notifications.noticeCount !== null && (
         <aside
           role="status"
-          className={`absolute z-[100] flex w-max max-w-[min(280px,calc(100vw-2rem))] items-center gap-3 rounded-lg border border-[#DADADA] bg-white px-4 py-3 text-[13px] text-[#111111] shadow-lg transition-[opacity,transform] duration-200 ease-out ${panelPosition} ${notifications.noticeVisible ? "translate-y-0 scale-100 opacity-100" : placement === "up" ? "translate-y-1 scale-[0.98] opacity-0" : "-translate-y-1 scale-[0.98] opacity-0"}`}
+          style={{ animation: "ticket-notification-pop 420ms cubic-bezier(0.16,1,0.3,1)" }}
+          className={`absolute z-[100] flex w-max max-w-[min(300px,calc(100vw-2rem))] items-center gap-3 overflow-hidden rounded-xl border border-[#C8D6E5] bg-[linear-gradient(135deg,#FFFFFF_0%,#F5F8FC_100%)] px-3.5 py-3 text-[13px] text-[#193653] shadow-[0_14px_36px_rgba(23,51,83,0.20)] ring-1 ring-[#173353]/[0.04] transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ticket-notification-motion ${panelPosition} ${notifications.noticeVisible ? "translate-y-0 scale-100 opacity-100" : placement === "up" ? "translate-y-2 scale-[0.96] opacity-0" : "-translate-y-2 scale-[0.96] opacity-0"}`}
         >
-          <Bell className="h-4 w-4 shrink-0 text-[#5A5A5A]" aria-hidden="true" />
-          <span>Có {notifications.noticeCount} ticket chưa trả lời.</span>
+          <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-[linear-gradient(to_bottom,#47759A,#294D72)]" />
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#D6E2EF] bg-[#EAF0F7] text-[#294D72] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+            <Bell className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="leading-snug">
+            {notifications.audience === "student" ? (
+              <>
+                You have{" "}
+                <strong className="font-bold text-[#1F3A5F]">{notifications.noticeCount}</strong>{" "}
+                new {notifications.noticeCount === 1 ? "reply" : "replies"} from your instructor.
+              </>
+            ) : (
+              <>
+                You have{" "}
+                <strong className="font-bold text-[#1F3A5F]">{notifications.noticeCount}</strong>{" "}
+                unanswered {notifications.noticeCount === 1 ? "ticket" : "tickets"}.
+              </>
+            )}
+          </span>
           <button
             type="button"
-            aria-label="Đóng thông báo ticket"
+            aria-label="Dismiss ticket notification"
             onClick={notifications.dismissNotice}
-            className="ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#6F6F6F] hover:bg-[#F7F7F7]"
+            className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#60758A] transition-colors hover:bg-[#E8EEF5] hover:text-[#193653] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#294D72]"
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -177,7 +225,7 @@ export function TicketNotificationBell({ placement = "up" }: { placement?: "up" 
       )}
       <button
         type="button"
-        aria-label={notifications.total ? `Unanswered tickets: ${notifications.total}` : "Ticket notifications"}
+        aria-label={notifications.total ? `${notifications.audience === "student" ? "New teacher replies" : "Unanswered tickets"}: ${notifications.total}` : "Ticket notifications"}
         aria-haspopup="dialog"
         aria-expanded={notifications.open}
         aria-controls={panelId}
@@ -199,19 +247,20 @@ export function TicketNotificationBell({ placement = "up" }: { placement?: "up" 
         <section
           id={panelId}
           role="dialog"
-          aria-label="Unanswered tickets"
-          className={`absolute z-[70] w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-[#DADADA] bg-white shadow-lg ${panelPosition}`}
+          aria-label={notifications.audience === "student" ? "New teacher replies" : "Unanswered tickets"}
+          className={`absolute z-[70] w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-[#DADADA] bg-white shadow-lg ticket-notification-motion ${panelPosition}`}
+          style={{ animation: "ticket-notification-pop 420ms cubic-bezier(0.16,1,0.3,1)" }}
         >
           <header className="flex items-center justify-between border-b border-[#EDEDED] px-4 py-3">
             <div>
-              <h2 className="text-[13px] font-bold text-[#111111]">Unanswered tickets</h2>
+              <h2 className="text-[13px] font-bold text-[#111111]">{notifications.audience === "student" ? "New teacher replies" : "Unanswered tickets"}</h2>
               <p className="mt-0.5 text-[11px] text-[#6F6F6F]">
-                {notifications.total} waiting for your reply
+                {notifications.audience === "student" ? `${notifications.total} tickets with new replies` : `${notifications.total} waiting for your reply`}
               </p>
             </div>
             <button
               type="button"
-              aria-label="Refresh unanswered tickets"
+              aria-label={notifications.audience === "student" ? "Refresh new replies" : "Refresh unanswered tickets"}
               onClick={() => void notifications.refresh()}
               disabled={notifications.loading}
               className="flex h-8 w-8 items-center justify-center rounded-md text-[#6F6F6F] hover:bg-[#F7F7F7] disabled:opacity-50"
@@ -230,24 +279,32 @@ export function TicketNotificationBell({ placement = "up" }: { placement?: "up" 
           ) : notifications.loading && notifications.tickets.length === 0 ? (
             <p className="p-4 text-[12px] text-[#6F6F6F]" role="status">Loading tickets…</p>
           ) : notifications.tickets.length === 0 ? (
-            <p className="p-4 text-[12px] text-[#6F6F6F]" role="status">No unanswered tickets.</p>
+            <p className="p-4 text-[12px] text-[#6F6F6F]" role="status">{notifications.audience === "student" ? "No new replies." : "No unanswered tickets."}</p>
           ) : (
             <ul className="max-h-[min(420px,65vh)] overflow-y-auto">
-              {notifications.tickets.map((ticket) => (
+              {(notifications.audience === "student"
+                ? [...notifications.tickets].sort((a, b) =>
+                    Date.parse(latestUnreadReply(b)?.created_at ?? b.created_at)
+                    - Date.parse(latestUnreadReply(a)?.created_at ?? a.created_at),
+                  )
+                : notifications.tickets).map((ticket) => (
                 <li key={ticket.id} className="border-b border-[#F0F0F0] last:border-b-0">
                   <a
-                    href={ticketNotificationHref(ticket)}
-                    onClick={() => notifications.setOpen(false)}
+                    href={ticketNotificationHref(ticket, notifications.audience === "student" ? "student" : "trainer")}
+                    onClick={() => {
+                      notifications.dismissNotice();
+                      notifications.setOpen(false);
+                    }}
                     className="block px-4 py-3 transition-colors hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#111111]"
                   >
                     <span className="block truncate text-[11px] font-semibold text-[#5A5A5A]">
-                      {ticket.student_name} · {ticket.class_code}
+                      {notifications.audience === "student" ? ticket.class_code : `${ticket.student_name} · ${ticket.class_code}`}
                     </span>
                     <span className="mt-1 block line-clamp-2 break-words text-[12.5px] font-semibold text-[#111111]">
                       {ticket.question}
                     </span>
-                    <time dateTime={ticket.created_at} className="mt-1 block text-[10.5px] text-[#6F6F6F]">
-                      {new Date(ticket.created_at).toLocaleString()}
+                    <time dateTime={notifications.audience === "student" ? latestUnreadReply(ticket)?.created_at ?? ticket.created_at : ticket.created_at} className="mt-1 block text-[10.5px] text-[#6F6F6F]">
+                      {new Date(notifications.audience === "student" ? latestUnreadReply(ticket)?.created_at ?? ticket.created_at : ticket.created_at).toLocaleString()}
                     </time>
                   </a>
                 </li>
