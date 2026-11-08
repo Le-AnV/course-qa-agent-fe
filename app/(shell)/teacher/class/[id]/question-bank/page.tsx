@@ -70,6 +70,15 @@ export default function QuestionBankPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [successNotice, setSuccessNotice] = React.useState<string | null>(null);
 
+  // Auto-dismiss success notification after 3.5 seconds
+  React.useEffect(() => {
+    if (!successNotice) return;
+    const timer = setTimeout(() => {
+      setSuccessNotice(null);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [successNotice]);
+
   // Filters
   const [search, setSearch] = React.useState("");
   const [skillFilter, setSkillFilter] = React.useState<string>("");

@@ -49,7 +49,15 @@ export type ExamQuestion = {
   question_type: QuestionType;
   question: string;
   points: number;
-  difficulty: "REMEMBER" | "UNDERSTAND" | "APPLY";
+  difficulty:
+    | "REMEMBER"
+    | "UNDERSTAND"
+    | "APPLY"
+    | "NOVICE"
+    | "BEGINNER"
+    | "COMPETENT"
+    | "PROFICIENT"
+    | "MASTER";
   order_index: number;
   options: ExamOption[];
 };
@@ -81,6 +89,30 @@ export type AnswerInput = {
   is_marked_for_review?: boolean;
 };
 
+export type SkillMasteryLevelBreakdown = {
+  count: number;
+  earned: number;
+  max: number;
+  rate: number | null;
+  passed: boolean;
+  threshold: number;
+  status: string;
+};
+
+export type SkillMasteryRadarItem = {
+  skill_id: string;
+  skill_code: string;
+  skill_name: string;
+  achieved_level: string;
+  ceiling_level: string | null;
+  percentage: number;
+  is_blocked: boolean;
+  blocked_at: string | null;
+  reason: string | null;
+  foundation_gaps: string[];
+  breakdown: Record<string, SkillMasteryLevelBreakdown>;
+};
+
 export type QuizAttemptResult = {
   attempt_id: string;
   quiz_id: string;
@@ -94,8 +126,10 @@ export type QuizAttemptResult = {
   passing_score: number | null;
   passing_percentage: number | null;
   is_passed: boolean | null;
+  show_solutions_after_submission?: boolean;
   questions: ResultQuestion[];
   answers: AnswerDraft[];
+  skill_radar?: SkillMasteryRadarItem[];
 };
 
 export type QuizAttemptSession = {

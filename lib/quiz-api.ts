@@ -94,11 +94,51 @@ export type QuizMetadataUpdate = {
   max_attempts?: number | null;
 };
 
+export type BlueprintCellAvailability = {
+  skill_id: string;
+  skill_code: string;
+  skill_name: string;
+  difficulty: string;
+  available_in_bank: number;
+};
+
+export type BlueprintAvailabilityResponse = {
+  class_id: string;
+  cells: BlueprintCellAvailability[];
+  total_bank_questions: number;
+};
+
+export type QuizGenerateBlueprintRequest = {
+  title: string;
+  description?: string | null;
+  time_limit_minutes?: number | null;
+  passing_score?: number | null;
+  opens_at?: string | null;
+  closes_at?: string | null;
+  max_attempts?: number | null;
+  target_skill_ids: string[];
+  target_levels?: string[];
+  questions_per_level?: number;
+  auto_generate_missing?: boolean;
+  document_ids?: string[];
+  shuffle_questions?: boolean;
+  shuffle_options?: boolean;
+  show_solutions_after_submission?: boolean;
+};
+
 export type QuizQuestionInput = {
   question_type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "FILL_IN_BLANK";
   question: string;
   points: number;
-  difficulty: "REMEMBER" | "UNDERSTAND" | "APPLY";
+  difficulty:
+    | "REMEMBER"
+    | "UNDERSTAND"
+    | "APPLY"
+    | "NOVICE"
+    | "BEGINNER"
+    | "COMPETENT"
+    | "PROFICIENT"
+    | "MASTER";
   explanation: string | null;
   rubric: string | null;
   source_reference: string | null;
@@ -405,6 +445,18 @@ export const quizApi = {
     link.download = "quiz_template.xlsx";
     link.click();
     URL.revokeObjectURL(url);
+  },
+  getBlueprintAvailability(classId: string): Promise<BlueprintAvailabilityResponse> {
+    return request<BlueprintAvailabilityResponse>(
+      `/api/classes/${encodeURIComponent(classId)}/quizzes/blueprint-matrix`,
+    );
+  },
+  generateFromBlueprint(classId: string, payload: QuizGenerateBlueprintRequest): Promise<QuizDetail> {
+    return mutate<QuizDetail>(
+      "POST",
+      `/api/classes/${encodeURIComponent(classId)}/quizzes/generate-blueprint`,
+      payload,
+    );
   },
 };
 

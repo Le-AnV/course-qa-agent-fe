@@ -114,9 +114,9 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
     setBusy(true);
     try {
       applyDetail(await quizApi.updateQuiz(classId, quizId, form));
-      toast.success("Quiz settings saved.");
+      toast.success("Quiz settings saved.", { duration: 3000 });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save quiz settings.");
+      toast.error(err instanceof Error ? err.message : "Could not save quiz settings.", { duration: 4000 });
     } finally {
       setBusy(false);
     }
@@ -131,7 +131,7 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
       applyDetail(detail);
       setEditorOpen(false);
       setEditing(null);
-      toast.success(editing ? "Question saved." : "Question added.");
+      toast.success(editing ? "Question saved." : "Question added.", { duration: 3000 });
     } finally {
       setSavingQuestion(false);
     }
@@ -144,7 +144,7 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
     try {
       const detail = await quizApi.regenerateQuestion(classId, quizId, regenerating.id, instructions);
       applyDetail(detail);
-      toast.success("Question regenerated.");
+      toast.success("Question regenerated.", { duration: 3000 });
       setRegenerating(null);
     } catch (err) {
       setRegenerateError(err instanceof Error ? err.message : "Could not regenerate this question.");
@@ -158,10 +158,10 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
     setBusy(true);
     try {
       applyDetail(await quizApi.deleteQuestion(classId, quizId, pendingDelete.id));
-      toast.success("Question deleted.");
+      toast.success("Question deleted.", { duration: 3000 });
       setPendingDelete(null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not delete this question.");
+      toast.error(err instanceof Error ? err.message : "Could not delete this question.", { duration: 4000 });
     } finally {
       setBusy(false);
     }
@@ -171,10 +171,10 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
     setBusy(true);
     try {
       applyDetail(await quizApi.approveQuiz(classId, quizId));
-      toast.success("Quiz approved.");
+      toast.success("Quiz approved.", { duration: 3000 });
       setApproveOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not approve this quiz.");
+      toast.error(err instanceof Error ? err.message : "Could not approve this quiz.", { duration: 4000 });
     } finally {
       setBusy(false);
     }
@@ -184,10 +184,10 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
     setBusy(true);
     try {
       applyDetail(await quizApi.reopenQuiz(classId, quizId));
-      toast.success("Quiz reopened for editing.");
+      toast.success("Quiz reopened for editing.", { duration: 3000 });
       setReopenOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not reopen this quiz.");
+      toast.error(err instanceof Error ? err.message : "Could not reopen this quiz.", { duration: 4000 });
     } finally {
       setBusy(false);
     }

@@ -9,6 +9,7 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  EyeOff,
   Flag,
   LoaderCircle,
   RotateCcw,
@@ -38,6 +39,7 @@ import {
   type QuizAttemptResult,
   type QuizAttemptSession,
 } from "@/lib/student-quiz-api";
+import { SkillRadarChart } from "@/features/quizzes/skill-radar-chart";
 
 type LocalAnswer = {
   selected_option_labels: string[];
@@ -665,11 +667,25 @@ function QuizResult({
         )}
       </section>
 
+      {result.skill_radar && result.skill_radar.length > 0 && (
+        <SkillRadarChart radarItems={result.skill_radar} />
+      )}
+
+      {result.show_solutions_after_submission === false && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600 flex items-center gap-2.5">
+          <EyeOff className="size-4 text-slate-500 shrink-0" />
+          <span>
+            Detailed answer keys and explanations are withheld by the instructor for this assessment.
+          </span>
+        </div>
+      )}
+
       <ol className="space-y-3">
         {result.questions.map((question, questionIndex) => {
           const answer = answers.get(question.id);
           const selected = new Set(answer?.selected_option_labels ?? []);
           const awarded = answer?.score_awarded ?? 0;
+          const showKey = result.show_solutions_after_submission !== false;
           return (
             <li key={question.id} className="rounded-xl border border-[#DADADA] bg-white p-4">
               <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-[#5A5A5A]">
@@ -694,17 +710,19 @@ function QuizResult({
                         key={option.id}
                         className={[
                           "flex items-start gap-2 rounded-md border px-3 py-2 text-[13px]",
-                          option.is_correct
+                          showKey && option.is_correct
                             ? "border-emerald-200 bg-emerald-50 text-emerald-900"
                             : chosen
-                              ? "border-rose-200 bg-rose-50 text-rose-900"
+                              ? showKey
+                                ? "border-rose-200 bg-rose-50 text-rose-900"
+                                : "border-indigo-200 bg-indigo-50/60 text-indigo-900 font-medium"
                               : "border-[#E5E5E5] text-[#5A5A5A]",
                         ].join(" ")}
                       >
                         <span className="font-bold">{option.option_label}.</span>
                         <span className="flex-1">{option.option_text}</span>
                         {chosen && <span className="text-[11px] font-semibold">Your answer</span>}
-                        {option.is_correct && (
+                        {showKey && option.is_correct && (
                           <span className="text-[11px] font-semibold">Correct</span>
                         )}
                       </li>
