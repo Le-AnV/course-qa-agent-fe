@@ -24,7 +24,12 @@ export type StudentQuizListItem = {
   attempt_status: AttemptStatus | null;
   can_start: boolean;
   total_score: number | null;
+  max_score: number | null;
+  percentage: number | null;
+  passing_score: number | null;
+  passing_percentage: number | null;
   is_passed: boolean | null;
+  official_attempt_id: string | null;
 };
 
 export type StudentQuizList = {
@@ -119,6 +124,7 @@ export type QuizAttemptResult = {
   max_score: number;
   percentage: number;
   passing_score: number | null;
+  passing_percentage: number | null;
   is_passed: boolean | null;
   show_solutions_after_submission?: boolean;
   questions: ResultQuestion[];

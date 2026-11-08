@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -83,6 +84,7 @@ export function StudentQuizPlayer({
   quizId: string;
   initialAttemptId?: string;
 }) {
+  const router = useRouter();
   const [session, setSession] = React.useState<QuizAttemptSession | null>(null);
   const [answers, setAnswers] = React.useState<Record<string, LocalAnswer>>({});
   const [index, setIndex] = React.useState(0);
@@ -220,6 +222,13 @@ export function StudentQuizPlayer({
     },
     [applySession],
   );
+
+  // A finalized attempt is rendered by AI-154's result page. Redirect both
+  // after submit and when the player is opened with an already-submitted id.
+  React.useEffect(() => {
+    if (!session || session.status === "IN_PROGRESS") return;
+    router.replace(`/student/quizzes/${session.quiz_id}/attempts/${session.attempt_id}`);
+  }, [session, router]);
 
   // AC-04: the server deadline wins; the client never extends it.
   React.useEffect(() => {
@@ -650,9 +659,10 @@ function QuizResult({
             </p>
           </div>
         </div>
-        {result.passing_score !== null && (
+        {result.passing_percentage !== null && (
           <p className="mt-2 text-[12px] text-[#5A5A5A]">
-            Passing score: {result.passing_score}%
+            Passing: {result.passing_percentage}%
+            {result.passing_score !== null ? ` (${result.passing_score} points)` : ""}
           </p>
         )}
       </section>

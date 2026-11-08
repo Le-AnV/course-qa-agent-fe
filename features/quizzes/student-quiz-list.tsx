@@ -24,6 +24,20 @@ function attemptsLabel(quiz: StudentQuizListItem): string {
   return `${left} of ${quiz.max_attempts} attempt${quiz.max_attempts === 1 ? "" : "s"} left`;
 }
 
+function scoreLabel(quiz: StudentQuizListItem): string | null {
+  if (quiz.total_score === null) return null;
+  const max = quiz.max_score;
+  const percentage =
+    quiz.percentage === null ? null : `${quiz.percentage.toFixed(1)}%`;
+  const points = max === null ? `${quiz.total_score}` : `${quiz.total_score} / ${max}`;
+  return percentage ? `${points} (${percentage})` : points;
+}
+
+/**
+ * Class quiz list for students. AI-153 owns the take/resume entry points and
+ * AI-154 owns the result/history links, so this component merges both states
+ * into one row instead of rendering two competing lists.
+ */
 export function StudentQuizList({ classId }: { classId: string }) {
   const [quizzes, setQuizzes] = React.useState<StudentQuizListItem[] | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -74,12 +88,17 @@ export function StudentQuizList({ classId }: { classId: string }) {
       ) : (
         <ul className="space-y-3">
           {quizzes.map((quiz) => {
-            const completed = quiz.attempt_status === "SUBMITTED" || quiz.attempt_status === "EXPIRED";
+            const completed =
+              quiz.attempt_status === "SUBMITTED" || quiz.attempt_status === "EXPIRED";
             const resume = quiz.attempt_status === "IN_PROGRESS";
             const canStartNew = quiz.can_start && !resume;
-            const showResult = completed && Boolean(quiz.attempt_id);
+            const resultAttemptId = quiz.official_attempt_id ?? quiz.attempt_id;
+            const showResult = completed && Boolean(resultAttemptId);
             const playHref = `/student/class/${classId}/quizzes/${quiz.quiz_id}`;
-            const resultHref = showResult ? `${playHref}/result/${quiz.attempt_id}` : playHref;
+            const resultHref = resultAttemptId
+              ? `/student/quizzes/${quiz.quiz_id}/attempts/${resultAttemptId}`
+              : playHref;
+            const historyHref = `/student/quizzes/${quiz.quiz_id}`;
             const actionLabel = resume
               ? "Resume attempt"
               : canStartNew
@@ -97,6 +116,7 @@ export function StudentQuizList({ classId }: { classId: string }) {
                         : "Start quiz";
             const actionHref = canStartNew || resume ? playHref : resultHref;
             const actionEnabled = resume || canStartNew || showResult;
+            const bestScore = scoreLabel(quiz);
             return (
               <li
                 key={quiz.quiz_id}
@@ -138,13 +158,20 @@ export function StudentQuizList({ classId }: { classId: string }) {
                           : "No time limit"}
                       </span>
                       <span>{attemptsLabel(quiz)}</span>
-                      {completed && quiz.total_score !== null && (
+                      {bestScore && (
                         <span className="inline-flex items-center gap-1.5 font-semibold text-[#111111]">
                           <Trophy className="size-3.5" />
-                          {quiz.total_score} points
+                          {bestScore}
                         </span>
                       )}
                     </div>
+                    {bestScore &&
+                      quiz.passing_percentage !== null &&
+                      quiz.passing_score !== null && (
+                        <p className="text-[11.5px] text-[#6F6F6F]">
+                          Passing {quiz.passing_percentage}% ({quiz.passing_score} points)
+                        </p>
+                      )}
                   </div>
 
                   <div className="shrink-0 space-y-2 text-right">
@@ -167,6 +194,16 @@ export function StudentQuizList({ classId }: { classId: string }) {
                           className="text-[11.5px] font-semibold text-[#5A5A5A] underline"
                         >
                           Last result
+                        </Link>
+                      </div>
+                    )}
+                    {quiz.attempts_used > 0 && (
+                      <div>
+                        <Link
+                          href={historyHref}
+                          className="text-[11.5px] font-semibold text-[#5A5A5A] underline"
+                        >
+                          Attempt history
                         </Link>
                       </div>
                     )}
