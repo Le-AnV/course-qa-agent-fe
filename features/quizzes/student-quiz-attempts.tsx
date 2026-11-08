@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { studentQuizResultApi, type QuizAttemptHistory } from "@/lib/quiz-api";
+import { studentQuizApi } from "@/lib/student-quiz-api";
 import { cn } from "@/lib/utils";
 import { AttemptStatusBadge, OfficialBadge, PassBadge } from "./quiz-result-badges";
 import { formatDateTime, formatPercentage, formatScore } from "./quiz-result-format";
@@ -20,9 +21,29 @@ import { formatDateTime, formatPercentage, formatScore } from "./quiz-result-for
 export function StudentQuizAttempts({ quizId }: { quizId: string }) {
   const [attempts, setAttempts] = React.useState<QuizAttemptHistory[] | null>(null);
   const [quizTitle, setQuizTitle] = React.useState<string | null>(null);
+  const [classId, setClassId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [reloadToken, setReloadToken] = React.useState(0);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    studentQuizApi
+      .list()
+      .then((data) => {
+        if (cancelled) return;
+        const quiz = data.quizzes.find((item) => item.quiz_id === quizId);
+        if (!quiz) return;
+        setQuizTitle(quiz.title);
+        setClassId(quiz.class_id);
+      })
+      .catch(() => {
+        // Quiz context is cosmetic; the attempt list already rendered.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [quizId]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -32,19 +53,6 @@ export function StudentQuizAttempts({ quizId }: { quizId: string }) {
         if (cancelled) return;
         setAttempts(rows);
         setError(null);
-
-        // The history payload does not carry the quiz title; read one result
-        // to label the page. This is optional — a failure keeps the fallback.
-        const candidate = rows.find((row) => row.status !== "IN_PROGRESS");
-        if (!candidate) return;
-        studentQuizResultApi
-          .getAttemptResult(quizId, candidate.id)
-          .then((result) => {
-            if (!cancelled) setQuizTitle(result.quiz_title);
-          })
-          .catch(() => {
-            // Title is cosmetic; the attempt list already rendered.
-          });
       })
       .catch((cause: unknown) => {
         if (cancelled) return;
@@ -58,6 +66,9 @@ export function StudentQuizAttempts({ quizId }: { quizId: string }) {
     };
   }, [quizId, reloadToken]);
 
+  const backHref = classId ? `/student/class/${classId}/quizzes` : "/student/classes";
+  const backLabel = classId ? "Back to quizzes" : "My classes";
+
   function retry() {
     setLoading(true);
     setError(null);
@@ -68,10 +79,10 @@ export function StudentQuizAttempts({ quizId }: { quizId: string }) {
     <div className="space-y-5">
       <div>
         <Link
-          href="/student/classes"
+          href={backHref}
           className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900"
         >
-          <ArrowLeft className="size-4" /> My classes
+          <ArrowLeft className="size-4" /> {backLabel}
         </Link>
       </div>
 
@@ -107,7 +118,9 @@ export function StudentQuizAttempts({ quizId }: { quizId: string }) {
               description="Open this quiz from your class to start your first attempt. Your score and answer review will appear here."
               action={
                 <Button asChild size="sm" variant="outline">
-                  <Link href="/student/classes">Back to my classes</Link>
+                  <Link href={backHref}>
+                    {classId ? "Back to quizzes" : "Back to my classes"}
+                  </Link>
                 </Button>
               }
             />
