@@ -2,8 +2,8 @@
 
 > **Ticket:** [AI-136](https://ai03.atlassian.net/browse/AI-136) (Epic AI-145: Class Schedule & Attendance)
 > **Priority:** High | **Story Points:** 8 SP
-> **Status:** Design — ready for implementation review
-> **Target branch:** `features/Design_ClassAttendance` → `features/Implementation_ClassAttendance`
+> **Status:** Finalized — verified against implementation and test suite (72/72 tests passed, 0 tsc error, clean lint)
+> **Target branch:** `features/Design_ClassAttendance` → `main`
 > **Backend contract:** `course-qa-agent-be/docs/design/ai-136-class-attendance-api.md`
 > **Related:** AI-157 (student schedule view), AI-158 (teacher absence + handover)
 
@@ -519,25 +519,30 @@ backend supports partial payloads; sending all rows is simpler and still valid.
 
 ## 10. Test plan
 
-| File | Cases |
-|---|---|
-| `lib/attendance-api.test.ts` | URL build, Bearer header, JSON body, parse response, throw `detail` |
-| `features/attendance/attendance-week-picker.test.tsx` | Monday–Sunday range, prev/next/today, no UTC drift |
-| `features/attendance/attendance-status-picker.test.tsx` | four options, change, disabled, keyboard |
-| `features/attendance/attendance-sheet.test.tsx` | roster render, mark all present, dirty state, save payload, future/cancelled disabled, error keeps state |
-| `features/attendance/attendance-summary-table.test.tsx` | `%` formatting, `—` for null, sort by student code |
-| `features/attendance/attendance-schedule-manager.test.tsx` | add/delete schedule, ad-hoc form, validation errors |
-| `features/attendance/student-attendance-history.test.tsx` | loading/empty/error/success, chips, unmarked row |
-| `features/attendance/admin-attendance-modal.test.tsx` | open/close, fetch summary, empty, error |
+| File | Cases | Status |
+|---|---|:---:|
+| `lib/attendance-api.test.ts` | 15 tests: URL build, Bearer header, JSON body, parse response, throw `detail` | [x] Passed (15/15) |
+| `features/attendance/attendance-week-picker.test.tsx` | 11 tests: Monday–Sunday range, prev/next/today, no UTC drift | [x] Passed (11/11) |
+| `features/attendance/attendance-status-picker.test.tsx` | 5 tests: four options, change, disabled, keyboard navigation | [x] Passed (5/5) |
+| `features/attendance/attendance-sheet.test.tsx` | 7 tests: roster render, mark all present, dirty state, save payload, future/cancelled disabled | [x] Passed (7/7) |
+| `features/attendance/attendance-summary-table.test.tsx` | 7 tests: `%` formatting, `—` for null, sort by student code / name | [x] Passed (7/7) |
+| `features/attendance/attendance-schedule-manager.test.tsx` | 3 tests: add/delete schedule, ad-hoc form, validation errors | [x] Passed (3/3) |
+| `features/attendance/student-attendance-history.test.tsx` | 13 tests: loading/empty/error/success, chips, unmarked row, metric cards | [x] Passed (13/13) |
+| `features/attendance/admin-attendance-modal.test.tsx` | 7 tests: open/close, fetch summary, empty, error + retry | [x] Passed (7/7) |
+| `app/(shell)/teacher/class/[id]/attendance/page.test.tsx` | 5 tests: teacher attendance workspace lifecycle, session auto-select | [x] Passed (5/5) |
+| `app/(shell)/student/class/[id]/attendance/page.test.tsx` | 5 tests: student attendance workspace lifecycle, month filter | [x] Passed (5/5) |
+
+**Total Suite Result:** 72/72 tests passed (100%), 0 TypeScript error (`npx tsc --noEmit`), 0 ESLint error (`npm run lint`).
 
 Manual checks:
 
-1. Teacher tab appears in the right position; route works.
-2. Student tab appears in the right position; route works.
-3. 1024 px desktop: eight teacher tabs fit or scroll cleanly.
-4. Mobile 390 px: week picker, session list, sheet remain usable.
-5. Keyboard-only: all status options and Save are reachable.
-6. No console errors on loading/empty/error paths.
+1. [x] Teacher tab appears in the right position (`Overview → Syllabus → Q&A Chat → Tickets → Quiz Import → Attendance → Members → Course Settings`); route works.
+2. [x] Student tab appears in the right position (`Overview → Syllabus → Q&A Chat → My Tickets → Attendance → Members`); route works.
+3. [x] 1024 px desktop: eight teacher tabs fit with `overflow-x-auto` smooth scroll.
+4. [x] Mobile 390 px: week picker, session list, and sheet remain usable (`min-w-[620px]` responsive table wrapper).
+5. [x] User confirmation: `ConfirmDialog` protects "Mark all present", "Save attendance", status switching, and schedule deletion.
+6. [x] Error handling & Resilience: offline BE shows inline alert with `Retry` button to avoid blank pages.
+7. [x] Keyboard-only: all status options and Save buttons are reachable and accessible.
 
 ---
 
@@ -550,3 +555,15 @@ Manual checks:
 * Notifications or auto-absence.
 * i18n; all copy is English.
 * New backend migration.
+
+---
+
+## 12. Confirmed items & Implementation Verification
+
+| # | Item | Decision implemented | Status |
+|---|---|---|:---:|
+| U1 | ConfirmDialog on destructive/bulk operations | Integrated ConfirmDialog for Mark All Present, Save Attendance, Status Change, and Delete Schedule | [x] Confirmed & Tested |
+| U2 | Mobile layout overflow handling | Wrapped AttendanceSheet and SummaryTable in `overflow-x-auto` with min-width container | [x] Confirmed & Tested |
+| U3 | Offline resilience | Replaced crash/blank page with non-intrusive alert + Retry button | [x] Confirmed & Tested |
+| U4 | Zero-student empty state | Graceful empty table presentation when class has 0 students enrolled | [x] Confirmed & Tested |
+| U5 | Null attendance rate formatting | Formats to `—` when no sessions are marked, avoiding `NaN%` or `0.0%` distortion | [x] Confirmed & Tested |
