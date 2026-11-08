@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Check, KeyRound, Loader2, Mail } from "lucide-react";
 import { errorMessage, isSessionError, profileApi } from "./api";
 import { PageContainer, PAGE_COLUMN } from "@/components/shared/PageShell";
+import { WorkspacePageHeader } from "@/components/shared/WorkspacePageHeader";
 import { useProfile } from "./profile-context";
 import { PasswordDialog } from "./password-dialog";
 import {
@@ -136,14 +137,12 @@ export function ProfilePanel({ signOut }: { signOut: () => void }) {
 
   return (
     <PageContainer>
-      <h1 className="font-heading text-[28px] font-bold tracking-tight text-[#111111]">
-        Account
-      </h1>
-      <p className="mt-2 text-[14px] text-[#5A5A5A]">
-        Your profile and the details you use to sign in.
-      </p>
+      <WorkspacePageHeader
+        title="Account"
+        subtitle="Your profile and the details you use to sign in."
+      />
 
-      <div className="mt-10 flex flex-col gap-6">
+      <div className="mt-6 flex flex-col gap-6">
         {/* Identity masthead — real facts only, no filler prose. */}
         <section
           className={`${CARD_CLASSES} flex flex-wrap items-center gap-x-8 gap-y-4 p-6`}

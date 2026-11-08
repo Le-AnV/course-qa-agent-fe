@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { adminApi, type EmailStats, type ImportBatch } from "@/lib/admin-api";
 import { PageContainer } from "@/components/shared/PageShell";
+import { WorkspacePageHeader } from "@/components/shared/WorkspacePageHeader";
 
 type Notice = {
   id: string;
@@ -112,12 +113,10 @@ export default function AdminHomePage() {
 
   return (
     <PageContainer className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <h1 className="text-[28px] font-bold text-[#111111] font-heading tracking-tight">Home</h1>
-          <p className="text-[14px] text-[#5A5A5A] mt-1">System updates and review queue.</p>
-        </div>
-      </div>
+      <WorkspacePageHeader
+        title="Home"
+        subtitle="System updates and review queue."
+      />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DADADA] pb-3">
         <div className="flex items-center gap-6">

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { studentApi, accentFor, termFor, type StudentClass, type CatalogClass } from "@/lib/student-api";
 import { PageContainer } from "@/components/shared/PageShell";
+import { WorkspacePageHeader } from "@/components/shared/WorkspacePageHeader";
 
 export default function StudentClassesPage() {
   const router = useRouter();
@@ -131,12 +132,10 @@ export default function StudentClassesPage() {
 
   return (
     <PageContainer className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <h1 className="text-[28px] font-bold text-[#111111] font-heading tracking-tight">My Classes</h1>
-          <p className="text-[14px] text-[#5A5A5A] mt-1">Manage and access your enrolled courses.</p>
-        </div>
-      </div>
+      <WorkspacePageHeader
+        title="My Classes"
+        subtitle="Manage and access your enrolled courses."
+      />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative w-full sm:w-72">
