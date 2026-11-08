@@ -15,6 +15,19 @@ vi.mock("next/link", () => ({
   }) => <a href={href}>{children}</a>,
 }));
 
+const routerReplace = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    replace: routerReplace,
+    push: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}));
+
 vi.mock("@/components/ui/dialog", () => {
   const Container = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
   return {
@@ -117,6 +130,7 @@ describe("student quiz player", () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     saveRequests.length = 0;
     submitCount = 0;
+    routerReplace.mockClear();
     host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
@@ -145,6 +159,7 @@ describe("student quiz player", () => {
             max_score: 3,
             percentage: 66.67,
             passing_score: 60,
+            passing_percentage: 60,
             is_passed: true,
             questions: [
               {
@@ -221,5 +236,6 @@ describe("student quiz player", () => {
     expect(submitCount).toBe(1);
     expect(host.textContent).toContain("Submitted.");
     expect(host.textContent).toContain("Passed");
+    expect(routerReplace).toHaveBeenCalledWith("/student/quizzes/q1/attempts/a1");
   });
 });
