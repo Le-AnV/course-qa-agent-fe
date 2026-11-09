@@ -514,6 +514,18 @@ export function QuizReview({ classId, quizId }: { classId: string; quizId: strin
                         </span>
                         <span>·</span>
                         <span>{question.difficulty}</span>
+                        {question.validation_flags.length > 0 && (
+                          <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10.5px] font-semibold text-amber-800">
+                            {question.validation_flags.includes("LOW_CONFIDENCE")
+                              ? "Low confidence"
+                              : question.validation_flags.join(", ")}
+                          </span>
+                        )}
+                        {question.confidence != null && (
+                          <span className="text-[10.5px] font-medium text-slate-500">
+                            {Math.round(question.confidence * 100)}% confidence
+                          </span>
+                        )}
                       </div>
                       <p className="mt-1.5 text-sm font-medium text-slate-900">
                         {question.question}
