@@ -38,6 +38,8 @@ export type QuizQuestion = {
   rubric: string | null;
   source_reference: string | null;
   grading_config: { correct_answers?: string[] } | null;
+  confidence: number | null;
+  validation_flags: string[];
   options: {
     id: string;
     option_label: string;
